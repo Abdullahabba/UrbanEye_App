@@ -1,37 +1,21 @@
-import sys
-import os
-
-# Project root path setup
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 import streamlit as st
-from auth.login import handle_google_callback, render_login_ui
-from views.dashboard import render_dashboard_ui
+from supabase import create_client
 
-# Page Config
-st.set_page_config(
-    page_title="Urban Eye AI Portal",
-    page_icon="👁️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Supabase Client Configuration
+SUPABASE_URL = "https://clriyqbkdxpjscpufqns.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNscml5cWJrZHhwanNjcHVmcW5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NDEwMjcsImV4cCI6MjEwMDMxNzAyN30.sgslve6nIZ3h4gSHzHz8Ici9Zd-zbUkx5BPHEldaT2Q"  # Yahan apni Anon Public Key daalein
 
-# Global Session State Initializations
-if "user" not in st.session_state:
-    st.session_state.user = None
-if "processed_image" not in st.session_state:
-    st.session_state.processed_image = None
-if "detection_stats" not in st.session_state:
-    st.session_state.detection_stats = None
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def main():
-    handle_google_callback()
+st.title("👁️ UrbanEye AI Dashboard")
 
-    # Router logic
-    if st.session_state.user is None:
-        render_login_ui()
-    else:
-        render_dashboard_ui()
-
-if __name__ == "__main__":
-    main()
+# Google Sign-In Button
+if st.button("🌐 Sign in with Google", use_container_width=True):
+    response = supabase.auth.sign_in_with_oauth({
+        "provider": "google",
+        "options": {
+            "redirect_to": "https://urbaneye-app.streamlit.app"
+        }
+    })
+    # Google Auth Page par redirect karne ke liye
+    st.markdown(f'<meta http-equiv="refresh" content="0;url={response.url}">', unsafe_allow_html=True)
