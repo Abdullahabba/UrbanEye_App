@@ -1,21 +1,26 @@
 import streamlit as st
-from supabase import create_client
+from auth.login import render_login_page
+from views.dashboard import render_dashboard_page
 
-# Supabase Client Configuration
-SUPABASE_URL = "https://clriyqbkdxpjscpufqns.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNscml5cWJrZHhwanNjcHVmcW5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NDEwMjcsImV4cCI6MjEwMDMxNzAyN30.sgslve6nIZ3h4gSHzHz8Ici9Zd-zbUkx5BPHEldaT2Q"  # Yahan apni Anon Public Key daalein
+st.set_page_config(
+    page_title="UrbanEye AI",
+    page_icon="👁️",
+    layout="wide",
+)
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Session State Check
+if "user" not in st.session_state:
+    st.session_state["user"] = None
 
-st.title("👁️ UrbanEye AI Dashboard")
+# Navigation Logic
+if st.session_state["user"] is None:
+    render_login_page()
+else:
+    # Sidebar Logout Button
+    with st.sidebar:
+        st.write(f"👤 {st.session_state['user'].email}")
+        if st.button("Logout"):
+            st.session_state["user"] = None
+            st.rerun()
 
-# Google Sign-In Button
-if st.button("🌐 Sign in with Google", use_container_width=True):
-    response = supabase.auth.sign_in_with_oauth({
-        "provider": "google",
-        "options": {
-            "redirect_to": "https://urbaneye-app.streamlit.app"
-        }
-    })
-    # Google Auth Page par redirect karne ke liye
-    st.markdown(f'<meta http-equiv="refresh" content="0;url={response.url}">', unsafe_allow_html=True)
+    render_dashboard_page()
