@@ -1,87 +1,79 @@
+from PIL import Image
 import streamlit as st
-from database.supabase_client import get_supabase_client
-from models.detector import run_ai_detection
-from utils.pdf_generator import generate_pdf_report
+from models.detector import run_detection
 from utils.email_sender import send_email_with_pdf
+from utils.pdf_generator import create_pdf_report
 
-def render_dashboard_ui():
-    supabase = get_supabase_client()
-    user = st.session_state.user
 
-    st.sidebar.markdown("### 👤 User Info")
-    st.sidebar.code(user.email)
+def render_dashboard_page():
+    user = st.session_state.get("user", None)
+    user_email = user.email if user else "guest_user@urbaneye.ai"
 
-    if st.sidebar.button("🚪 Log Out"):
-        if supabase:
-            supabase.auth.sign_out()
-        st.session_state.user = None
-        st.query_params.clear()
-        st.rerun()
+    st.title("👁️ UrbanEye AI - Incident Dashboard")
+    st.write(f"Logged in as: **{user_email}**")
 
-    st.title("👁️ Urban Eye AI - Inspection Dashboard")
+    # Image Upload Section
+    uploaded_file = st.file_uploader(
+        "Upload Incident Image", type=["jpg", "png", "jpeg"]
+    )
 
-    tab1, tab2 = st.tabs(["📸 Image AI Analysis", "📩 Department PDF Dispatch"])
+    if uploaded_file:
+        image = Image.open(uploaded_file)
 
-    # TAB 1: UPLOAD & DETECT
-    with tab1:
-        st.subheader("1. Upload Incident Image")
-        uploaded_file = st.file_uploader("Choose image file (JPG, PNG)", type=["jpg", "jpeg", "png"])
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(image, caption="Uploaded Image", use_container_width=True)
 
-        if uploaded_file:
-            bytes_data = uploaded_file.read()
-            col_a, col_b = st.columns(2)
+        if st.button("🔍 Run AI Detection", use_container_width=True):
+            with st.spinner("Processing image via YOLO..."):
+                processed_img, counts = run_detection(image)
+                st.session_state["processed_img"] = processed_img
+                st.session_state["counts"] = counts
 
-            with col_a:
-                st.markdown("**Original Image**")
-                st.image(bytes_data, use_container_width=True)
+        if "processed_img" in st.session_state:
+            with col2:
+                st.image(
+                    st.session_state["processed_img"],
+                    caption="Detection Results",
+                    use_container_width=True,
+                )
 
-            if st.button("🚀 Run AI Detection Analysis"):
-                with st.spinner("YOLO Model (`best.pt`) analyzing image..."):
-                    proc_img_bytes, stats = run_ai_detection(bytes_data, model_path="models/best.pt")
-                    st.session_state.processed_image = proc_img_bytes
-                    st.session_state.detection_stats = stats
+            st.success("✅ Detections complete!")
+            st.write("**Detected Objects:**", st.session_state["counts"])
 
-            if st.session_state.get("processed_image"):
-                with col_b:
-                    st.markdown("**AI Detection Result**")
-                    st.image(st.session_state.processed_image, use_container_width=True)
-                
-                st.success("✅ AI Detection Completed!")
-                st.json(st.session_state.detection_stats)
+            st.divider()
 
-    # TAB 2: GENERATE & EMAIL REPORT
-    with tab2:
-        st.subheader("2. Generate & Send Incident Report")
+            # Incident Reporting Form
+            st.subheader("🚨 Report Incident to Authorities")
 
-        if not st.session_state.get("processed_image"):
-            st.warning("⚠️ Please complete AI Analysis in Tab 1 first.")
-        else:
-            with st.form("report_form"):
-                title = st.text_input("Incident Title", value="Traffic Hazard / Road Violation")
-                location = st.text_input("Location / City Zone", value="Main Boulevard, Sector A")
-                target_email = st.text_input("Target Department Email", value="department_authority@gov.pk")
-                notes = st.text_area("Additional Details / Evidence Description")
-                
-                submit_btn = st.form_submit_button("📄 Generate & Dispatch Report")
+            title = st.text_input("Incident Title", "Unauthorized Activity Detected")
+            dept_email = st.selectbox(
+                "Target Department Email",
+                [
+                    "traffic@city.gov",
+                    "urban.planning@city.gov",
+                    "police@city.gov",
+                ],
+            )
 
-            if submit_btn:
+            if st.button(
+                "📩 Generate & Send Email Report", use_container_width=True
+            ):
                 with st.spinner("Generating PDF & Sending Email..."):
-                    pdf_data = generate_pdf_report(
-                        user.email, title, location, notes, 
-                        st.session_state.processed_image, 
-                        st.session_state.detection_stats
-                    )
-                    
-                    st.download_button(
-                        label="⬇️ Download PDF Copy Directly",
-                        data=pdf_data,
-                        file_name=f"Report_{title}.pdf",
-                        mime="application/pdf"
+                    summary_text = f"Detections Count:\n{st.session_state['counts']}\n\nLocation: Sector A Urban Grid"
+
+                    # 1. Generate PDF Bytes
+                    pdf_bytes = create_pdf_report(title, user_email, summary_text)
+
+                    # 2. Send Email
+                    success, msg = send_email_with_pdf(
+                        sender_email=user_email,
+                        target_department_email=dept_email,
+                        pdf_bytes=pdf_bytes,
+                        title=title,
                     )
 
-                    success, msg = send_email_with_pdf(user.email, target_email, pdf_data, title)
                     if success:
-                        st.balloons()
-                        st.success(f"🎉 {msg}")
+                        st.success(f"✅ {msg}")
                     else:
-                        st.info(f"PDF generated! Email status: {msg}")
+                        st.error(f"❌ {msg}")
