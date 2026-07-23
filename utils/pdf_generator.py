@@ -1,23 +1,46 @@
 from fpdf import FPDF
 
 
+def sanitize_text(text: str) -> str:
+    """Non-Latin-1 characters (jaise '•' ya emojis) ko safe PDF text mein convert karta hai."""
+    text = text.replace("•", "-")  # Bullet ko hyphen se replace karein
+    return text.encode("latin-1", "replace").decode("latin-1")
+
+
 def create_pdf_report(title: str, user_email: str, summary_text: str) -> bytes:
-    """PDF Report banakar uske bytes return karta hai."""
     pdf = FPDF()
     pdf.add_page()
 
+    # Input text ko sanitize karna taake Unicode error na aaye
+    safe_title = sanitize_text(title)
+    safe_email = sanitize_text(user_email)
+    safe_summary = sanitize_text(summary_text)
+
     # Title Section
     pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 10, "URBAN EYE AI - INCIDENT REPORT", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.cell(
+        0,
+        10,
+        "URBAN EYE AI - INCIDENT REPORT",
+        new_x="LMARGIN",
+        new_y="NEXT",
+        align="C",
+    )
     pdf.ln(10)
 
     # Incident Details
     pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(0, 8, f"Incident Title: {title}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, f"Incident Title: {safe_title}", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 8, f"Reported By: {user_email}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f"Platform Status: Verified AI Detection", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, f"Reported By: {safe_email}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(
+        0,
+        8,
+        "Platform Status: Verified AI Detection",
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
     pdf.ln(5)
 
     # Summary
@@ -25,7 +48,7 @@ def create_pdf_report(title: str, user_email: str, summary_text: str) -> bytes:
     pdf.cell(0, 8, "Detection Summary & Details:", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_font("Helvetica", "", 10)
-    pdf.multi_cell(0, 6, summary_text)
+    pdf.multi_cell(0, 6, safe_summary)
 
     pdf.ln(15)
     pdf.set_font("Helvetica", "I", 9)
@@ -38,5 +61,4 @@ def create_pdf_report(title: str, user_email: str, summary_text: str) -> bytes:
         align="C",
     )
 
-    # Return PDF as Bytes
     return bytes(pdf.output())
