@@ -14,8 +14,8 @@ def send_email_with_pdf(
 ):
     SMTP_SERVER = "smtp.gmail.com"
     SMTP_PORT = 587
-    SMTP_USER = st.secrets.get("SMTP_USER", "your_system_email@gmail.com")
-    SMTP_PASS = st.secrets.get("SMTP_PASS", "your_app_password")
+    SMTP_USER = st.secrets.get("SMTP_USER", "Abdullahabbasi555a@gmail.com")
+    SMTP_PASS = st.secrets.get("SMTP_PASS", "zlsekipjqddtvubq")
 
     msg = MIMEMultipart()
     msg["From"] = f"Urban Eye AI <{SMTP_USER}>"
