@@ -17,9 +17,9 @@ def render_login_page():
             "Password", type="password", key="login_password"
         )
 
-        # 🔘 Keep Me Logged In Option
+        # 🔘 Fix: Widget key ka naam 'chk_keep_logged_in' kar diya hai
         keep_logged_in = st.checkbox(
-            "Keep me logged in", value=True, key="keep_logged_in"
+            "Keep me logged in", value=True, key="chk_keep_logged_in"
         )
 
         if st.button("Sign In", use_container_width=True, type="primary"):
@@ -34,9 +34,9 @@ def render_login_page():
                         )
 
                         if response.user:
-                            # Session State Mein User Save Karna
+                            # 🎯 Session State Variables Set Karna
                             st.session_state["user"] = response.user
-                            st.session_state["keep_logged_in"] = keep_logged_in
+                            st.session_state["remember_me"] = keep_logged_in
 
                             st.success("✅ Login successful!")
                             st.rerun()
@@ -51,15 +51,15 @@ def render_login_page():
 
         col1, col2 = st.columns(2)
         with col1:
-            username = st.text_input("Full Name / Username")
-            phone = st.text_input("Phone Number")
+            username = st.text_input("Full Name / Username", key="signup_username")
+            phone = st.text_input("Phone Number", key="signup_phone")
         with col2:
             signup_email = st.text_input("Email Address", key="signup_email")
             signup_password = st.text_input(
                 "Password", type="password", key="signup_password"
             )
 
-        address = st.text_area("Address / Department Location")
+        address = st.text_area("Address / Department Location", key="signup_address")
 
         if st.button(
             "Create Account", use_container_width=True, type="secondary"
