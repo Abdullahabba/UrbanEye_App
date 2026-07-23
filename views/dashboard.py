@@ -9,16 +9,43 @@ from utils.pdf_generator import create_pdf_report
 
 
 def render_dashboard_page():
+    # ---------------------------------------------------------
+    # USER METADATA EXTRACTION (Supabase Session Se)
+    # ---------------------------------------------------------
     user = st.session_state.get("user", None)
-    user_email = user.email if user else "guest_user@urbaneye.ai"
+    user_details = {
+        "email": (
+            user.email
+            if user and hasattr(user, "email")
+            else "guest_user@urbaneye.ai"
+        ),
+        "username": "N/A",
+        "phone": "N/A",
+        "address": "N/A",
+    }
 
+    if user and hasattr(user, "user_metadata") and user.user_metadata:
+        meta = user.user_metadata
+        user_details["username"] = meta.get("username", "N/A")
+        user_details["phone"] = meta.get("phone", "N/A")
+        user_details["address"] = meta.get("address", "N/A")
+
+    # Header Display
     st.title("👁️ UrbanEye AI - Municipal Incident Detector")
     st.caption(
         "AI Detection System for Potholes, Garbage, Graffiti & Fallen Trees"
     )
-    st.write(f"Logged in as: **{user_email}**")
 
-    # 3 Main Input Tabs
+    if user_details["username"] != "N/A":
+        st.write(
+            f"Logged in as: **{user_details['username']}** (`{user_details['email']}`)"
+        )
+    else:
+        st.write(f"Logged in as: **{user_details['email']}**")
+
+    # ---------------------------------------------------------
+    # 3 MAIN INPUT TABS (Image, Video, Live Camera)
+    # ---------------------------------------------------------
     tab_img, tab_video, tab_cam = st.tabs(
         ["🖼️ Image Upload", "🎥 Video Analysis", "📸 Live Camera"]
     )
@@ -80,6 +107,7 @@ def render_dashboard_page():
                 cap = cv2.VideoCapture(tfile.name)
                 st_frame = st.empty()
                 video_counts = {}
+                last_proc_frame = None
 
                 st.info("Processing video frames in real-time...")
                 while cap.isOpened():
@@ -87,21 +115,29 @@ def render_dashboard_page():
                     if not ret:
                         break
 
+                    # BGR se RGB convert karke YOLO run karna
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     pil_img = Image.fromarray(frame_rgb)
                     proc_frame, counts = run_detection(pil_img)
+                    last_proc_frame = proc_frame
 
+                    # Live Frame Display
                     st_frame.image(
                         proc_frame,
                         caption="AI Video Feed",
                         use_container_width=True,
                     )
 
+                    # Counts accumulate karna
                     for k, v in counts.items():
                         video_counts[k] = video_counts.get(k, 0) + v
 
                 cap.release()
                 st.session_state["counts"] = video_counts
+                if last_proc_frame:
+                    st.session_state["processed_img"] = (
+                        last_proc_frame  # Save last frame for PDF
+                    )
                 st.success("✅ Video processing completed!")
 
     # ---------------------------------------------------------
@@ -128,7 +164,7 @@ def render_dashboard_page():
                     )
 
     # ---------------------------------------------------------
-    # REPORTING, DOWNLOAD & EMAIL SECTION
+    # REPORTING, DOWNLOAD & EMAIL DISPATCH SECTION
     # ---------------------------------------------------------
     if "counts" in st.session_state and st.session_state["counts"]:
         st.divider()
@@ -141,7 +177,9 @@ def render_dashboard_page():
         col_a, col_b = st.columns(2)
         with col_a:
             title = st.text_input(
-                "Incident Title", "Municipal Hazard Report (Automated)"
+                "Incident Title",
+                "Municipal Hazard Report (Automated)",
+                key="incident_title",
             )
         with col_b:
             dept_email = st.selectbox(
@@ -152,34 +190,49 @@ def render_dashboard_page():
                     "urban_planning@city.gov",
                     "civic_support@city.gov",
                 ],
+                key="target_dept",
             )
 
-        # 📄 PDF Bytes Tayar Karna
+        # Summary text formatting (Hyphens used to avoid Unicode FPDF errors)
         summary_text = "UrbanEye AI Detection Summary:\n" + "\n".join(
-            [f"• {k.title()}: {v}" for k, v in st.session_state["counts"].items()]
+            [f"- {k.title()}: {v}" for k, v in st.session_state["counts"].items()]
         )
-        pdf_bytes = create_pdf_report(title, user_email, summary_text)
+
+        # Detected Image retrieval
+        proc_img = st.session_state.get("processed_img", None)
+
+        # Generate PDF Bytes
+        pdf_bytes = create_pdf_report(
+            title=title,
+            user_details=user_details,
+            summary_text=summary_text,
+            detected_image=proc_img,
+        )
 
         st.write("")
-        # Side-by-Side Action Buttons (Download + Email)
         col_btn1, col_btn2 = st.columns(2)
 
+        # 📥 Button 1: Download PDF Report
         with col_btn1:
-            # 📥 1. PDF Download Button
             st.download_button(
                 label="📥 Download PDF Report",
                 data=pdf_bytes,
                 file_name=f"Incident_Report_{title.replace(' ', '_')}.pdf",
                 mime="application/pdf",
                 use_container_width=True,
+                key="btn_download_pdf",
             )
 
+        # 📩 Button 2: Dispatch Email to Department
         with col_btn2:
-            # 📩 2. Send Email Button
-            if st.button("📩 Send Email to Authority", use_container_width=True):
+            if st.button(
+                "📩 Send Email to Authority",
+                use_container_width=True,
+                key="btn_send_email",
+            ):
                 with st.spinner("Dispatching Email with PDF attachment..."):
                     success, msg = send_email_with_pdf(
-                        sender_email=user_email,
+                        sender_email=user_details["email"],
                         target_department_email=dept_email,
                         pdf_bytes=pdf_bytes,
                         title=title,
