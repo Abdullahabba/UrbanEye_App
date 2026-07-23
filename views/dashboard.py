@@ -13,7 +13,9 @@ def render_dashboard_page():
     user_email = user.email if user else "guest_user@urbaneye.ai"
 
     st.title("👁️ UrbanEye AI - Municipal Incident Detector")
-    st.caption("AI Detection System for Potholes, Garbage, Graffiti & Fallen Trees")
+    st.caption(
+        "AI Detection System for Potholes, Garbage, Graffiti & Fallen Trees"
+    )
     st.write(f"Logged in as: **{user_email}**")
 
     # 3 Main Input Tabs
@@ -36,7 +38,9 @@ def render_dashboard_page():
             col1, col2 = st.columns(2)
 
             with col1:
-                st.image(image, caption="Uploaded Image", use_container_width=True)
+                st.image(
+                    image, caption="Uploaded Image", use_container_width=True
+                )
 
             if st.button(
                 "🔍 Run AI Detection", use_container_width=True, key="btn_img"
@@ -69,7 +73,9 @@ def render_dashboard_page():
             tfile.write(uploaded_video.read())
 
             if st.button(
-                "🎥 Process Video Stream", use_container_width=True, key="btn_video"
+                "🎥 Process Video Stream",
+                use_container_width=True,
+                key="btn_video",
             ):
                 cap = cv2.VideoCapture(tfile.name)
                 st_frame = st.empty()
@@ -81,17 +87,16 @@ def render_dashboard_page():
                     if not ret:
                         break
 
-                    # Frame BGR se RGB convert karke detection run karna
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     pil_img = Image.fromarray(frame_rgb)
                     proc_frame, counts = run_detection(pil_img)
 
-                    # Screen par output frame dikhana
                     st_frame.image(
-                        proc_frame, caption="AI Video Feed", use_container_width=True
+                        proc_frame,
+                        caption="AI Video Feed",
+                        use_container_width=True,
                     )
 
-                    # Object counts record karna
                     for k, v in counts.items():
                         video_counts[k] = video_counts.get(k, 0) + v
 
@@ -123,11 +128,11 @@ def render_dashboard_page():
                     )
 
     # ---------------------------------------------------------
-    # REPORTING & EMAIL SECTION
+    # REPORTING, DOWNLOAD & EMAIL SECTION
     # ---------------------------------------------------------
     if "counts" in st.session_state and st.session_state["counts"]:
         st.divider()
-        st.subheader("🚨 Incident Reporting & Email Dispatch")
+        st.subheader("🚨 Incident Report Actions")
 
         st.write("### 📊 Detected Issues Summary:")
         for hazard, count in st.session_state["counts"].items():
@@ -149,30 +154,38 @@ def render_dashboard_page():
                 ],
             )
 
-        if st.button(
-            "📩 Generate & Send Email Report", use_container_width=True
-        ):
-            with st.spinner("Generating PDF & Dispatching Email..."):
-                # Detections ki formatted summary
-                summary_text = f"UrbanEye AI Detection Summary:\n" + "\n".join(
-                    [
-                        f"• {k.title()}: {v}"
-                        for k, v in st.session_state["counts"].items()
-                    ]
-                )
+        # 📄 PDF Bytes Tayar Karna
+        summary_text = "UrbanEye AI Detection Summary:\n" + "\n".join(
+            [f"• {k.title()}: {v}" for k, v in st.session_state["counts"].items()]
+        )
+        pdf_bytes = create_pdf_report(title, user_email, summary_text)
 
-                # 1. Generate PDF Bytes
-                pdf_bytes = create_pdf_report(title, user_email, summary_text)
+        st.write("")
+        # Side-by-Side Action Buttons (Download + Email)
+        col_btn1, col_btn2 = st.columns(2)
 
-                # 2. Send Email with PDF
-                success, msg = send_email_with_pdf(
-                    sender_email=user_email,
-                    target_department_email=dept_email,
-                    pdf_bytes=pdf_bytes,
-                    title=title,
-                )
+        with col_btn1:
+            # 📥 1. PDF Download Button
+            st.download_button(
+                label="📥 Download PDF Report",
+                data=pdf_bytes,
+                file_name=f"Incident_Report_{title.replace(' ', '_')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
 
-                if success:
-                    st.success(f"✅ {msg}")
-                else:
-                    st.error(f"❌ {msg}")
+        with col_btn2:
+            # 📩 2. Send Email Button
+            if st.button("📩 Send Email to Authority", use_container_width=True):
+                with st.spinner("Dispatching Email with PDF attachment..."):
+                    success, msg = send_email_with_pdf(
+                        sender_email=user_email,
+                        target_department_email=dept_email,
+                        pdf_bytes=pdf_bytes,
+                        title=title,
+                    )
+
+                    if success:
+                        st.success(f"✅ {msg}")
+                    else:
+                        st.error(f"❌ {msg}")
