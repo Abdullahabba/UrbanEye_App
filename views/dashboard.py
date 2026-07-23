@@ -129,17 +129,17 @@ def render_dashboard_page():
 
         st.divider()
 
-        # 👤 Officer Profile Pill
+        # 👤 Officer Profile
         st.markdown(f"**👤 Officer:** {user_details['username']}")
         st.markdown(f"**📍 Sector:** {user_details['address']}")
-        st.caption(f"🟢 System Status: **Online & Synced**")
+        st.caption("🟢 System Status: **Online & Synced**")
 
         st.divider()
 
         # 🎯 MAIN NAVIGATION MENU
-        st.subheader("🧭 Command Center View")
+        st.subheader("🧭 Navigation Menu")
         current_view = st.radio(
-            "Go To:",
+            "Go To View:",
             [
                 "🏠 Executive Command Overview",
                 "🔍 AI Visual Detection Engine",
@@ -153,20 +153,23 @@ def render_dashboard_page():
 
         st.divider()
 
-        # ⚙️ AI DETECTION ENGINE CONTROLS (Only visible if Detection Engine selected)
+        # ⚙️ AI DETECTION INPUT CONTROLS (Sidebar Options)
         if current_view == "🔍 AI Visual Detection Engine":
             st.subheader("⚙️ Detector Settings")
             conf_threshold = st.slider(
                 "YOLO Confidence Threshold", 0.1, 1.0, 0.45, step=0.05
             )
+
+            st.subheader("📷 Input Media Source")
             input_mode = st.radio(
-                "Select Input Source:",
+                "Select Source Type:",
                 [
                     "🖼️ Single Image",
                     "📂 Batch Processing",
                     "🎥 Video Stream",
                     "📸 Live Camera",
                 ],
+                key="input_source_mode",
             )
         else:
             conf_threshold = 0.45
@@ -191,7 +194,7 @@ def render_dashboard_page():
                 default=["LOW", "MEDIUM", "CRITICAL"],
             )
 
-            # Apply Global Sidebar Filters to DataFrame
+            # Apply Global Sidebar Filters
             filtered_ledger = df_ledger[
                 (df_ledger["Status"].isin(filter_status))
                 & (df_ledger["Severity"].isin(filter_severity))
@@ -200,7 +203,7 @@ def render_dashboard_page():
             filtered_ledger = df_ledger
 
     # =========================================================================
-    # MAIN AREA CONTENT (BASED ON SIDEBAR NAVIGATION)
+    # MAIN AREA CONTENT
     # =========================================================================
 
     # -------------------------------------------------------------------------
@@ -208,7 +211,7 @@ def render_dashboard_page():
     # -------------------------------------------------------------------------
     if current_view == "🏠 Executive Command Overview":
         st.title("🏠 Executive Command Center")
-        st.caption("Real-time City Metrics & High-Level Emergency Overview")
+        st.caption("Real-time City Metrics & Emergency Overview")
 
         # Top Metric Bar
         c1, c2, c3, c4 = st.columns(4)
@@ -230,7 +233,7 @@ def render_dashboard_page():
 
         col_left, col_right = st.columns([3, 2])
         with col_left:
-            st.subheader("📍 Active GIS Hazard Quick Map")
+            st.subheader("📍 Active GIS Hazard Map")
             map_data = filtered_ledger[["Latitude", "Longitude"]].rename(
                 columns={"Latitude": "lat", "Longitude": "lon"}
             )
@@ -250,22 +253,26 @@ def render_dashboard_page():
                 st.success("🎉 No active Critical Hazards pending!")
 
     # -------------------------------------------------------------------------
-    # VIEW 2: AI VISUAL DETECTION ENGINE
+    # VIEW 2: AI VISUAL DETECTION ENGINE (ALL 4 MODES INCLUDED)
     # -------------------------------------------------------------------------
     elif current_view == "🔍 AI Visual Detection Engine":
-        st.title("🔍 AI Inspection & Emergency Dispatch")
+        st.title("🔍 AI Inspection Engine")
         st.caption(
-            f"Active Detection Engine | Confidence Threshold: `{conf_threshold}`"
+            f"Active Mode: **{input_mode}** | YOLO Confidence Threshold: `{conf_threshold}`"
         )
 
         processed_img = None
         current_counts = {}
 
-        # --- MODE 1: SINGLE IMAGE ---
+        # ---------------------------------------------------------------------
+        # MODE 1: SINGLE IMAGE
+        # ---------------------------------------------------------------------
         if input_mode == "🖼️ Single Image":
+            st.markdown("### 🖼️ Single Image Inspection")
             uploaded_file = st.file_uploader(
-                "Upload Field Inspection Snapshot",
+                "Upload Hazard Snapshot",
                 type=["jpg", "jpeg", "png"],
+                key="single_image_upload",
             )
             if uploaded_file:
                 img = Image.open(uploaded_file)
@@ -273,7 +280,7 @@ def render_dashboard_page():
                 with c1:
                     st.image(img, caption="Original Input", use_container_width=True)
 
-                if st.button("🔍 Execute AI Inference", key="btn_single"):
+                if st.button("🔍 Run AI Detection", key="btn_single"):
                     with st.spinner("Analyzing with YOLO Model..."):
                         processed_img, current_counts = run_detection(img)
                         st.session_state["processed_img"] = processed_img
@@ -283,18 +290,24 @@ def render_dashboard_page():
                     with c2:
                         st.image(
                             st.session_state["processed_img"],
-                            caption="YOLO AI Detections",
+                            caption="YOLO AI Detection Result",
                             use_container_width=True,
                         )
 
-        # --- MODE 2: BATCH PROCESSING ---
+        # ---------------------------------------------------------------------
+        # MODE 2: BATCH PROCESSING
+        # ---------------------------------------------------------------------
         elif input_mode == "📂 Batch Processing":
+            st.markdown("### 📂 Batch Image Processing")
             uploaded_files = st.file_uploader(
                 "Upload Multiple Hazard Images",
-                type=["jpg", "png"],
+                type=["jpg", "jpeg", "png"],
                 accept_multiple_files=True,
+                key="batch_image_upload",
             )
-            if uploaded_files and st.button("🚀 Process Batch"):
+            if uploaded_files and st.button(
+                "🚀 Process All Batch Images", key="btn_batch"
+            ):
                 batch_summary = {}
                 cols = st.columns(min(len(uploaded_files), 3))
 
@@ -311,59 +324,92 @@ def render_dashboard_page():
                         batch_summary[k] = batch_summary.get(k, 0) + v
 
                 st.session_state["counts"] = batch_summary
-                st.success(f"✅ Batch of {len(uploaded_files)} images processed!")
+                st.success(
+                    f"✅ Batch processing complete for {len(uploaded_files)} images!"
+                )
 
-        # --- MODE 3: VIDEO STREAM ---
+        # ---------------------------------------------------------------------
+        # MODE 3: VIDEO STREAM
+        # ---------------------------------------------------------------------
         elif input_mode == "🎥 Video Stream":
+            st.markdown("### 🎥 Video Stream Inspection")
             uploaded_video = st.file_uploader(
-                "Upload Video Stream", type=["mp4", "avi", "mov"]
+                "Upload CCTV or Drone Footage",
+                type=["mp4", "avi", "mov"],
+                key="video_upload",
             )
-            if uploaded_video and st.button("🎥 Process Stream"):
+            if uploaded_video and st.button(
+                "🎥 Start Video Analysis", key="btn_video"
+            ):
                 tfile = tempfile.NamedTemporaryFile(delete=False)
                 tfile.write(uploaded_video.read())
+
                 cap = cv2.VideoCapture(tfile.name)
                 st_frame = st.empty()
                 v_counts = {}
                 last_frame = None
 
-                while cap.isOpened():
-                    ret, frame = cap.read()
-                    if not ret:
-                        break
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    pil_img = Image.fromarray(frame_rgb)
-                    proc_frame, counts = run_detection(pil_img)
-                    last_frame = proc_frame
-                    st_frame.image(
-                        proc_frame,
-                        caption="Live Stream Analysis",
-                        use_container_width=True,
-                    )
-                    for k, v in counts.items():
-                        v_counts[k] = v_counts.get(k, 0) + v
+                with st.spinner("Processing Video Stream Frame by Frame..."):
+                    frame_count = 0
+                    while cap.isOpened():
+                        ret, frame = cap.read()
+                        if not ret:
+                            break
+
+                        frame_count += 1
+                        # Process every 3rd frame to optimize speed
+                        if frame_count % 3 != 0:
+                            continue
+
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        pil_img = Image.fromarray(frame_rgb)
+                        proc_frame, counts = run_detection(pil_img)
+                        last_frame = proc_frame
+
+                        st_frame.image(
+                            proc_frame,
+                            caption=f"Live Frame Analysis (Frame {frame_count})",
+                            use_container_width=True,
+                        )
+
+                        for k, v in counts.items():
+                            v_counts[k] = v_counts.get(k, 0) + v
 
                 cap.release()
                 st.session_state["counts"] = v_counts
                 if last_frame:
                     st.session_state["processed_img"] = last_frame
-                st.success("✅ Video Stream Analysis Complete!")
-
-        # --- MODE 4: LIVE CAMERA ---
-        elif input_mode == "📸 Live Camera":
-            cam_photo = st.camera_input("Capture Field Photo")
-            if cam_photo and st.button("🔍 Analyze Snapshot"):
-                img = Image.open(cam_photo)
-                proc_img, counts = run_detection(img)
-                st.session_state["processed_img"] = proc_img
-                st.session_state["counts"] = counts
-                st.image(proc_img, caption="Camera Detection", use_container_width=True)
+                st.success("✅ Video Stream Analysis Completed Successfully!")
 
         # ---------------------------------------------------------------------
-        # DISPATCH & REPORTING SECTION
+        # MODE 4: LIVE CAMERA
+        # ---------------------------------------------------------------------
+        elif input_mode == "📸 Live Camera":
+            st.markdown("### 📸 Field Camera Live Capture")
+            cam_photo = st.camera_input(
+                "Take Live Photo from Camera", key="camera_input"
+            )
+
+            if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_cam"):
+                img = Image.open(cam_photo)
+                with st.spinner("Analyzing Camera Capture..."):
+                    proc_img, counts = run_detection(img)
+                    st.session_state["processed_img"] = proc_img
+                    st.session_state["counts"] = counts
+
+            if "processed_img" in st.session_state:
+                st.image(
+                    st.session_state["processed_img"],
+                    caption="Live Camera AI Result",
+                    use_container_width=True,
+                )
+
+        # ---------------------------------------------------------------------
+        # DISPATCH & REPORTING SECTION (TRIPPED WHEN DETECTIONS EXIST)
         # ---------------------------------------------------------------------
         if "counts" in st.session_state and st.session_state["counts"]:
             st.divider()
-            st.subheader("🚨 Inspection Results & SLA Dispatch")
+            st.subheader("🚨 Inspection Breakdown & Urgent Dispatch")
 
             severity_label, color_code, sla_target = calculate_severity_and_sla(
                 st.session_state["counts"]
@@ -371,7 +417,7 @@ def render_dashboard_page():
 
             col_a, col_b = st.columns([2, 1])
             with col_a:
-                st.write("### Detected Hazards:")
+                st.write("### Detected Hazards Summary:")
                 for hz, count in st.session_state["counts"].items():
                     st.write(f"- **{hz.title()}**: {count} instance(s)")
 
@@ -427,9 +473,14 @@ def render_dashboard_page():
                     file_name=f"Incident_{title.replace(' ', '_')}.pdf",
                     mime="application/pdf",
                     use_container_width=True,
+                    key="btn_dl_pdf",
                 )
             with btn2:
-                if st.button("📩 Send Email Alert", use_container_width=True):
+                if st.button(
+                    "📩 Send Email Alert",
+                    use_container_width=True,
+                    key="btn_send_email",
+                ):
                     ok, msg = send_email_with_pdf(
                         sender_email=user_details["email"],
                         target_department_email=dept_email,
@@ -441,7 +492,11 @@ def render_dashboard_page():
                     else:
                         st.error(f"❌ {msg}")
             with btn3:
-                if st.button("💾 Log to Master Ledger", use_container_width=True):
+                if st.button(
+                    "💾 Log to Master Ledger",
+                    use_container_width=True,
+                    key="btn_save_ledger",
+                ):
                     new_id = f"INC-{1001 + len(df_ledger)}"
                     primary_hazard = list(st.session_state["counts"].keys())[0].title()
                     new_row = pd.DataFrame(
@@ -463,14 +518,14 @@ def render_dashboard_page():
                     st.session_state["incident_ledger"] = pd.concat(
                         [df_ledger, new_row], ignore_index=True
                     )
-                    st.success(f"✅ Added {new_id} to Ledger!")
+                    st.success(f"✅ Added {new_id} to Master Ledger!")
 
     # -------------------------------------------------------------------------
     # VIEW 3: GIS LIVE INCIDENT MAP
     # -------------------------------------------------------------------------
     elif current_view == "🗺️ GIS Live Incident Map":
         st.title("🗺️ Interactive GIS City Map")
-        st.caption("Live geographical plotting based on sidebar global filters")
+        st.caption("Live geographical plotting based on active filters")
 
         map_data = filtered_ledger[["Latitude", "Longitude"]].rename(
             columns={"Latitude": "lat", "Longitude": "lon"}
@@ -531,10 +586,11 @@ def render_dashboard_page():
             data=csv_data,
             file_name="UrbanEye_Ledger_Export.csv",
             mime="text/csv",
+            key="btn_export_csv",
         )
 
     # -------------------------------------------------------------------------
-    # VIEW 6: FIX VERIFICATION (BEFORE / AFTER) - NEW FEATURE!
+    # VIEW 6: FIX VERIFICATION (BEFORE / AFTER)
     # -------------------------------------------------------------------------
     elif current_view == "✅ Fix Verification (Before/After)":
         st.title("✅ Municipal Fix Verification Engine")
@@ -548,6 +604,7 @@ def render_dashboard_page():
             selected_inc_id = st.selectbox(
                 "Select Incident to Verify & Close:",
                 pending_incidents["ID"].tolist(),
+                key="select_pending_id",
             )
 
             inc_details = pending_incidents[
@@ -561,12 +618,14 @@ def render_dashboard_page():
             c1, c2 = st.columns(2)
             with c1:
                 st.subheader("📷 Original Hazard (Before)")
-                st.warning("Original inspection evidence attached in database.")
+                st.warning("Original inspection evidence logged in database.")
 
             with c2:
                 st.subheader("📸 Upload Fix Evidence (After)")
                 after_file = st.file_uploader(
-                    "Upload Repair Photo", type=["jpg", "png"]
+                    "Upload Repair Photo",
+                    type=["jpg", "png"],
+                    key="after_repair_upload",
                 )
                 if after_file:
                     st.image(
@@ -575,13 +634,14 @@ def render_dashboard_page():
                         use_container_width=True,
                     )
 
-            if after_file and st.button("🟢 Mark as Resolved & Verify"):
-                # Update status in DataFrame
+            if after_file and st.button(
+                "🟢 Mark as Resolved & Verify", key="btn_verify_fix"
+            ):
                 st.session_state["incident_ledger"].loc[
                     st.session_state["incident_ledger"]["ID"] == selected_inc_id,
                     "Status",
                 ] = "Resolved"
                 st.success(
-                    f"✅ {selected_inc_id} has been successfully verified and status changed to RESOLVED!"
+                    f"✅ {selected_inc_id} has been verified and status changed to RESOLVED!"
                 )
                 st.balloons()
