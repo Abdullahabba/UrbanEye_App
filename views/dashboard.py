@@ -5,10 +5,10 @@ import pandas as pd
 import streamlit as st
 from PIL import Image
 
-# Core Modules Import
+# Core Modules Import (Fixed Import Names to Match utils/ files)
 from models.detector import run_detection
-from utils.email_sender import send_email_alert
-from utils.pdf_generator import create_pdf_report
+from utils.email_sender import send_email_with_pdf
+from utils.pdf_sender import create_pdf_report
 
 # Optional Visualization Libraries
 try:
@@ -153,7 +153,7 @@ def render_dashboard_page():
 
         st.divider()
 
-        # ⚙️ AI DETECTION INPUT CONTROLS (Sidebar Options)
+        # ⚙️ AI DETECTION INPUT CONTROLS
         if current_view == "🔍 AI Visual Detection Engine":
             st.subheader("⚙️ Detector Settings")
             conf_threshold = st.slider(
@@ -175,7 +175,7 @@ def render_dashboard_page():
             conf_threshold = 0.45
             input_mode = "🖼️ Single Image"
 
-        # 🔍 GLOBAL FILTERS (For Map, Analytics, and Ledger)
+        # 🔍 GLOBAL FILTERS
         if current_view in [
             "🏠 Executive Command Overview",
             "🗺️ GIS Live Incident Map",
@@ -194,7 +194,6 @@ def render_dashboard_page():
                 default=["LOW", "MEDIUM", "CRITICAL"],
             )
 
-            # Apply Global Sidebar Filters
             filtered_ledger = df_ledger[
                 (df_ledger["Status"].isin(filter_status))
                 & (df_ledger["Severity"].isin(filter_severity))
@@ -213,7 +212,6 @@ def render_dashboard_page():
         st.title("🏠 Executive Command Center")
         st.caption("Real-time City Metrics & Emergency Overview")
 
-        # Top Metric Bar
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Total Reported", len(filtered_ledger))
         c2.metric(
@@ -253,7 +251,7 @@ def render_dashboard_page():
                 st.success("🎉 No active Critical Hazards pending!")
 
     # -------------------------------------------------------------------------
-    # VIEW 2: AI VISUAL DETECTION ENGINE (ALL 4 MODES INCLUDED)
+    # VIEW 2: AI VISUAL DETECTION ENGINE
     # -------------------------------------------------------------------------
     elif current_view == "🔍 AI Visual Detection Engine":
         st.title("🔍 AI Inspection Engine")
@@ -264,9 +262,7 @@ def render_dashboard_page():
         processed_img = None
         current_counts = {}
 
-        # ---------------------------------------------------------------------
         # MODE 1: SINGLE IMAGE
-        # ---------------------------------------------------------------------
         if input_mode == "🖼️ Single Image":
             st.markdown("### 🖼️ Single Image Inspection")
             uploaded_file = st.file_uploader(
@@ -278,7 +274,9 @@ def render_dashboard_page():
                 img = Image.open(uploaded_file)
                 c1, c2 = st.columns(2)
                 with c1:
-                    st.image(img, caption="Original Input", use_container_width=True)
+                    st.image(
+                        img, caption="Original Input", use_container_width=True
+                    )
 
                 if st.button("🔍 Run AI Detection", key="btn_single"):
                     with st.spinner("Analyzing with YOLO Model..."):
@@ -294,9 +292,7 @@ def render_dashboard_page():
                             use_container_width=True,
                         )
 
-        # ---------------------------------------------------------------------
         # MODE 2: BATCH PROCESSING
-        # ---------------------------------------------------------------------
         elif input_mode == "📂 Batch Processing":
             st.markdown("### 📂 Batch Image Processing")
             uploaded_files = st.file_uploader(
@@ -328,9 +324,7 @@ def render_dashboard_page():
                     f"✅ Batch processing complete for {len(uploaded_files)} images!"
                 )
 
-        # ---------------------------------------------------------------------
         # MODE 3: VIDEO STREAM
-        # ---------------------------------------------------------------------
         elif input_mode == "🎥 Video Stream":
             st.markdown("### 🎥 Video Stream Inspection")
             uploaded_video = st.file_uploader(
@@ -357,7 +351,6 @@ def render_dashboard_page():
                             break
 
                         frame_count += 1
-                        # Process every 3rd frame to optimize speed
                         if frame_count % 3 != 0:
                             continue
 
@@ -379,18 +372,20 @@ def render_dashboard_page():
                 st.session_state["counts"] = v_counts
                 if last_frame:
                     st.session_state["processed_img"] = last_frame
-                st.success("✅ Video Stream Analysis Completed Successfully!")
+                st.success(
+                    "✅ Video Stream Analysis Completed Successfully!"
+                )
 
-        # ---------------------------------------------------------------------
         # MODE 4: LIVE CAMERA
-        # ---------------------------------------------------------------------
         elif input_mode == "📸 Live Camera":
             st.markdown("### 📸 Field Camera Live Capture")
             cam_photo = st.camera_input(
                 "Take Live Photo from Camera", key="camera_input"
             )
 
-            if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_cam"):
+            if cam_photo and st.button(
+                "🔍 Analyze Field Snapshot", key="btn_cam"
+            ):
                 img = Image.open(cam_photo)
                 with st.spinner("Analyzing Camera Capture..."):
                     proc_img, counts = run_detection(img)
@@ -404,16 +399,16 @@ def render_dashboard_page():
                     use_container_width=True,
                 )
 
-        # ---------------------------------------------------------------------
-        # DISPATCH & REPORTING SECTION (TRIPPED WHEN DETECTIONS EXIST)
-        # ---------------------------------------------------------------------
+        # DISPATCH & REPORTING SECTION
         if "counts" in st.session_state and st.session_state["counts"]:
             st.divider()
             st.subheader("🚨 Inspection Breakdown & Urgent Dispatch")
 
-            severity_label, color_code, sla_target = calculate_severity_and_sla(
-                st.session_state["counts"]
-            )
+            (
+                severity_label,
+                color_code,
+                sla_target,
+            ) = calculate_severity_and_sla(st.session_state["counts"])
 
             col_a, col_b = st.columns([2, 1])
             with col_a:
@@ -454,7 +449,10 @@ def render_dashboard_page():
                 )
 
             summary_text = "UrbanEye AI Summary:\n" + "\n".join(
-                [f"- {k.title()}: {v}" for k, v in st.session_state["counts"].items()]
+                [
+                    f"- {k.title()}: {v}"
+                    for k, v in st.session_state["counts"].items()
+                ]
             )
             p_img = st.session_state.get("processed_img", None)
 
@@ -476,18 +474,25 @@ def render_dashboard_page():
                     key="btn_dl_pdf",
                 )
             with btn2:
-                # Direct External File Handler Call for Email dispatch
+                # Updated Email Dispatch Call matching email_sender.py
                 if st.button(
                     "📩 Send Email Alert",
                     use_container_width=True,
                     key="btn_send_email",
                 ):
-                    send_email_alert(
-                        sender_email=user_details["email"],
-                        target_email=dept_email,
-                        pdf_bytes=pdf_bytes,
-                        title=title,
-                    )
+                    with st.spinner("Sending Email Alert..."):
+                        ok, msg = send_email_with_pdf(
+                            sender_email=user_details["email"],
+                            target_department_email=dept_email,
+                            pdf_bytes=pdf_bytes,
+                            title=title,
+                            user_details=user_details,
+                            counts=st.session_state["counts"],
+                        )
+                        if ok:
+                            st.success(f"✅ {msg}")
+                        else:
+                            st.error(f"❌ {msg}")
             with btn3:
                 if st.button(
                     "💾 Log to Master Ledger",
@@ -495,7 +500,9 @@ def render_dashboard_page():
                     key="btn_save_ledger",
                 ):
                     new_id = f"INC-{1001 + len(df_ledger)}"
-                    primary_hazard = list(st.session_state["counts"].keys())[0].title()
+                    primary_hazard = list(
+                        st.session_state["counts"].keys()
+                    )[0].title()
                     new_row = pd.DataFrame(
                         [
                             {
@@ -504,8 +511,10 @@ def render_dashboard_page():
                                 "Severity": severity_label,
                                 "SLA Target": sla_target,
                                 "Status": "Pending",
-                                "Latitude": 31.5204 + (np.random.randn() * 0.01),
-                                "Longitude": 74.3587 + (np.random.randn() * 0.01),
+                                "Latitude": 31.5204
+                                + (np.random.randn() * 0.01),
+                                "Longitude": 74.3587
+                                + (np.random.randn() * 0.01),
                                 "Timestamp": pd.Timestamp.now().strftime(
                                     "%Y-%m-%d %H:%M"
                                 ),
@@ -591,7 +600,9 @@ def render_dashboard_page():
     # -------------------------------------------------------------------------
     elif current_view == "✅ Fix Verification (Before/After)":
         st.title("✅ Municipal Fix Verification Engine")
-        st.caption("Upload 'After Fix' evidence to resolve active pending incidents")
+        st.caption(
+            "Upload 'After Fix' evidence to resolve active pending incidents"
+        )
 
         pending_incidents = df_ledger[df_ledger["Status"] != "Resolved"]
 
@@ -635,7 +646,8 @@ def render_dashboard_page():
                 "🟢 Mark as Resolved & Verify", key="btn_verify_fix"
             ):
                 st.session_state["incident_ledger"].loc[
-                    st.session_state["incident_ledger"]["ID"] == selected_inc_id,
+                    st.session_state["incident_ledger"]["ID"]
+                    == selected_inc_id,
                     "Status",
                 ] = "Resolved"
                 st.success(
