@@ -5,12 +5,32 @@ import pandas as pd
 import streamlit as st
 from PIL import Image
 
-# Core Modules Import (Fixed Import Names to Match utils/ files)
+# Core Detector Import
 from models.detector import run_detection
-from utils.email_sender import send_email_with_pdf
-from utils.pdf_sender import create_pdf_report
 
-# Optional Visualization Libraries
+# Email Utility Import
+try:
+    from utils.email_sender import send_email_with_pdf
+except ImportError:
+    # Safe fallback if function name differs
+    from utils.email_sender import send_email_alert as send_email_with_pdf
+
+# PDF Utility Import with Auto-Fallback (Fixes ModuleNotFoundError)
+try:
+    from utils.pdf_sender import create_pdf_report
+except ModuleNotFoundError:
+    try:
+        from utils.pdf_generator import create_pdf_report
+    except ModuleNotFoundError:
+
+        def create_pdf_report(*args, **kwargs):
+            st.error(
+                "⚠️ PDF Module missing. Please check utils/pdf_sender.py file."
+            )
+            return b""
+
+
+# Optional Plotly handling
 try:
     import plotly.express as px
 
@@ -260,7 +280,6 @@ def render_dashboard_page():
         )
 
         processed_img = None
-        current_counts = {}
 
         # MODE 1: SINGLE IMAGE
         if input_mode == "🖼️ Single Image":
@@ -280,7 +299,9 @@ def render_dashboard_page():
 
                 if st.button("🔍 Run AI Detection", key="btn_single"):
                     with st.spinner("Analyzing with YOLO Model..."):
-                        processed_img, current_counts = run_detection(img)
+                        processed_img, current_counts = run_detection(
+                            img, conf_threshold
+                        )
                         st.session_state["processed_img"] = processed_img
                         st.session_state["counts"] = current_counts
 
@@ -309,7 +330,7 @@ def render_dashboard_page():
 
                 for idx, file in enumerate(uploaded_files):
                     img = Image.open(file)
-                    p_img, counts = run_detection(img)
+                    p_img, counts = run_detection(img, conf_threshold)
                     with cols[idx % 3]:
                         st.image(
                             p_img,
@@ -356,7 +377,9 @@ def render_dashboard_page():
 
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         pil_img = Image.fromarray(frame_rgb)
-                        proc_frame, counts = run_detection(pil_img)
+                        proc_frame, counts = run_detection(
+                            pil_img, conf_threshold
+                        )
                         last_frame = proc_frame
 
                         st_frame.image(
@@ -388,7 +411,7 @@ def render_dashboard_page():
             ):
                 img = Image.open(cam_photo)
                 with st.spinner("Analyzing Camera Capture..."):
-                    proc_img, counts = run_detection(img)
+                    proc_img, counts = run_detection(img, conf_threshold)
                     st.session_state["processed_img"] = proc_img
                     st.session_state["counts"] = counts
 
@@ -456,6 +479,7 @@ def render_dashboard_page():
             )
             p_img = st.session_state.get("processed_img", None)
 
+            # Generate PDF using imported module
             pdf_bytes = create_pdf_report(
                 title=title,
                 user_details=user_details,
@@ -465,34 +489,37 @@ def render_dashboard_page():
 
             btn1, btn2, btn3 = st.columns(3)
             with btn1:
-                st.download_button(
-                    label="📥 Download PDF Report",
-                    data=pdf_bytes,
-                    file_name=f"Incident_{title.replace(' ', '_')}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                    key="btn_dl_pdf",
-                )
+                if pdf_bytes:
+                    st.download_button(
+                        label="📥 Download PDF Report",
+                        data=pdf_bytes,
+                        file_name=f"Incident_{title.replace(' ', '_')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="btn_dl_pdf",
+                    )
             with btn2:
-                # Updated Email Dispatch Call matching email_sender.py
                 if st.button(
                     "📩 Send Email Alert",
                     use_container_width=True,
                     key="btn_send_email",
                 ):
                     with st.spinner("Sending Email Alert..."):
-                        ok, msg = send_email_with_pdf(
-                            sender_email=user_details["email"],
-                            target_department_email=dept_email,
-                            pdf_bytes=pdf_bytes,
-                            title=title,
-                            user_details=user_details,
-                            counts=st.session_state["counts"],
-                        )
-                        if ok:
-                            st.success(f"✅ {msg}")
-                        else:
-                            st.error(f"❌ {msg}")
+                        try:
+                            ok, msg = send_email_with_pdf(
+                                sender_email=user_details["email"],
+                                target_department_email=dept_email,
+                                pdf_bytes=pdf_bytes,
+                                title=title,
+                                user_details=user_details,
+                                counts=st.session_state["counts"],
+                            )
+                            if ok:
+                                st.success(f"✅ {msg}")
+                            else:
+                                st.error(f"❌ {msg}")
+                        except Exception as e:
+                            st.error(f"❌ Failed to send email: {e}")
             with btn3:
                 if st.button(
                     "💾 Log to Master Ledger",
@@ -500,9 +527,11 @@ def render_dashboard_page():
                     key="btn_save_ledger",
                 ):
                     new_id = f"INC-{1001 + len(df_ledger)}"
-                    primary_hazard = list(
-                        st.session_state["counts"].keys()
-                    )[0].title()
+                    primary_hazard = (
+                        list(st.session_state["counts"].keys())[0].title()
+                        if st.session_state["counts"]
+                        else "General Hazard"
+                    )
                     new_row = pd.DataFrame(
                         [
                             {
