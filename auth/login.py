@@ -3,95 +3,100 @@ from database.supabase_client import supabase
 
 
 def render_login_page():
-    st.title("👁️ UrbanEye AI - Portal Access")
+    st.title("👁️ Urban Eye AI - Security Portal")
 
-    tab_login, tab_signup = st.tabs(["🔑 Login", "📝 Sign Up"])
+    # Tabs for Login, Sign Up, and Forgot Password
+    tab_login, tab_signup, tab_forgot = st.tabs(
+        ["🔑 Login", "📝 Sign Up", "❓ Forgot Password"]
+    )
 
-    # ---------------------------------------------------------
-    # TAB 1: LOGIN (Email + Password + Keep Me Logged In)
-    # ---------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # TAB 1: LOGIN
+    # -------------------------------------------------------------------------
     with tab_login:
-        st.subheader("Welcome Back!")
-        email = st.text_input("Email Address", key="login_email")
-        password = st.text_input(
-            "Password", type="password", key="login_password"
-        )
+        st.subheader("Login to your account")
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Password", type="password", key="login_pass")
 
-        # 🔘 Fix: Widget key ka naam 'chk_keep_logged_in' kar diya hai
-        keep_logged_in = st.checkbox(
-            "Keep me logged in", value=True, key="chk_keep_logged_in"
-        )
+        if st.button("Sign In", key="btn_login"):
+            try:
+                response = supabase.auth.sign_in_with_password(
+                    {"email": email, "password": password}
+                )
+                st.session_state["user"] = response.user
+                st.success("✅ Login successful!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Login failed: {e}")
 
-        if st.button("Sign In", use_container_width=True, type="primary"):
-            if not email or not password:
-                st.warning("Please fill in both Email and Password.")
-            else:
-                with st.spinner("Authenticating..."):
-                    try:
-                        # Supabase Login Call
-                        response = supabase.auth.sign_in_with_password(
-                            {"email": email, "password": password}
-                        )
-
-                        if response.user:
-                            # 🎯 Session State Variables Set Karna
-                            st.session_state["user"] = response.user
-                            st.session_state["remember_me"] = keep_logged_in
-
-                            st.success("✅ Login successful!")
-                            st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ Login Failed: {str(e)}")
-
-    # ---------------------------------------------------------
-    # TAB 2: SIGN UP (Full Registration Form)
-    # ---------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # TAB 2: SIGN UP
+    # -------------------------------------------------------------------------
     with tab_signup:
-        st.subheader("Create a New Account")
+        st.subheader("Create a new account")
+        new_email = st.text_input("Email", key="signup_email")
+        new_password = st.text_input("Password", type="password", key="signup_pass")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            username = st.text_input("Full Name / Username", key="signup_username")
-            phone = st.text_input("Phone Number", key="signup_phone")
-        with col2:
-            signup_email = st.text_input("Email Address", key="signup_email")
-            signup_password = st.text_input(
-                "Password", type="password", key="signup_password"
+        if st.button("Register", key="btn_signup"):
+            try:
+                supabase.auth.sign_up({"email": new_email, "password": new_password})
+                st.success("✅ Account created! Please check your email to verify.")
+            except Exception as e:
+                st.error(f"❌ Registration failed: {e}")
+
+    # -------------------------------------------------------------------------
+    # TAB 3: FORGOT PASSWORD (Naya Option)
+    # -------------------------------------------------------------------------
+    with tab_forgot:
+        st.subheader("🔑 Reset Your Password")
+        st.caption(
+            "Apna registered email enter karein. Hum aap ko password reset karne ka link bhejen ge."
+        )
+
+        reset_email = st.text_input("Registered Email", key="reset_email_input")
+
+        if st.button("📩 Send Reset Link", key="btn_forgot_password"):
+            if not reset_email:
+                st.warning("Khabardar: Pehle email enter karein!")
+            else:
+                try:
+                    # Supabase API call for Password Reset Link
+                    supabase.auth.reset_password_for_email(
+                        reset_email,
+                        # Live app URL ya Localhost link jahan user click karke wapas aaye
+                        redirect_to="http://localhost:8501",
+                    )
+                    st.success(
+                        f"✅ Reset link **{reset_email}** par bhej diya gaya hai! Apna Inbox / Spam folder check karein."
+                    )
+                except Exception as e:
+                    st.error(f"❌ Error sending reset link: {e}")
+
+        st.divider()
+
+        # STEP 2: Jab user email link se wapas aaye toh Naya Password Set karne ka Form
+        # Streamlit URL se check karein ke kya recovery token aaya hai
+        query_params = st.query_params
+        if "type" in query_params and query_params["type"] == "recovery":
+            st.info("🔐 Set your new password below:")
+            new_pwd = st.text_input(
+                "Enter New Password", type="password", key="new_pwd_input"
+            )
+            confirm_pwd = st.text_input(
+                "Confirm New Password", type="password", key="confirm_pwd_input"
             )
 
-        address = st.text_area("Address / Department Location", key="signup_address")
-
-        if st.button(
-            "Create Account", use_container_width=True, type="secondary"
-        ):
-            if (
-                not signup_email
-                or not signup_password
-                or not username
-                or not phone
-            ):
-                st.warning("Please fill in all required fields.")
-            else:
-                with st.spinner("Creating account..."):
+            if st.button("💾 Update Password", key="btn_update_password"):
+                if new_pwd != confirm_pwd:
+                    st.error("Passwords match nahi kar rahe!")
+                elif len(new_pwd) < 6:
+                    st.warning("Password kam az kam 6 characters ka hona chahiye.")
+                else:
                     try:
-                        # Supabase Auth mein Extra Data (User Metadata) save karna
-                        response = supabase.auth.sign_up(
-                            {
-                                "email": signup_email,
-                                "password": signup_password,
-                                "options": {
-                                    "data": {
-                                        "username": username,
-                                        "phone": phone,
-                                        "address": address,
-                                    }
-                                },
-                            }
+                        # Update user password in Supabase
+                        supabase.auth.update_user({"password": new_pwd})
+                        st.success(
+                            "🎉 Password successfully update ho gaya! Ab Login tab se sign-in karein."
                         )
-
-                        if response.user:
-                            st.success(
-                                "🎉 Account created successfully! You can now log in."
-                            )
                     except Exception as e:
-                        st.error(f"❌ Sign Up Failed: {str(e)}")
+                        st.error(f"❌ Password update fail hua: {e}")
