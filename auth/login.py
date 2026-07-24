@@ -18,16 +18,19 @@ def render_login_page():
         email = st.text_input("Email", key="login_email")
         password = st.text_input("Password", type="password", key="login_pass")
 
-        if st.button("Sign In", key="btn_login"):
-            try:
-                response = supabase.auth.sign_in_with_password(
-                    {"email": email, "password": password}
-                )
-                st.session_state["user"] = response.user
-                st.success("✅ Login successful!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ Login failed: {e}")
+        if st.button("Sign In", key="btn_login", use_container_width=True):
+            if not email or not password:
+                st.warning("Pehle Email aur Password dono enter karein!")
+            else:
+                try:
+                    response = supabase.auth.sign_in_with_password(
+                        {"email": email, "password": password}
+                    )
+                    st.session_state["user"] = response.user
+                    st.success("✅ Login successful!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Login failed: {e}")
 
     # -------------------------------------------------------------------------
     # TAB 2: SIGN UP
@@ -35,47 +38,58 @@ def render_login_page():
     with tab_signup:
         st.subheader("Create a new account")
         new_email = st.text_input("Email", key="signup_email")
-        new_password = st.text_input("Password", type="password", key="signup_pass")
+        new_password = st.text_input(
+            "Password", type="password", key="signup_pass"
+        )
 
-        if st.button("Register", key="btn_signup"):
-            try:
-                supabase.auth.sign_up({"email": new_email, "password": new_password})
-                st.success("✅ Account created! Please check your email to verify.")
-            except Exception as e:
-                st.error(f"❌ Registration failed: {e}")
+        if st.button("Register", key="btn_signup", use_container_width=True):
+            if not new_email or not new_password:
+                st.warning("Khabardar: Email aur Password dono fill karein!")
+            else:
+                try:
+                    supabase.auth.sign_up(
+                        {"email": new_email, "password": new_password}
+                    )
+                    st.success(
+                        "✅ Account created! Check your email inbox to verify your account."
+                    )
+                except Exception as e:
+                    st.error(f"❌ Registration failed: {e}")
 
     # -------------------------------------------------------------------------
-    # TAB 3: FORGOT PASSWORD (Naya Option)
+    # TAB 3: FORGOT PASSWORD
     # -------------------------------------------------------------------------
     with tab_forgot:
         st.subheader("🔑 Reset Your Password")
         st.caption(
-            "Apna registered email enter karein. Hum aap ko password reset karne ka link bhejen ge."
+            "Apna registered email enter karein. Hum aap ko password reset karne ka link email karein ge."
         )
 
         reset_email = st.text_input("Registered Email", key="reset_email_input")
 
-        if st.button("📩 Send Reset Link", key="btn_forgot_password"):
+        if st.button(
+            "📩 Send Reset Link",
+            key="btn_forgot_password",
+            use_container_width=True,
+        ):
             if not reset_email:
-                st.warning("Khabardar: Pehle email enter karein!")
+                st.warning("Pehle apna email enter karein!")
             else:
                 try:
-                    # Supabase API call for Password Reset Link
+                    # Fix: options dictionary used for redirect_to parameter
                     supabase.auth.reset_password_for_email(
                         reset_email,
-                        # Live app URL ya Localhost link jahan user click karke wapas aaye
-                        redirect_to="http://localhost:8501",
+                        options={"redirect_to": "http://localhost:8501"},
                     )
                     st.success(
-                        f"✅ Reset link **{reset_email}** par bhej diya gaya hai! Apna Inbox / Spam folder check karein."
+                        f"✅ Reset link **{reset_email}** par bhej diya gaya hai! Check your Inbox / Spam folder."
                     )
                 except Exception as e:
                     st.error(f"❌ Error sending reset link: {e}")
 
         st.divider()
 
-        # STEP 2: Jab user email link se wapas aaye toh Naya Password Set karne ka Form
-        # Streamlit URL se check karein ke kya recovery token aaya hai
+        # RECOVERY FLOW: Jab user email ke reset link par click karke app par wapas aaye
         query_params = st.query_params
         if "type" in query_params and query_params["type"] == "recovery":
             st.info("🔐 Set your new password below:")
@@ -86,17 +100,21 @@ def render_login_page():
                 "Confirm New Password", type="password", key="confirm_pwd_input"
             )
 
-            if st.button("💾 Update Password", key="btn_update_password"):
+            if st.button(
+                "💾 Update Password",
+                key="btn_update_password",
+                use_container_width=True,
+            ):
                 if new_pwd != confirm_pwd:
                     st.error("Passwords match nahi kar rahe!")
                 elif len(new_pwd) < 6:
                     st.warning("Password kam az kam 6 characters ka hona chahiye.")
                 else:
                     try:
-                        # Update user password in Supabase
+                        # Update current session user's password in Supabase
                         supabase.auth.update_user({"password": new_pwd})
                         st.success(
                             "🎉 Password successfully update ho gaya! Ab Login tab se sign-in karein."
                         )
                     except Exception as e:
-                        st.error(f"❌ Password update fail hua: {e}")
+                        st.error(f"❌ Password update failed: {e}")
