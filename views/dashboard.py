@@ -7,7 +7,7 @@ from PIL import Image
 
 # Core Modules Import
 from models.detector import run_detection
-from utils.email_sender import send_email_with_pdf
+from utils.email_sender import send_email_alert
 from utils.pdf_generator import create_pdf_report
 
 # Optional Visualization Libraries
@@ -476,21 +476,18 @@ def render_dashboard_page():
                     key="btn_dl_pdf",
                 )
             with btn2:
+                # Direct External File Handler Call for Email dispatch
                 if st.button(
                     "📩 Send Email Alert",
                     use_container_width=True,
                     key="btn_send_email",
                 ):
-                    ok, msg = send_email_with_pdf(
+                    send_email_alert(
                         sender_email=user_details["email"],
-                        target_department_email=dept_email,
+                        target_email=dept_email,
                         pdf_bytes=pdf_bytes,
                         title=title,
                     )
-                    if ok:
-                        st.success(f"✅ {msg}")
-                    else:
-                        st.error(f"❌ {msg}")
             with btn3:
                 if st.button(
                     "💾 Log to Master Ledger",
