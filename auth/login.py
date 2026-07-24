@@ -5,7 +5,7 @@ from database.supabase_client import supabase
 def render_login_page():
     st.title("👁️ Urban Eye AI - Security Portal")
 
-    # Tabs for Login, Sign Up, and Forgot Password
+    # Navigation Tabs
     tab_login, tab_signup, tab_forgot = st.tabs(
         ["🔑 Login", "📝 Sign Up", "❓ Forgot Password"]
     )
@@ -18,6 +18,11 @@ def render_login_page():
         email = st.text_input("Email", key="login_email")
         password = st.text_input("Password", type="password", key="login_pass")
 
+        # 🔹 Remember Me Checkbox
+        remember_me = st.checkbox(
+            "Remember Me (Mujhe logged in rakhein)", key="chk_remember_me"
+        )
+
         if st.button("Sign In", key="btn_login", use_container_width=True):
             if not email or not password:
                 st.warning("Pehle Email aur Password dono enter karein!")
@@ -26,7 +31,10 @@ def render_login_page():
                     response = supabase.auth.sign_in_with_password(
                         {"email": email, "password": password}
                     )
+                    # Save user session & remember_me preference
                     st.session_state["user"] = response.user
+                    st.session_state["remember_me"] = remember_me
+
                     st.success("✅ Login successful!")
                     st.rerun()
                 except Exception as e:
@@ -57,47 +65,87 @@ def render_login_page():
                     st.error(f"❌ Registration failed: {e}")
 
     # -------------------------------------------------------------------------
-    # TAB 3: FORGOT PASSWORD
+    # TAB 3: EASY FORGOT PASSWORD & MAGIC LINK
     # -------------------------------------------------------------------------
     with tab_forgot:
-        st.subheader("🔑 Reset Your Password")
-        st.caption(
-            "Apna registered email enter karein. Hum aap ko password reset karne ka link email karein ge."
+        st.subheader("🔑 Password Recovery Options")
+
+        reset_mode = st.radio(
+            "Recovery Method Select Karein:",
+            [
+                "✨ Direct Magic Link (Bina Password Direct Login)",
+                "📧 Password Reset Link (Naya Password Set Karein)",
+            ],
+            key="reset_mode_choice",
         )
-
-        reset_email = st.text_input("Registered Email", key="reset_email_input")
-
-        if st.button(
-            "📩 Send Reset Link",
-            key="btn_forgot_password",
-            use_container_width=True,
-        ):
-            if not reset_email:
-                st.warning("Pehle apna email enter karein!")
-            else:
-                try:
-                    # Fix: options dictionary used for redirect_to parameter
-                    supabase.auth.reset_password_for_email(
-                        reset_email,
-                        options={"redirect_to": "http://localhost:8501"},
-                    )
-                    st.success(
-                        f"✅ Reset link **{reset_email}** par bhej diya gaya hai! Check your Inbox / Spam folder."
-                    )
-                except Exception as e:
-                    st.error(f"❌ Error sending reset link: {e}")
 
         st.divider()
 
-        # RECOVERY FLOW: Jab user email ke reset link par click karke app par wapas aaye
+        # METHOD 1: MAGIC LINK (Direct Login without password)
+        if "Magic Link" in reset_mode:
+            st.info(
+                "💡 **Asaan Tareeqah:** Email enter karein, hum aap ko login link bhej dein ge. Aap ko password ki zarurat nahi pare gi!"
+            )
+            magic_email = st.text_input(
+                "Registered Email", key="magic_email_input"
+            )
+
+            if st.button(
+                "✨ Send Magic Login Link",
+                key="btn_magic_link",
+                use_container_width=True,
+            ):
+                if not magic_email:
+                    st.warning("Pehle apna email enter karein!")
+                else:
+                    try:
+                        supabase.auth.sign_in_with_otp({"email": magic_email})
+                        st.success(
+                            f"✅ Direct Login link **{magic_email}** par bhej diya gaya hai! Email khol kar link click karein."
+                        )
+                    except Exception as e:
+                        st.error(f"❌ Error: {e}")
+
+        # METHOD 2: RESET PASSWORD LINK
+        else:
+            st.info(
+                "📧 Email enter karein. Reset link par click kar ke aap naya password set kar sakte hain."
+            )
+            reset_email = st.text_input(
+                "Registered Email", key="reset_email_input"
+            )
+
+            if st.button(
+                "📩 Send Reset Link",
+                key="btn_forgot_password",
+                use_container_width=True,
+            ):
+                if not reset_email:
+                    st.warning("Pehle apna email enter karein!")
+                else:
+                    try:
+                        supabase.auth.reset_password_for_email(
+                            reset_email,
+                            options={"redirect_to": "http://localhost:8501"},
+                        )
+                        st.success(
+                            f"✅ Reset link **{reset_email}** par bhej diya gaya hai! Inbox / Spam folder check karein."
+                        )
+                    except Exception as e:
+                        st.error(f"❌ Error sending reset link: {e}")
+
+        # RECOVERY FLOW: Runs when user opens app via the Email Reset Link
         query_params = st.query_params
         if "type" in query_params and query_params["type"] == "recovery":
-            st.info("🔐 Set your new password below:")
+            st.divider()
+            st.subheader("🔐 Set Your New Password")
             new_pwd = st.text_input(
                 "Enter New Password", type="password", key="new_pwd_input"
             )
             confirm_pwd = st.text_input(
-                "Confirm New Password", type="password", key="confirm_pwd_input"
+                "Confirm New Password",
+                type="password",
+                key="confirm_pwd_input",
             )
 
             if st.button(
@@ -108,10 +156,11 @@ def render_login_page():
                 if new_pwd != confirm_pwd:
                     st.error("Passwords match nahi kar rahe!")
                 elif len(new_pwd) < 6:
-                    st.warning("Password kam az kam 6 characters ka hona chahiye.")
+                    st.warning(
+                        "Password kam az kam 6 characters ka hona chahiye."
+                    )
                 else:
                     try:
-                        # Update current session user's password in Supabase
                         supabase.auth.update_user({"password": new_pwd})
                         st.success(
                             "🎉 Password successfully update ho gaya! Ab Login tab se sign-in karein."
