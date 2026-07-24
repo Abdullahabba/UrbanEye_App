@@ -13,12 +13,12 @@ def render_login_page():
     st.title("👁️ Urban Eye AI - Security Portal")
 
     # Session State Variables to handle 2-Step Password Reset Flow
-    if "reset_phone_verified" not in st.session_state:
-        st.session_state["reset_phone_verified"] = False
+    if "reset_verified" not in st.session_state:
+        st.session_state["reset_verified"] = False
     if "reset_target_user_id" not in st.session_state:
         st.session_state["reset_target_user_id"] = None
-    if "reset_matched_phone" not in st.session_state:
-        st.session_state["reset_matched_phone"] = ""
+    if "reset_matched_email" not in st.session_state:
+        st.session_state["reset_matched_email"] = ""
 
     tab_login, tab_signup, tab_forgot = st.tabs(
         ["🔑 Login", "📝 Sign Up", "❓ Forgot Password"]
@@ -96,19 +96,22 @@ def render_login_page():
                     st.error(f"❌ Registration failed: {e}")
 
     # =========================================================================
-    # TAB 3: FORGOT PASSWORD (2-STEP PHONE NUMBER VERIFICATION FLOW)
+    # TAB 3: FORGOT PASSWORD (REQUIRES BOTH EMAIL & PHONE NUMBER)
     # =========================================================================
     with tab_forgot:
-        st.subheader("🔑 Reset Password via Phone Number")
+        st.subheader("🔑 Reset Password")
 
         # ---------------------------------------------------------------------
-        # STEP 1: PHONE NUMBER CHECK
+        # STEP 1: EMAIL & PHONE NUMBER VERIFICATION
         # ---------------------------------------------------------------------
-        if not st.session_state["reset_phone_verified"]:
+        if not st.session_state["reset_verified"]:
             st.info(
-                "💡 Enter your registered Phone Number. If verified, you will proceed to the New Password screen."
+                "💡 Enter both your registered **Email Address** and **Phone Number** to proceed."
             )
 
+            reset_email = st.text_input(
+                "Registered Email Address", key="reset_email_input"
+            )
             reset_phone = st.text_input(
                 "Registered Phone Number",
                 key="reset_phone_input",
@@ -116,55 +119,63 @@ def render_login_page():
             )
 
             if st.button(
-                "🔍 Verify Phone Number",
-                key="btn_verify_phone",
+                "🔍 Verify Account Details",
+                key="btn_verify_account",
                 use_container_width=True,
             ):
-                if not reset_phone.strip():
-                    st.warning("Please enter your Phone Number!")
+                if not reset_email.strip() or not reset_phone.strip():
+                    st.warning("Please enter both Email Address and Phone Number!")
                 else:
-                    with st.spinner("Checking database for phone number..."):
+                    with st.spinner("Checking database for matching account..."):
                         try:
                             users = supabase_admin.auth.admin.list_users()
                             target_user = None
+
+                            cleaned_email = reset_email.strip().lower()
                             cleaned_phone = reset_phone.strip()
 
                             for u in users:
+                                u_email = (u.email or "").strip().lower()
                                 user_metadata = (
                                     getattr(u, "user_metadata", {}) or {}
                                 )
-                                saved_phone = user_metadata.get("phone", "")
+                                u_phone = str(
+                                    user_metadata.get("phone", "")
+                                ).strip()
 
+                                # Match both Email and Phone Number
                                 if (
-                                    saved_phone
-                                    and str(saved_phone).strip() == cleaned_phone
+                                    u_email == cleaned_email
+                                    and u_phone == cleaned_phone
                                 ):
                                     target_user = u
                                     break
 
                             if target_user:
-                                st.session_state["reset_phone_verified"] = True
+                                st.session_state["reset_verified"] = True
                                 st.session_state["reset_target_user_id"] = (
                                     target_user.id
                                 )
-                                st.session_state["reset_matched_phone"] = (
-                                    cleaned_phone
+                                st.session_state["reset_matched_email"] = (
+                                    cleaned_email
                                 )
-                                st.success("✅ Phone number matched successfully!")
+                                st.success(
+                                    "✅ Account verified successfully!"
+                                )
                                 st.rerun()
                             else:
                                 st.error(
-                                    "❌ No account found registered with this Phone Number!"
+                                    "❌ Invalid credentials! No matching account found with this Email and Phone Number combination."
                                 )
                         except Exception as e:
                             st.error(f"❌ Verification failed: {e}")
 
         # ---------------------------------------------------------------------
-        # STEP 2: NEW PASSWORD SETTING SCREEN (Only opens if Phone matches)
+        # STEP 2: NEW PASSWORD SETTING SCREEN (Only opens if Email & Phone match)
         # ---------------------------------------------------------------------
         else:
             st.success(
-                f"✅ Verified Account Phone: **{st.session_state['reset_matched_phone']}**"
+                f"✅ Verified Account: **{st.session_state['reset_matched_email']}**"
             )
             st.subheader("Set Your New Password")
 
@@ -184,7 +195,7 @@ def render_login_page():
                     use_container_width=True,
                 ):
                     if not new_password or not confirm_password:
-                        st.warning("Please enter both password fields!")
+                        st.warning("Please fill in both password fields!")
                     elif new_password != confirm_password:
                         st.error("❌ Passwords do not match!")
                     elif len(new_password) < 6:
@@ -198,9 +209,9 @@ def render_login_page():
                                 )
 
                                 # Clear reset state
-                                st.session_state["reset_phone_verified"] = False
+                                st.session_state["reset_verified"] = False
                                 st.session_state["reset_target_user_id"] = None
-                                st.session_state["reset_matched_phone"] = ""
+                                st.session_state["reset_matched_email"] = ""
 
                                 st.success(
                                     "🎉 Password updated successfully! Switch to the Login tab to sign in with your new password."
@@ -210,9 +221,9 @@ def render_login_page():
 
             with col2:
                 if st.button(
-                    "🔙 Change Phone", key="btn_back_phone", use_container_width=True
+                    "🔙 Go Back", key="btn_back_reset", use_container_width=True
                 ):
-                    st.session_state["reset_phone_verified"] = False
+                    st.session_state["reset_verified"] = False
                     st.session_state["reset_target_user_id"] = None
-                    st.session_state["reset_matched_phone"] = ""
+                    st.session_state["reset_matched_email"] = ""
                     st.rerun()
