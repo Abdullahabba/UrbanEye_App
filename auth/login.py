@@ -1,10 +1,12 @@
 import streamlit as st
 from database.supabase_client import SUPABASE_KEY, SUPABASE_URL, supabase
-# Admin Client for password override without email
 from supabase import create_client
 
-# Admin client with Service Role Key (Ya direct client if configured)
-supabase_admin = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Admin Client for password override without email verification
+try:
+    supabase_admin = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception:
+    supabase_admin = supabase
 
 
 def render_login_page():
@@ -19,12 +21,12 @@ def render_login_page():
     # =========================================================================
     with tab_login:
         st.subheader("Login to your account")
-        email = st.text_input("Email", key="login_email")
+        email = st.text_input("Email Address", key="login_email")
         password = st.text_input("Password", type="password", key="login_pass")
 
         if st.button("Sign In", key="btn_login", use_container_width=True):
             if not email or not password:
-                st.warning("Pehle Email aur Password dono enter karein!")
+                st.warning("Please enter both Email and Password!")
             else:
                 try:
                     response = supabase.auth.sign_in_with_password(
@@ -37,18 +39,24 @@ def render_login_page():
                     st.error(f"❌ Login failed: {e}")
 
     # =========================================================================
-    # TAB 2: SIGN UP (With 4-Digit Security PIN)
+    # TAB 2: SIGN UP (With Username, Phone, Address & 4-Digit Security PIN)
     # =========================================================================
     with tab_signup:
         st.subheader("Create a new account")
-        new_email = st.text_input("Email", key="signup_email")
+        username = st.text_input("Full Name / Username", key="signup_username")
+        new_email = st.text_input("Email Address", key="signup_email")
+        phone = st.text_input(
+            "Phone Number", key="signup_phone", placeholder="+923001234567"
+        )
+        address = st.text_input(
+            "Address", key="signup_address", placeholder="City, Country"
+        )
         new_password = st.text_input(
             "Password", type="password", key="signup_pass"
         )
 
-        # Security PIN field added
         security_pin = st.text_input(
-            "Set 4-Digit Security PIN (Password Reset ke liye)",
+            "4-Digit Security PIN (For Password Recovery)",
             type="password",
             max_chars=4,
             key="signup_pin",
@@ -56,23 +64,39 @@ def render_login_page():
         )
 
         if st.button("Register", key="btn_signup", use_container_width=True):
-            if not new_email or not new_password or not security_pin:
-                st.warning(
-                    "Khabardar: Email, Password aur 4-digit PIN teeno fill karein!"
-                )
+            if (
+                not username
+                or not new_email
+                or not phone
+                or not address
+                or not new_password
+                or not security_pin
+            ):
+                st.warning("Please fill in all required fields!")
             elif len(security_pin) < 4 or not security_pin.isdigit():
-                st.warning("Security PIN me sirf 4 numbers hone chahiye!")
+                st.warning("Security PIN must be exactly 4 digits!")
+            elif len(new_password) < 6:
+                st.warning("Password must be at least 6 characters long!")
             else:
                 try:
-                    # Save PIN inside user metadata
+                    # Storing all extra metadata attributes in Supabase user profile
                     supabase.auth.sign_up(
                         {
                             "email": new_email,
                             "password": new_password,
-                            "options": {"data": {"security_pin": security_pin}},
+                            "options": {
+                                "data": {
+                                    "username": username,
+                                    "phone": phone,
+                                    "address": address,
+                                    "security_pin": security_pin,
+                                }
+                            },
                         }
                     )
-                    st.success("✅ Account created successfully! Ab login karein.")
+                    st.success(
+                        "✅ Account created successfully! Please switch to the Login tab to sign in."
+                    )
                 except Exception as e:
                     st.error(f"❌ Registration failed: {e}")
 
@@ -82,12 +106,10 @@ def render_login_page():
     with tab_forgot:
         st.subheader("🔑 Instant Password Reset")
         st.info(
-            "💡 Registration ke waqt set kiya gaya **4-Digit Security PIN** enter karein."
+            "💡 Enter your registered email and the **4-Digit Security PIN** you set during registration."
         )
 
-        reset_email = st.text_input(
-            "Registered Email", key="reset_pin_email"
-        )
+        reset_email = st.text_input("Registered Email", key="reset_pin_email")
         entered_pin = st.text_input(
             "Your 4-Digit Security PIN",
             type="password",
@@ -98,10 +120,10 @@ def render_login_page():
         st.divider()
 
         new_password = st.text_input(
-            "Naya Password (New Password)", type="password", key="reset_new_pass"
+            "New Password", type="password", key="reset_new_pass"
         )
         confirm_password = st.text_input(
-            "Confirm Naya Password", type="password", key="reset_conf_pass"
+            "Confirm New Password", type="password", key="reset_conf_pass"
         )
 
         if st.button(
@@ -115,19 +137,15 @@ def render_login_page():
                 or not new_password
                 or not confirm_password
             ):
-                st.warning("Tamam fields fill karein!")
+                st.warning("Please fill in all required fields!")
             elif new_password != confirm_password:
-                st.error("❌ Passwords match nahi kar rahe!")
+                st.error("❌ Passwords do not match!")
             elif len(new_password) < 6:
-                st.warning("⚠️ Password kam az kam 6 characters ka hona chahiye.")
+                st.warning("⚠️ Password must be at least 6 characters long.")
             else:
                 try:
-                    with st.spinner("Verifying PIN & Updating Password..."):
-                        # 1. Sign in temporarily with old credentials OR check PIN metadata via Admin API
-                        # Fetch user list to verify PIN
-                        users = (
-                            supabase_admin.auth.admin.list_users()
-                        )  # Fetches user profiles
+                    with st.spinner("Verifying PIN & updating password..."):
+                        users = supabase_admin.auth.admin.list_users()
                         target_user = None
 
                         for u in users:
@@ -136,22 +154,22 @@ def render_login_page():
                                 break
 
                         if not target_user:
-                            st.error("❌ Yeh Email registered nahi hai!")
+                            st.error("❌ This email is not registered!")
                         else:
-                            # Verify PIN from metadata
                             saved_pin = target_user.user_metadata.get(
                                 "security_pin"
                             )
 
                             if saved_pin and str(saved_pin) == str(entered_pin):
-                                # Update user password directly using Admin API
                                 supabase_admin.auth.admin.update_user_by_id(
                                     target_user.id, {"password": new_password}
                                 )
                                 st.success(
-                                    "🎉 Password instantly update ho gaya! Ab Login tab se Sign In karein."
+                                    "🎉 Password updated successfully! Please switch to the Login tab to sign in."
                                 )
                             else:
-                                st.error("❌ Invalid Security PIN! Sahi PIN enter karein.")
+                                st.error(
+                                    "❌ Invalid Security PIN! Please enter the correct PIN."
+                                )
                 except Exception as e:
                     st.error(f"❌ Reset failed: {e}")
