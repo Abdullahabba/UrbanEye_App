@@ -5,7 +5,7 @@ from database.supabase_client import supabase
 def render_login_page():
     st.title("👁️ Urban Eye AI - Security Portal")
 
-    # Navigation Tabs
+    # Tabs for Login, Sign Up, and Password Recovery
     tab_login, tab_signup, tab_forgot = st.tabs(
         ["🔑 Login", "📝 Sign Up", "❓ Forgot Password"]
     )
@@ -18,7 +18,7 @@ def render_login_page():
         email = st.text_input("Email", key="login_email")
         password = st.text_input("Password", type="password", key="login_pass")
 
-        # 🔹 Remember Me Checkbox
+        # Remember Me Checkbox
         remember_me = st.checkbox(
             "Remember Me (Mujhe logged in rakhein)", key="chk_remember_me"
         )
@@ -31,7 +31,7 @@ def render_login_page():
                     response = supabase.auth.sign_in_with_password(
                         {"email": email, "password": password}
                     )
-                    # Save user session & remember_me preference
+                    # Store User and Remember Me state
                     st.session_state["user"] = response.user
                     st.session_state["remember_me"] = remember_me
 
@@ -65,26 +65,26 @@ def render_login_page():
                     st.error(f"❌ Registration failed: {e}")
 
     # -------------------------------------------------------------------------
-    # TAB 3: EASY FORGOT PASSWORD & MAGIC LINK
+    # TAB 3: FORGOT PASSWORD & MAGIC LINK
     # -------------------------------------------------------------------------
     with tab_forgot:
         st.subheader("🔑 Password Recovery Options")
 
         reset_mode = st.radio(
-            "Recovery Method Select Karein:",
+            "Select Recovery Option:",
             [
-                "✨ Direct Magic Link (Bina Password Direct Login)",
-                "📧 Password Reset Link (Naya Password Set Karein)",
+                "✨ Option 1: Direct Magic Link (Bina Password Direct Login)",
+                "📧 Option 2: Reset Password Email Link",
             ],
             key="reset_mode_choice",
         )
 
         st.divider()
 
-        # METHOD 1: MAGIC LINK (Direct Login without password)
+        # OPTION 1: MAGIC LINK
         if "Magic Link" in reset_mode:
             st.info(
-                "💡 **Asaan Tareeqah:** Email enter karein, hum aap ko login link bhej dein ge. Aap ko password ki zarurat nahi pare gi!"
+                "💡 **Asaan Tareeqah:** Email enter karein, aap ko direct login link bhej diya jaye ga."
             )
             magic_email = st.text_input(
                 "Registered Email", key="magic_email_input"
@@ -101,15 +101,15 @@ def render_login_page():
                     try:
                         supabase.auth.sign_in_with_otp({"email": magic_email})
                         st.success(
-                            f"✅ Direct Login link **{magic_email}** par bhej diya gaya hai! Email khol kar link click karein."
+                            f"✅ Direct Login Link **{magic_email}** par bhej diya gaya hai! Inbox check karein."
                         )
                     except Exception as e:
-                        st.error(f"❌ Error: {e}")
+                        st.error(f"❌ Magic Link Sending Failed: {e}")
 
-        # METHOD 2: RESET PASSWORD LINK
+        # OPTION 2: RESET PASSWORD LINK
         else:
             st.info(
-                "📧 Email enter karein. Reset link par click kar ke aap naya password set kar sakte hain."
+                "📧 Email enter karein. Link par click kar ke aap naya password set kar sakte hain."
             )
             reset_email = st.text_input(
                 "Registered Email", key="reset_email_input"
@@ -129,12 +129,12 @@ def render_login_page():
                             options={"redirect_to": "http://localhost:8501"},
                         )
                         st.success(
-                            f"✅ Reset link **{reset_email}** par bhej diya gaya hai! Inbox / Spam folder check karein."
+                            f"✅ Reset link **{reset_email}** par bhej diya gaya hai! Inbox / Spam check karein."
                         )
                     except Exception as e:
                         st.error(f"❌ Error sending reset link: {e}")
 
-        # RECOVERY FLOW: Runs when user opens app via the Email Reset Link
+        # RECOVERY URL HANDLER (Jab user Email Reset Link se wapas aaye)
         query_params = st.query_params
         if "type" in query_params and query_params["type"] == "recovery":
             st.divider()
