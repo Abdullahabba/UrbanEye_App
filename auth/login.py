@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 from database.supabase_client import supabase
 
@@ -70,13 +71,13 @@ def render_login_page():
                     st.error(f"❌ Registration failed: {e}")
 
     # =========================================================================
-    # TAB 3: FORGOT PASSWORD (6-DIGIT OTP FLOW)
+    # TAB 3: FORGOT PASSWORD (6-DIGIT OTP FLOW WITH TIMEOUT RETRY)
     # =========================================================================
     with tab_forgot:
         st.subheader("🔑 Password Recovery via OTP")
 
         # ---------------------------------------------------------------------
-        # STEP 1: REQUEST OTP (Email Enter Karein)
+        # STEP 1: REQUEST OTP (With Auto-Retry on Timeout)
         # ---------------------------------------------------------------------
         if (
             not st.session_state["otp_sent"]
@@ -97,19 +98,41 @@ def render_login_page():
                 if not reset_email_input:
                     st.warning("Pehle Email enter karein!")
                 else:
-                    try:
-                        # Supabase triggers OTP for password recovery
-                        supabase.auth.reset_password_for_email(
-                            reset_email_input
-                        )
-                        st.session_state["otp_sent"] = True
-                        st.session_state["reset_email"] = reset_email_input
-                        st.success(
-                            f"✅ OTP Code **{reset_email_input}** par bhej diya gaya hai! Inbox check karein."
-                        )
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ OTP bhejne me masla aaya: {e}")
+                    # Retry logic for network timeouts (Up to 3 attempts)
+                    max_retries = 3
+                    with st.spinner("OTP bhej rahe hain... Please wait..."):
+                        for attempt in range(1, max_retries + 1):
+                            try:
+                                supabase.auth.reset_password_for_email(
+                                    reset_email_input
+                                )
+                                st.session_state["otp_sent"] = True
+                                st.session_state["reset_email"] = (
+                                    reset_email_input
+                                )
+                                st.success(
+                                    f"✅ OTP Code **{reset_email_input}** par bhej diya gaya hai! Inbox check karein."
+                                )
+                                st.rerun()
+                                break
+                            except Exception as e:
+                                err_str = str(e).lower()
+                                if (
+                                    "timed out" in err_str
+                                    or "timeout" in err_str
+                                ):
+                                    if attempt < max_retries:
+                                        time.sleep(
+                                            1
+                                        )  # Wait 1 sec before retry
+                                        continue
+                                    else:
+                                        st.error(
+                                            "⏳ Network Timeout: Supabase server ne response dene me zyada waqt lagaya. Dobara 'Send OTP Code' par click karein."
+                                        )
+                                else:
+                                    st.error(f"❌ OTP bhejne me masla aaya: {e}")
+                                    break
 
         # ---------------------------------------------------------------------
         # STEP 2: ENTER & VERIFY OTP CODE
@@ -139,24 +162,26 @@ def render_login_page():
                     if not otp_code or len(otp_code) < 6:
                         st.warning("Mukammal 6-digit OTP enter karein!")
                     else:
-                        try:
-                            # Verify recovery OTP with Supabase
-                            res = supabase.auth.verify_otp(
-                                {
-                                    "email": st.session_state["reset_email"],
-                                    "token": otp_code,
-                                    "type": "recovery",
-                                }
-                            )
-                            st.session_state["otp_verified"] = True
-                            st.success(
-                                "🎉 OTP verified successfully! Ab naya password set karein."
-                            )
-                            st.rerun()
-                        except Exception as e:
-                            st.error(
-                                f"❌ Invalid or Expired OTP: {e}. Sahi code enter karein."
-                            )
+                        with st.spinner("OTP verify ho raha hai..."):
+                            try:
+                                res = supabase.auth.verify_otp(
+                                    {
+                                        "email": st.session_state[
+                                            "reset_email"
+                                        ],
+                                        "token": otp_code,
+                                        "type": "recovery",
+                                    }
+                                )
+                                st.session_state["otp_verified"] = True
+                                st.success(
+                                    "🎉 OTP verified successfully! Ab naya password set karein."
+                                )
+                                st.rerun()
+                            except Exception as e:
+                                st.error(
+                                    f"❌ Invalid, Expired ya Timeout Error: {e}. Sahi code enter karein."
+                                )
 
             with col2:
                 if st.button(
@@ -169,7 +194,7 @@ def render_login_page():
                     st.rerun()
 
         # ---------------------------------------------------------------------
-        # STEP 3: SET NEW PASSWORD (2 DAFA ENTER KAREIN)
+        # STEP 3: SET NEW PASSWORD (2 DAFA CONFIRM KAREIN)
         # ---------------------------------------------------------------------
         elif st.session_state["otp_verified"]:
             st.success("🔒 Identity Verified! Naya password set karein.")
@@ -191,9 +216,13 @@ def render_login_page():
                 if not new_pwd or not confirm_pwd:
                     st.warning("Dono password fields fill karein!")
                 elif new_pwd != confirm_pwd:
-                    st.error("❌ Mismatch! Dono passwords aik jaisay hone chahiye.")
+                    st.error(
+                        "❌ Mismatch! Dono passwords aik jaisay hone chahiye."
+                    )
                 elif len(new_pwd) < 6:
-                    st.warning("⚠️ Password kam az kam 6 characters ka hona chahiye.")
+                    st.warning(
+                        "⚠️ Password kam az kam 6 characters ka hona chahiye."
+                    )
                 else:
                     try:
                         # Update password in Supabase for verified user session
