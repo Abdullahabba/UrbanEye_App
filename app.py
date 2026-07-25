@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_cookies_controller import CookieController
 from auth.login import render_login_page
 from views.dashboard import render_dashboard_page
 
@@ -11,23 +10,15 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Initialize Cookie Controller
-controller = CookieController()
-
 # Safely Initialize Session State
 if "user" not in st.session_state:
     st.session_state["user"] = None
 
-# Attempt Cookie Restoration if User is not in Session
+# Check Query Parameters for Persistent Login (Instant & Reliable)
 if st.session_state["user"] is None:
-    try:
-        cookies = controller.getAll()
-        if cookies and isinstance(cookies, dict):
-            saved_user = cookies.get("urbaneye_logged_in_user")
-            if saved_user:
-                st.session_state["user"] = saved_user
-    except Exception as e:
-        print(f"Cookie fetch warning: {e}")
+    saved_email = st.query_params.get("logged_in_email")
+    if saved_email:
+        st.session_state["user"] = {"email": saved_email}
 
 # Navigation Guard: User Login Required
 if st.session_state["user"] is None:
@@ -46,10 +37,7 @@ else:
 
         if st.button("🚪 Logout", key="btn_logout", use_container_width=True):
             st.session_state["user"] = None
-            try:
-                controller.remove("urbaneye_logged_in_user")
-            except Exception:
-                pass
+            st.query_params.clear() # Clear persistent login parameter
             st.rerun()
 
         st.markdown("---")
