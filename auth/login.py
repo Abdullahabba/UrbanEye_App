@@ -1,18 +1,11 @@
 import streamlit as st
-from database.supabase_client import SUPABASE_KEY, SUPABASE_URL, supabase
-from supabase import create_client
-
-# Admin Client for direct password updates
-try:
-    supabase_admin = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception:
-    supabase_admin = supabase
+from database.supabase_client import supabase, supabase_admin
 
 
 def render_login_page():
     st.title("👁️ Urban Eye AI - Security Portal")
 
-    # Session State Variables to handle 2-Step Password Reset Flow
+    # Session State Variables for 2-Step Password Reset Flow
     if "reset_verified" not in st.session_state:
         st.session_state["reset_verified"] = False
     if "reset_target_user_id" not in st.session_state:
@@ -128,6 +121,7 @@ def render_login_page():
                 else:
                     with st.spinner("Checking database for matching account..."):
                         try:
+                            # Using admin client with service_role privileges
                             users = supabase_admin.auth.admin.list_users()
                             target_user = None
 
@@ -143,7 +137,7 @@ def render_login_page():
                                     user_metadata.get("phone", "")
                                 ).strip()
 
-                                # Match both Email and Phone Number
+                                # Check matching email and phone
                                 if (
                                     u_email == cleaned_email
                                     and u_phone == cleaned_phone
@@ -171,7 +165,7 @@ def render_login_page():
                             st.error(f"❌ Verification failed: {e}")
 
         # ---------------------------------------------------------------------
-        # STEP 2: NEW PASSWORD SETTING SCREEN (Only opens if Email & Phone match)
+        # STEP 2: NEW PASSWORD SETTING SCREEN
         # ---------------------------------------------------------------------
         else:
             st.success(
