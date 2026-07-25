@@ -1,5 +1,13 @@
 import streamlit as st
-from database.supabase_client import supabase, supabase_admin
+from database.supabase_client import supabase
+from supabase import create_client
+
+# Direct Admin Client setup with Service Role Key to bypass module cache
+SUPABASE_URL = "https://clriyqbkdxpjscpufqns.supabase.co"
+SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNscml5cWJrZHhwanNjcHVmcW5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDc0MTAyNywiZXhwIjoyMTAwMzE3MDI3fQ.PpNmjWt6babeIB5b5ACghI7e633Cl0O1dtTsNWXPC_4"
+
+# Admin Client (Has full database access for password resets)
+supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 
 def render_login_page():
@@ -121,7 +129,7 @@ def render_login_page():
                 else:
                     with st.spinner("Checking database for matching account..."):
                         try:
-                            # Using admin client with service_role privileges
+                            # Using Admin client with Service Role privileges
                             users = supabase_admin.auth.admin.list_users()
                             target_user = None
 
