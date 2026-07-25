@@ -1,23 +1,12 @@
 import streamlit as st
 
 try:
-    from database.supabase_client import supabase
+    from database.supabase_client import supabase, supabase_admin
 except ImportError:
     supabase = None
+    supabase_admin = None
 
 def get_user_metadata():
-    # Session restore karne ke liye Supabase session check karein
-    if "user" not in st.session_state or st.session_state["user"] is None:
-        if supabase:
-            try:
-                session_response = supabase.auth.get_session()
-                if session_response and session_response.session:
-                    st.session_state["user"] = session_response.session.user
-            except Exception:
-                pass
-
-    user = st.session_state.get("user", None)
-    
     details = {
         "email": "officer@urbaneye.ai",
         "username": "Inspector Ahmed",
@@ -25,45 +14,45 @@ def get_user_metadata():
         "address": "Lahore Urban Sector 4",
     }
     
-    if user:
+    user_id = None
+    email = None
+
+    # 1. Check existing session in st.session_state
+    if "user" in st.session_state and st.session_state["user"] is not None:
+        user = st.session_state["user"]
         user_id = getattr(user, "id", None) or (user.get("id") if isinstance(user, dict) else None)
         email = getattr(user, "email", None) or (user.get("email") if isinstance(user, dict) else None)
-        
-        if email:
-            details["email"] = email
+    
+    # 2. If session lost on refresh, recover using query parameters (Persistent Login)
+    if not user_id and "logged_in_email" in st.query_params and supabase_admin:
+        try:
+            logged_email = st.query_params["logged_in_email"]
+            users = supabase_admin.auth.admin.list_users()
+            for u in users:
+                if (u.email or "").strip().lower() == logged_email.strip().lower():
+                    user_id = u.id
+                    email = u.email
+                    st.session_state["user"] = u
+                    break
+        except Exception:
+            pass
 
-        # 1. Database ki 'profiles' table se fresh data fetch karein
-        if user_id and supabase:
-            try:
-                res = supabase.table("profiles").select("*").eq("id", user_id).execute()
-                if res.data and len(res.data) > 0:
-                    profile = res.data[0]
-                    if profile.get("username"):
-                        details["username"] = profile.get("username")
-                    if profile.get("phone") and str(profile.get("phone")).strip() != "":
-                        details["phone"] = profile.get("phone")
-                    if profile.get("address") and str(profile.get("address")).strip() != "":
-                        details["address"] = profile.get("address")
-                    return details
-            except Exception:
-                pass
+    if email:
+        details["email"] = email
 
-        # 2. Fallback to Auth metadata agar profiles table query fail ho jaye
-        meta = {}
-        if isinstance(user, dict):
-            meta = user.get("user_metadata") or user.get("raw_user_meta_data") or {}
-        else:
-            meta = getattr(user, "user_metadata", None) or getattr(user, "raw_user_meta_data", None) or {}
-
-        if meta.get("username"):
-            details["username"] = meta.get("username")
-        elif email:
-            details["username"] = email.split("@")[0].replace(".", " ").replace("_", " ").title()
-
-        if meta.get("phone") and str(meta.get("phone")).strip() != "":
-            details["phone"] = meta.get("phone")
-            
-        if meta.get("address") and str(meta.get("address")).strip() != "":
-            details["address"] = meta.get("address")
+    # 3. Fetch fresh data directly from the 'profiles' table
+    if user_id and supabase:
+        try:
+            res = supabase.table("profiles").select("*").eq("id", user_id).execute()
+            if res.data and len(res.data) > 0:
+                profile = res.data[0]
+                if profile.get("username"):
+                    details["username"] = profile.get("username")
+                if profile.get("phone") and str(profile.get("phone")).strip() != "":
+                    details["phone"] = profile.get("phone")
+                if profile.get("address") and str(profile.get("address")).strip() != "":
+                    details["address"] = profile.get("address")
+        except Exception:
+            pass
             
     return details
