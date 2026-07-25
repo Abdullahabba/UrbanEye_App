@@ -1,3 +1,4 @@
+import random
 import tempfile
 import cv2
 import numpy as np
@@ -17,7 +18,6 @@ except ImportError:
 # -----------------------------------------------------------------------------
 # 📑 INTEGRATED REPORT FOLDER & UTILITY IMPORTS
 # -----------------------------------------------------------------------------
-# Tries to import from your custom 'report' or 'reports' folder first
 create_pdf_report = None
 
 try:
@@ -58,6 +58,11 @@ except ImportError:
 # -----------------------------------------------------------------------------
 # HELPER FUNCTIONS
 # -----------------------------------------------------------------------------
+def generate_tracking_id():
+    """Generates a unique tracking ID for the reporting citizen."""
+    return f"UE-2026-{random.randint(1000, 9999)}"
+
+
 def get_user_metadata():
     """Extract user metadata safely from Streamlit Session."""
     user = st.session_state.get("user", None)
@@ -100,49 +105,42 @@ def calculate_severity_and_sla(counts: dict) -> tuple[str, str, str]:
 
 
 def initialize_mock_history():
-    """Initializes rich dummy incident ledger history."""
+    """Initializes rich dummy incident ledger history with Tracking IDs."""
     if "incident_ledger" not in st.session_state:
         st.session_state["incident_ledger"] = pd.DataFrame(
             [
                 {
-                    "ID": "INC-1001",
+                    "Tracking ID": "UE-2026-1001",
                     "Hazard": "Pothole",
                     "Severity": "CRITICAL",
                     "SLA Target": "4 Hours",
                     "Status": "In Progress",
+                    "Assigned Dept": "Road Maintenance Dept",
                     "Latitude": 31.5204,
                     "Longitude": 74.3587,
                     "Timestamp": "2026-07-23 08:15",
                 },
                 {
-                    "ID": "INC-1002",
+                    "Tracking ID": "UE-2026-1002",
                     "Hazard": "Garbage Dump",
                     "Severity": "MEDIUM",
                     "SLA Target": "12 Hours",
                     "Status": "Pending",
+                    "Assigned Dept": "Waste Management Dept",
                     "Latitude": 31.5100,
                     "Longitude": 74.3400,
                     "Timestamp": "2026-07-23 11:30",
                 },
                 {
-                    "ID": "INC-1003",
+                    "Tracking ID": "UE-2026-1003",
                     "Hazard": "Fallen Tree",
                     "Severity": "CRITICAL",
                     "SLA Target": "4 Hours",
                     "Status": "Resolved",
+                    "Assigned Dept": "Parks & Horticulture Authority",
                     "Latitude": 31.5300,
                     "Longitude": 74.3600,
                     "Timestamp": "2026-07-22 09:00",
-                },
-                {
-                    "ID": "INC-1004",
-                    "Hazard": "Graffiti",
-                    "Severity": "LOW",
-                    "SLA Target": "48 Hours",
-                    "Status": "Pending",
-                    "Latitude": 31.5400,
-                    "Longitude": 74.3300,
-                    "Timestamp": "2026-07-24 01:45",
                 },
             ]
         )
@@ -179,6 +177,7 @@ def render_dashboard_page():
             [
                 "🏠 Executive Command Overview",
                 "🔍 AI Visual Detection Engine",
+                "🔎 Public Hazard Tracker",
                 "🗺️ GIS Live Incident Map",
                 "📊 City Analytics & BI",
                 "📋 Master Incident Ledger",
@@ -283,7 +282,7 @@ def render_dashboard_page():
             if not critical_df.empty:
                 for idx, row in critical_df.iterrows():
                     st.error(
-                        f"**{row['ID']}** | {row['Hazard']}\n\n⏱️ **SLA:** {row['SLA Target']} | 📌 **Status:** {row['Status']}"
+                        f"**{row['Tracking ID']}** | {row['Hazard']}\n\n⏱️ **SLA:** {row['SLA Target']} | 📌 **Status:** {row['Status']}"
                     )
             else:
                 st.success("🎉 No active Critical Hazards pending!")
@@ -298,6 +297,9 @@ def render_dashboard_page():
         )
 
         processed_img = None
+
+        if "current_tracking_id" not in st.session_state:
+            st.session_state["current_tracking_id"] = generate_tracking_id()
 
         # MODE 1: SINGLE IMAGE
         if input_mode == "🖼️ Single Image":
@@ -322,6 +324,9 @@ def render_dashboard_page():
                         )
                         st.session_state["processed_img"] = processed_img
                         st.session_state["counts"] = current_counts
+                        st.session_state["current_tracking_id"] = (
+                            generate_tracking_id()
+                        )
 
                 if "processed_img" in st.session_state:
                     with c2:
@@ -359,6 +364,9 @@ def render_dashboard_page():
                         batch_summary[k] = batch_summary.get(k, 0) + v
 
                 st.session_state["counts"] = batch_summary
+                st.session_state["current_tracking_id"] = (
+                    generate_tracking_id()
+                )
                 st.success(
                     f"✅ Batch processing complete for {len(uploaded_files)} images!"
                 )
@@ -411,6 +419,9 @@ def render_dashboard_page():
 
                 cap.release()
                 st.session_state["counts"] = v_counts
+                st.session_state["current_tracking_id"] = (
+                    generate_tracking_id()
+                )
                 if last_frame:
                     st.session_state["processed_img"] = last_frame
                 st.success(
@@ -432,6 +443,9 @@ def render_dashboard_page():
                     proc_img, counts = run_detection(img, conf_threshold)
                     st.session_state["processed_img"] = proc_img
                     st.session_state["counts"] = counts
+                    st.session_state["current_tracking_id"] = (
+                        generate_tracking_id()
+                    )
 
             if "processed_img" in st.session_state:
                 st.image(
@@ -443,6 +457,12 @@ def render_dashboard_page():
         # DISPATCH & REPORTING SECTION
         if "counts" in st.session_state and st.session_state["counts"]:
             st.divider()
+
+            tracking_id = st.session_state["current_tracking_id"]
+            st.info(
+                f"🎫 **Your Unique Report Tracking ID:** `{tracking_id}` (Save this ID to track status later!)"
+            )
+
             st.subheader("🚨 Inspection Breakdown & Urgent Dispatch")
 
             (
@@ -489,7 +509,7 @@ def render_dashboard_page():
                     key="dispatch_dept",
                 )
 
-            summary_text = "UrbanEye AI Summary:\n" + "\n".join(
+            summary_text = f"Tracking ID: {tracking_id}\nUrbanEye AI Summary:\n" + "\n".join(
                 [
                     f"- {k.title()}: {v}"
                     for k, v in st.session_state["counts"].items()
@@ -497,9 +517,8 @@ def render_dashboard_page():
             )
             p_img = st.session_state.get("processed_img", None)
 
-            # Generate PDF using imported module from report folder
             pdf_bytes = create_pdf_report(
-                title=title,
+                title=f"{title} (ID: {tracking_id})",
                 user_details=user_details,
                 summary_text=summary_text,
                 detected_image=p_img,
@@ -511,7 +530,7 @@ def render_dashboard_page():
                     st.download_button(
                         label="📥 Download PDF Report",
                         data=pdf_bytes,
-                        file_name=f"Incident_{title.replace(' ', '_')}.pdf",
+                        file_name=f"Report_{tracking_id}.pdf",
                         mime="application/pdf",
                         use_container_width=True,
                         key="btn_dl_pdf",
@@ -528,7 +547,7 @@ def render_dashboard_page():
                                 sender_email=user_details["email"],
                                 target_department_email=dept_email,
                                 pdf_bytes=pdf_bytes,
-                                title=title,
+                                title=f"{title} [{tracking_id}]",
                                 user_details=user_details,
                                 counts=st.session_state["counts"],
                             )
@@ -540,11 +559,10 @@ def render_dashboard_page():
                             st.error(f"❌ Failed to send email: {e}")
             with btn3:
                 if st.button(
-                    "💾 Log to Master Ledger",
+                    "💾 Submit & Log to Master Ledger",
                     use_container_width=True,
                     key="btn_save_ledger",
                 ):
-                    new_id = f"INC-{1001 + len(df_ledger)}"
                     primary_hazard = (
                         list(st.session_state["counts"].keys())[0].title()
                         if st.session_state["counts"]
@@ -553,11 +571,14 @@ def render_dashboard_page():
                     new_row = pd.DataFrame(
                         [
                             {
-                                "ID": new_id,
+                                "Tracking ID": tracking_id,
                                 "Hazard": primary_hazard,
                                 "Severity": severity_label,
                                 "SLA Target": sla_target,
                                 "Status": "Pending",
+                                "Assigned Dept": dept_email.split("@")[0]
+                                .replace("_", " ")
+                                .title(),
                                 "Latitude": 31.5204
                                 + (np.random.randn() * 0.01),
                                 "Longitude": 74.3587
@@ -571,10 +592,63 @@ def render_dashboard_page():
                     st.session_state["incident_ledger"] = pd.concat(
                         [df_ledger, new_row], ignore_index=True
                     )
-                    st.success(f"✅ Added {new_id} to Master Ledger!")
+                    st.success(
+                        f"✅ Incident submitted successfully! Tracking ID: **{tracking_id}**"
+                    )
 
     # -------------------------------------------------------------------------
-    # VIEW 3: GIS LIVE INCIDENT MAP
+    # VIEW 3: PUBLIC HAZARD TRACKER
+    # -------------------------------------------------------------------------
+    elif current_view == "🔎 Public Hazard Tracker":
+        st.title("🔎 Citizen Hazard Tracker")
+        st.caption(
+            "Enter your unique Tracking ID to view real-time resolution status"
+        )
+
+        search_id = st.text_input(
+            "Enter Tracking ID (e.g., UE-2026-1001):",
+            value="",
+            placeholder="UE-2026-XXXX",
+        ).strip()
+
+        if search_id:
+            match = df_ledger[
+                df_ledger["Tracking ID"].str.upper() == search_id.upper()
+            ]
+
+            if not match.empty:
+                record = match.iloc[0]
+                st.success(f"✅ Found Report Record for `{record['Tracking ID']}`")
+
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Hazard Type", record["Hazard"])
+                m2.metric("Severity", record["Severity"])
+                m3.metric("Current Status", record["Status"])
+                m4.metric("SLA Resolution", record["SLA Target"])
+
+                st.divider()
+
+                status = record["Status"]
+                st.subheader("📌 Resolution Progress Tracker")
+
+                if status == "Pending":
+                    st.progress(25)
+                    st.warning("⏳ **Status: Pending** — Assigned to department. Inspection team queued.")
+                elif status == "In Progress":
+                    st.progress(65)
+                    st.info("🛠️ **Status: In Progress** — Maintenance team dispatched to the location.")
+                elif status == "Resolved":
+                    st.progress(100)
+                    st.success("🎉 **Status: Resolved** — Repair verified & hazard resolved successfully!")
+
+                st.markdown(f"**🏢 Department Assigned:** {record.get('Assigned Dept', 'Municipal Services')}")
+                st.markdown(f"**🕒 Reported Time:** {record['Timestamp']}")
+
+            else:
+                st.error(f"❌ No record found matching Tracking ID: `{search_id}`. Please check and try again.")
+
+    # -------------------------------------------------------------------------
+    # VIEW 4: GIS LIVE INCIDENT MAP
     # -------------------------------------------------------------------------
     elif current_view == "🗺️ GIS Live Incident Map":
         st.title("🗺️ Interactive GIS City Map")
@@ -589,7 +663,7 @@ def render_dashboard_page():
         st.dataframe(filtered_ledger, use_container_width=True)
 
     # -------------------------------------------------------------------------
-    # VIEW 4: CITY ANALYTICS & BI
+    # VIEW 5: CITY ANALYTICS & BI
     # -------------------------------------------------------------------------
     elif current_view == "📊 City Analytics & BI":
         st.title("📊 Business Intelligence & Trend Analytics")
@@ -625,7 +699,7 @@ def render_dashboard_page():
                 st.bar_chart(filtered_ledger["Status"].value_counts())
 
     # -------------------------------------------------------------------------
-    # VIEW 5: MASTER INCIDENT LEDGER
+    # VIEW 6: MASTER INCIDENT LEDGER
     # -------------------------------------------------------------------------
     elif current_view == "📋 Master Incident Ledger":
         st.title("📋 City Incident Master Ledger")
@@ -643,7 +717,7 @@ def render_dashboard_page():
         )
 
     # -------------------------------------------------------------------------
-    # VIEW 6: CITY REPORTS GENERATOR
+    # VIEW 7: CITY REPORTS GENERATOR
     # -------------------------------------------------------------------------
     elif current_view == "📄 City Reports Generator":
         st.title("📄 Executive City Reports Hub")
@@ -687,7 +761,6 @@ def render_dashboard_page():
 
         st.divider()
 
-        # Generate Custom PDF Report for current filtered ledger
         rep_summary_text = (
             f"UrbanEye AI Executive Report ({report_type.split(' ')[1]})\n\n"
             f"Officer: {user_details['username']} ({user_details['address']})\n"
@@ -733,7 +806,7 @@ def render_dashboard_page():
             )
 
     # -------------------------------------------------------------------------
-    # VIEW 7: FIX VERIFICATION (BEFORE / AFTER)
+    # VIEW 8: FIX VERIFICATION (BEFORE / AFTER)
     # -------------------------------------------------------------------------
     elif current_view == "✅ Fix Verification (Before/After)":
         st.title("✅ Municipal Fix Verification Engine")
@@ -747,17 +820,17 @@ def render_dashboard_page():
             st.success("🎉 All incidents have been verified and resolved!")
         else:
             selected_inc_id = st.selectbox(
-                "Select Incident to Verify & Close:",
-                pending_incidents["ID"].tolist(),
+                "Select Tracking ID to Verify & Close:",
+                pending_incidents["Tracking ID"].tolist(),
                 key="select_pending_id",
             )
 
             inc_details = pending_incidents[
-                pending_incidents["ID"] == selected_inc_id
+                pending_incidents["Tracking ID"] == selected_inc_id
             ].iloc[0]
 
             st.info(
-                f"**Selected:** {inc_details['ID']} | **Hazard:** {inc_details['Hazard']} | **Current Status:** `{inc_details['Status']}`"
+                f"**Selected:** {inc_details['Tracking ID']} | **Hazard:** {inc_details['Hazard']} | **Current Status:** `{inc_details['Status']}`"
             )
 
             c1, c2 = st.columns(2)
@@ -783,11 +856,11 @@ def render_dashboard_page():
                 "🟢 Mark as Resolved & Verify", key="btn_verify_fix"
             ):
                 st.session_state["incident_ledger"].loc[
-                    st.session_state["incident_ledger"]["ID"]
+                    st.session_state["incident_ledger"]["Tracking ID"]
                     == selected_inc_id,
                     "Status",
                 ] = "Resolved"
                 st.success(
-                    f"✅ {selected_inc_id} has been verified and status changed to RESOLVED!"
+                    f"✅ Incident {selected_inc_id} status updated to RESOLVED!"
                 )
                 st.balloons()
