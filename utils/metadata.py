@@ -6,6 +6,7 @@ except ImportError:
     supabase = None
 
 def get_user_metadata():
+    # Session restore karne ke liye Supabase session check karein
     if "user" not in st.session_state or st.session_state["user"] is None:
         if supabase:
             try:
@@ -31,26 +32,23 @@ def get_user_metadata():
         if email:
             details["email"] = email
 
-        # Database ki 'profiles' table se fresh data fetch karein
+        # 1. Database ki 'profiles' table se fresh data fetch karein
         if user_id and supabase:
             try:
                 res = supabase.table("profiles").select("*").eq("id", user_id).execute()
                 if res.data and len(res.data) > 0:
                     profile = res.data[0]
-                    
                     if profile.get("username"):
                         details["username"] = profile.get("username")
-                    if profile.get("phone"):
+                    if profile.get("phone") and str(profile.get("phone")).strip() != "":
                         details["phone"] = profile.get("phone")
-                    if profile.get("address"):
+                    if profile.get("address") and str(profile.get("address")).strip() != "":
                         details["address"] = profile.get("address")
-                    
-                    # Return details safely here once profile data is found
                     return details
             except Exception:
                 pass
 
-        # Fallback to Auth metadata if profiles table fails
+        # 2. Fallback to Auth metadata agar profiles table query fail ho jaye
         meta = {}
         if isinstance(user, dict):
             meta = user.get("user_metadata") or user.get("raw_user_meta_data") or {}
@@ -62,9 +60,10 @@ def get_user_metadata():
         elif email:
             details["username"] = email.split("@")[0].replace(".", " ").replace("_", " ").title()
 
-        if meta.get("phone"):
+        if meta.get("phone") and str(meta.get("phone")).strip() != "":
             details["phone"] = meta.get("phone")
-        if meta.get("address"):
+            
+        if meta.get("address") and str(meta.get("address")).strip() != "":
             details["address"] = meta.get("address")
             
     return details
