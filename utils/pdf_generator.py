@@ -2,6 +2,7 @@ import os
 import tempfile
 from fpdf import FPDF
 from PIL import Image
+from utils.metadata import get_user_metadata  # <-- Metadata function import kiya gaya hai
 
 
 def sanitize_text(text: str) -> str:
@@ -60,22 +61,26 @@ class ProfessionalPDF(FPDF):
 
 def create_pdf_report(
     title: str,
-    user_details: dict,
-    summary_text: str,
+    user_details: dict = None,  # Optional rakha hai taake agar pass na bhi ho toh khud fetch kar le
+    summary_text: str = "",
     detected_image: Image.Image = None,
 ) -> bytes:
     pdf = ProfessionalPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
+    # 🔄 Agar user_details na milein ya adhoori hon, toh metadata function se fresh fetch karein
+    if not user_details or not isinstance(user_details, dict) or not user_details.get("username"):
+        user_details = get_user_metadata()
+
     # Inputs Sanitize karna
     safe_title = sanitize_text(title)
     safe_summary = sanitize_text(summary_text)
 
-    u_name = sanitize_text(user_details.get("username", "N/A"))
-    u_email = sanitize_text(user_details.get("email", "N/A"))
-    u_phone = sanitize_text(user_details.get("phone", "N/A"))
-    u_address = sanitize_text(user_details.get("address", "N/A"))
+    u_name = sanitize_text(user_details.get("username", "Inspector Ahmed"))
+    u_email = sanitize_text(user_details.get("email", "officer@urbaneye.ai"))
+    u_phone = sanitize_text(user_details.get("phone", "+92 300 1234567"))
+    u_address = sanitize_text(user_details.get("address", "Lahore Urban Sector 4"))
 
     # ---------------------------------------------------------
     # SECTION 1: REPORTER & INCIDENT DETAILS (MODERN CARD BOX)
