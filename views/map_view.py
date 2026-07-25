@@ -1,38 +1,60 @@
 import streamlit as st
-from database.supabase_client import supabase
 import pandas as pd
 
 def render_map_page():
     st.title("🗺️ Interactive Map & Geo-Tagging")
-    st.markdown("This map displays the live locations of reported infrastructure issues (such as potholes, garbage dumps, and fallen trees) across the city.")
+    st.caption("Live locations of reported municipal infrastructure issues across the city.")
+    st.divider()
 
-    with st.spinner("Loading map data from database..."):
-        try:
-            # Fetching reports data from Supabase
+    reports_data = []
+
+    # 1. Pehle Local Session Ledger se data check karein
+    if "incident_ledger" in st.session_state and not st.session_state["incident_ledger"].empty:
+        df_local = st.session_state["incident_ledger"]
+        reports_data.extend(df_local.to_dict(orient="records"))
+
+    # 2. Phir Supabase Database se fetch karne ki koshish karein (Agar connected ho)
+    try:
+        from utils.supabase_client import init_supabase
+        supabase = init_supabase()
+        if supabase:
             response = supabase.table("reports").select("*").execute()
-            data = response.data
+            if response.data:
+                # Merge or append supabase data
+                db_reports = response.data
+                # Avoid duplicates based on tracking_id if needed
+                existing_ids = {r.get("Tracking ID") or r.get("tracking_id") for r in reports_data}
+                for r in db_reports:
+                    t_id = r.get("Tracking ID") or r.get("tracking_id")
+                    if t_id not in existing_ids:
+                        reports_data.append(r)
+    except Exception:
+        pass # Supabase offline ho toh local session chalta rahega
 
-            if data:
-                df = pd.DataFrame(data)
+    # 3. Render Map agar data mojood hai
+    if reports_data:
+        df = pd.DataFrame(reports_data)
+        
+        # Ensure column names match expected case
+        if "latitude" in df.columns and "longitude" in df.columns:
+            map_df = df.rename(columns={"latitude": "lat", "longitude": "lon"})
+        elif "Latitude" in df.columns and "Longitude" in df.columns:
+            map_df = df.rename(columns={"Latitude": "lat", "Longitude": "lon"})
+        else:
+            map_df = pd.DataFrame()
+
+        if not map_df.empty and "lat" in map_df.columns and "lon" in map_df.columns:
+            # Drop rows with null coords
+            map_df = map_df.dropna(subset=["lat", "lon"])
+            
+            if not map_df.empty:
+                st.subheader("📍 Live Incident Coordinates Map")
+                st.map(map_df, latitude="lat", longitude="lon", size=20, color="#FF4B4B")
                 
-                # Check if latitude and longitude columns exist in the table
-                if "latitude" in df.columns and "longitude" in df.columns:
-                    # Drop rows with missing coordinates
-                    map_df = df.dropna(subset=["latitude", "longitude"])
-                    
-                    if not map_df.empty:
-                        # Streamlit Native Map Display
-                        st.map(map_df, latitude="latitude", longitude="longitude", size=30, color="#FF4B4B")
-                        
-                        st.markdown("---")
-                        st.subheader("📋 Reported Issues Summary")
-                        st.dataframe(map_df, use_container_width=True)
-                    else:
-                        st.info("ℹ️ No reports currently contain saved GPS coordinates (latitude/longitude).")
-                else:
-                    st.warning("⚠️ 'latitude' and 'longitude' columns were not found in the database table. Please verify your database schema.")
-            else:
-                st.info("📭 No reports found in the database yet.")
+                st.divider()
+                st.subheader("📋 Detailed Reports Registry")
+                st.dataframe(df, use_container_width=True)
+                return
 
-        except Exception as e:
-            st.error(f"❌ Error loading map data: {e}")
+    # Agar koi report na ho
+    st.info("📭 No reports found in the database yet. Run a detection and submit an incident from the dashboard to view pins on the map!")
