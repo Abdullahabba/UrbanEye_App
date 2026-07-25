@@ -19,18 +19,6 @@ if "user" not in st.session_state or st.session_state["user"] is None:
     saved_user = controller.get("urbaneye_logged_in_user")
     if saved_user:
         st.session_state["user"] = saved_user
-    else:
-        st.session_state["user"] = None
-
-# Automatically save to cookie if user logs in successfully
-if st.session_state["user"] is not None:
-    current_cookie = controller.get("urbaneye_logged_in_user")
-    if not current_cookie:
-        user_val = st.session_state["user"]
-        if hasattr(user_val, "email"):
-            controller.set("urbaneye_logged_in_user", {"email": user_val.email}, max_age=60*60*24*7)
-        else:
-            controller.set("urbaneye_logged_in_user", user_val, max_age=60*60*24*7)
 
 # Navigation Guard: User Login Required
 if st.session_state["user"] is None:
