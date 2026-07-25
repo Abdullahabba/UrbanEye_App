@@ -85,12 +85,12 @@ def render_login_page():
                     
                     user_obj = auth_response.user
                     if user_obj:
-                        # 2. Explicitly save/upsert profile in the public.profiles table
-                        supabase.table("profiles").upsert({
+                        # 2. Forcefully save username, phone, and address in profiles table using admin
+                        supabase_admin.table("profiles").upsert({
                             "id": user_obj.id,
-                            "username": username,
+                            "username": username.strip(),
                             "phone": phone.strip(),
-                            "address": address
+                            "address": address.strip()
                         }).execute()
 
                     st.success("✅ Account created successfully! Please switch to the Login tab to sign in.")
