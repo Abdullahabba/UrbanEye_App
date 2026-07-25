@@ -14,17 +14,23 @@ st.set_page_config(
 # Initialize Cookie Controller
 controller = CookieController()
 
-# Safely Initialize Session State & Check Cookie Restoration
+# Safely Initialize Session State
 if "user" not in st.session_state:
     st.session_state["user"] = None
 
-if st.session_state.get("user") is None:
-    saved_user = controller.get("urbaneye_logged_in_user")
-    if saved_user:
-        st.session_state["user"] = saved_user
+# Attempt Cookie Restoration if User is not in Session
+if st.session_state["user"] is None:
+    try:
+        cookies = controller.getAll()
+        if cookies and isinstance(cookies, dict):
+            saved_user = cookies.get("urbaneye_logged_in_user")
+            if saved_user:
+                st.session_state["user"] = saved_user
+    except Exception as e:
+        print(f"Cookie fetch warning: {e}")
 
 # Navigation Guard: User Login Required
-if st.session_state.get("user") is None:
+if st.session_state["user"] is None:
     render_login_page()
 else:
     # Sidebar User Info & Logout
@@ -40,7 +46,10 @@ else:
 
         if st.button("🚪 Logout", key="btn_logout", use_container_width=True):
             st.session_state["user"] = None
-            controller.remove("urbaneye_logged_in_user")
+            try:
+                controller.remove("urbaneye_logged_in_user")
+            except Exception:
+                pass
             st.rerun()
 
         st.markdown("---")
