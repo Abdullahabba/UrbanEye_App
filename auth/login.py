@@ -1,6 +1,10 @@
 import streamlit as st
 from database.supabase_client import supabase
 from supabase import create_client
+from streamlit_cookies_controller import CookieController
+
+# Initialize Cookie Controller
+controller = CookieController()
 
 # Direct Admin Client setup with Service Role Key to bypass module cache
 SUPABASE_URL = "https://clriyqbkdxpjscpufqns.supabase.co"
@@ -45,9 +49,14 @@ def render_login_page():
                     st.session_state["user"] = response.user
                     st.session_state["remember_me"] = remember_me
                     
+                    user_data = {"email": email}
+                    
+                    # 🍪 Keep Me Logged In Check based on Checkbox
                     if remember_me:
+                        controller.set("urbaneye_logged_in_user", user_data, max_age=60*60*24*7) # 7 days
                         st.success("✅ Login successful! (Session remembered)")
                     else:
+                        controller.remove("urbaneye_logged_in_user")
                         st.success("✅ Login successful!")
                         
                     st.rerun()
