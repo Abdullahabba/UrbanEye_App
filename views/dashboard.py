@@ -109,6 +109,7 @@ def initialize_mock_history():
                     "Assigned Dept": "Road Maintenance Dept",
                     "Latitude": 31.5204,
                     "Longitude": 74.3587,
+                    "Location Name": "Iqbal Sector, Block AA",
                     "Timestamp": "2026-07-23 08:15",
                 },
                 {
@@ -120,6 +121,7 @@ def initialize_mock_history():
                     "Assigned Dept": "Waste Management Dept",
                     "Latitude": 31.5100,
                     "Longitude": 74.3400,
+                    "Location Name": "Gulberg III Main Blvd",
                     "Timestamp": "2026-07-23 11:30",
                 },
                 {
@@ -131,6 +133,7 @@ def initialize_mock_history():
                     "Assigned Dept": "Parks & Horticulture Authority",
                     "Latitude": 31.5300,
                     "Longitude": 74.3600,
+                    "Location Name": "Model Town Link Road",
                     "Timestamp": "2026-07-22 09:00",
                 },
             ]
@@ -161,7 +164,7 @@ def render_dashboard_page():
 
         st.divider()
 
-        # 🎯 FOCUSED NAVIGATION MENU (Only Detection & Tracking)
+        # 🎯 FOCUSED NAVIGATION MENU
         st.subheader("🧭 Navigation Menu")
         current_view = st.radio(
             "Go To View:",
@@ -213,6 +216,33 @@ def render_dashboard_page():
 
         if "current_tracking_id" not in st.session_state:
             st.session_state["current_tracking_id"] = generate_tracking_id()
+
+        # 📍 LOCATION CONFIGURATION SECTION FOR INPUTS
+        st.markdown("### 📍 Location Configuration (GPS / Manual)")
+        loc_col1, loc_col2 = st.columns(2)
+        
+        with loc_col1:
+            location_mode = st.selectbox(
+                "Location Method",
+                ["📡 Auto GPS (Device Simulation)", "✍️ Manual Coordinate & Address Entry"],
+                key="input_location_method"
+            )
+
+        if location_mode == "✍️ Manual Coordinate & Address Entry":
+            m_col1, m_col2, m_col3 = st.columns(3)
+            with m_col1:
+                manual_lat = st.number_input("Latitude", value=31.5204, format="%.4f", key="man_lat")
+            with m_col2:
+                manual_lon = st.number_input("Longitude", value=74.3587, format="%.4f", key="man_lon")
+            with m_col3:
+                manual_loc_name = st.text_input("Location / Street / Sector", value="Iqbal Sector, Block AA, Lahore", key="man_loc_name")
+        else:
+            manual_lat = 31.5204 + (random.random() * 0.005)
+            manual_lon = 74.3587 + (random.random() * 0.005)
+            manual_loc_name = f"Auto-GPS Location (Sector 4 - Lat: {manual_lat:.4f})"
+            st.info(f"📡 GPS Locked Successfully! Coords: `{manual_lat:.4f}, {manual_lon:.4f}`")
+
+        st.divider()
 
         # MODE 1: SINGLE IMAGE
         if input_mode == "🖼️ Single Image":
@@ -373,7 +403,7 @@ def render_dashboard_page():
 
             tracking_id = st.session_state["current_tracking_id"]
             st.info(
-                f"🎫 **Your Unique Report Tracking ID:** `{tracking_id}` (Save this ID to check back in the tracker!)"
+                f"🎫 **Your Unique Report Tracking ID:** `{tracking_id}` | 📍 **Location:** {manual_loc_name} (`{manual_lat:.4f}, {manual_lon:.4f}`)"
             )
 
             st.subheader("🚨 Inspection Breakdown & Urgent Dispatch")
@@ -422,7 +452,7 @@ def render_dashboard_page():
                     key="dispatch_dept",
                 )
 
-            summary_text = f"Tracking ID: {tracking_id}\nUrbanEye AI Summary:\n" + "\n".join(
+            summary_text = f"Tracking ID: {tracking_id}\nLocation: {manual_loc_name} (Lat: {manual_lat:.4f}, Lon: {manual_lon:.4f})\nUrbanEye AI Summary:\n" + "\n".join(
                 [
                     f"- {k.title()}: {v}"
                     for k, v in st.session_state["counts"].items()
@@ -492,10 +522,9 @@ def render_dashboard_page():
                                 "Assigned Dept": dept_email.split("@")[0]
                                 .replace("_", " ")
                                 .title(),
-                                "Latitude": 31.5204
-                                + (np.random.randn() * 0.01),
-                                "Longitude": 74.3587
-                                + (np.random.randn() * 0.01),
+                                "Latitude": manual_lat,
+                                "Longitude": manual_lon,
+                                "Location Name": manual_loc_name,
                                 "Timestamp": pd.Timestamp.now().strftime(
                                     "%Y-%m-%d %H:%M"
                                 ),
@@ -555,6 +584,7 @@ def render_dashboard_page():
                     st.success("🎉 **Status: Resolved** — Repair verified & hazard resolved successfully!")
 
                 st.markdown(f"**🏢 Department Assigned:** {record.get('Assigned Dept', 'Municipal Services')}")
+                st.markdown(f"**📍 Location Area:** {record.get('Location Name', 'N/A')} (Lat: {record.get('Latitude', 'N/A')}, Lon: {record.get('Longitude', 'N/A')})")
                 st.markdown(f"**🕒 Reported Time:** {record['Timestamp']}")
 
             else:
