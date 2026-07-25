@@ -4,3 +4,4 @@ opencv-python-headless
 pillow
 supabase
 fpdf2
+streamlit-cookies-controller
