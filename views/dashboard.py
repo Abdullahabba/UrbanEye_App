@@ -46,15 +46,6 @@ except ModuleNotFoundError:
                             return b""
 
 
-# Optional Plotly handling
-try:
-    import plotly.express as px
-
-    HAS_PLOTLY = True
-except ImportError:
-    HAS_PLOTLY = False
-
-
 # -----------------------------------------------------------------------------
 # HELPER FUNCTIONS
 # -----------------------------------------------------------------------------
@@ -159,7 +150,7 @@ def render_dashboard_page():
     # =========================================================================
     with st.sidebar:
         st.title("👁️ UrbanEye AI")
-        st.caption("Smart City Operations Command")
+        st.caption("Smart City Detection & Tracking")
 
         st.divider()
 
@@ -170,19 +161,13 @@ def render_dashboard_page():
 
         st.divider()
 
-        # 🎯 MAIN NAVIGATION MENU
+        # 🎯 FOCUSED NAVIGATION MENU (Only Detection & Tracking)
         st.subheader("🧭 Navigation Menu")
         current_view = st.radio(
             "Go To View:",
             [
-                "🏠 Executive Command Overview",
                 "🔍 AI Visual Detection Engine",
                 "🔎 Public Hazard Tracker",
-                "🗺️ GIS Live Incident Map",
-                "📊 City Analytics & BI",
-                "📋 Master Incident Ledger",
-                "📄 City Reports Generator",
-                "✅ Fix Verification (Before/After)",
             ],
             key="main_navigation",
         )
@@ -211,86 +196,14 @@ def render_dashboard_page():
             conf_threshold = 0.45
             input_mode = "🖼️ Single Image"
 
-        # 🔍 GLOBAL FILTERS
-        if current_view in [
-            "🏠 Executive Command Overview",
-            "🗺️ GIS Live Incident Map",
-            "📊 City Analytics & BI",
-            "📋 Master Incident Ledger",
-            "📄 City Reports Generator",
-        ]:
-            st.subheader("🌪️ Global Data Filters")
-            filter_status = st.multiselect(
-                "Filter Status:",
-                ["Pending", "In Progress", "Resolved"],
-                default=["Pending", "In Progress", "Resolved"],
-            )
-            filter_severity = st.multiselect(
-                "Filter Severity:",
-                ["LOW", "MEDIUM", "CRITICAL"],
-                default=["LOW", "MEDIUM", "CRITICAL"],
-            )
-
-            filtered_ledger = df_ledger[
-                (df_ledger["Status"].isin(filter_status))
-                & (df_ledger["Severity"].isin(filter_severity))
-            ]
-        else:
-            filtered_ledger = df_ledger
-
     # =========================================================================
     # MAIN AREA CONTENT
     # =========================================================================
 
     # -------------------------------------------------------------------------
-    # VIEW 1: EXECUTIVE COMMAND OVERVIEW
+    # VIEW 1: AI VISUAL DETECTION ENGINE
     # -------------------------------------------------------------------------
-    if current_view == "🏠 Executive Command Overview":
-        st.title("🏠 Executive Command Center")
-        st.caption("Real-time City Metrics & Emergency Overview")
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total Reported", len(filtered_ledger))
-        c2.metric(
-            "Pending Action",
-            len(filtered_ledger[filtered_ledger["Status"] == "Pending"]),
-        )
-        c3.metric(
-            "Critical SLA Hazards",
-            len(filtered_ledger[filtered_ledger["Severity"] == "CRITICAL"]),
-        )
-        c4.metric(
-            "SLA Resolution Rate",
-            f"{int((len(filtered_ledger[filtered_ledger['Status'] == 'Resolved']) / max(len(filtered_ledger), 1)) * 100)}%",
-        )
-
-        st.divider()
-
-        col_left, col_right = st.columns([3, 2])
-        with col_left:
-            st.subheader("📍 Active GIS Hazard Map")
-            map_data = filtered_ledger[["Latitude", "Longitude"]].rename(
-                columns={"Latitude": "lat", "Longitude": "lon"}
-            )
-            st.map(map_data, zoom=11)
-
-        with col_right:
-            st.subheader("🚨 Critical Priority Queue")
-            critical_df = filtered_ledger[
-                filtered_ledger["Severity"] == "CRITICAL"
-            ]
-            if not critical_df.empty:
-                for idx, row in critical_df.iterrows():
-                    st.error(
-                        f"**{row['Tracking ID']}** | {row['Hazard']}\n\n⏱️ **SLA:** {row['SLA Target']} | 📌 **Status:** {row['Status']}"
-                    )
-            else:
-                st.success("🎉 No active Critical Hazards pending!")
-
-    # -------------------------------------------------------------------------
-    # VIEW 2: AI VISUAL DETECTION ENGINE
-    # -------------------------------------------------------------------------
-    elif current_view == "🔍 AI Visual Detection Engine":
+    if current_view == "🔍 AI Visual Detection Engine":
         st.title("🔍 AI Inspection Engine")
         st.caption(
             f"Active Mode: **{input_mode}** | YOLO Confidence Threshold: `{conf_threshold}`"
@@ -460,7 +373,7 @@ def render_dashboard_page():
 
             tracking_id = st.session_state["current_tracking_id"]
             st.info(
-                f"🎫 **Your Unique Report Tracking ID:** `{tracking_id}` (Save this ID to track status later!)"
+                f"🎫 **Your Unique Report Tracking ID:** `{tracking_id}` (Save this ID to check back in the tracker!)"
             )
 
             st.subheader("🚨 Inspection Breakdown & Urgent Dispatch")
@@ -559,7 +472,7 @@ def render_dashboard_page():
                             st.error(f"❌ Failed to send email: {e}")
             with btn3:
                 if st.button(
-                    "💾 Submit & Log to Master Ledger",
+                    "💾 Submit & Log to Tracker",
                     use_container_width=True,
                     key="btn_save_ledger",
                 ):
@@ -597,7 +510,7 @@ def render_dashboard_page():
                     )
 
     # -------------------------------------------------------------------------
-    # VIEW 3: PUBLIC HAZARD TRACKER
+    # VIEW 2: PUBLIC HAZARD TRACKER
     # -------------------------------------------------------------------------
     elif current_view == "🔎 Public Hazard Tracker":
         st.title("🔎 Citizen Hazard Tracker")
@@ -647,220 +560,6 @@ def render_dashboard_page():
             else:
                 st.error(f"❌ No record found matching Tracking ID: `{search_id}`. Please check and try again.")
 
-    # -------------------------------------------------------------------------
-    # VIEW 4: GIS LIVE INCIDENT MAP
-    # -------------------------------------------------------------------------
-    elif current_view == "🗺️ GIS Live Incident Map":
-        st.title("🗺️ Interactive GIS City Map")
-        st.caption("Live geographical plotting based on active filters")
 
-        map_data = filtered_ledger[["Latitude", "Longitude"]].rename(
-            columns={"Latitude": "lat", "Longitude": "lon"}
-        )
-        st.map(map_data, zoom=12)
-
-        st.subheader("Filtered Location Registry")
-        st.dataframe(filtered_ledger, use_container_width=True)
-
-    # -------------------------------------------------------------------------
-    # VIEW 5: CITY ANALYTICS & BI
-    # -------------------------------------------------------------------------
-    elif current_view == "📊 City Analytics & BI":
-        st.title("📊 Business Intelligence & Trend Analytics")
-
-        c_a1, c_a2 = st.columns(2)
-        if HAS_PLOTLY:
-            with c_a1:
-                fig1 = px.bar(
-                    filtered_ledger,
-                    x="Hazard",
-                    color="Severity",
-                    title="Incidents by Category & Severity",
-                    color_discrete_map={
-                        "CRITICAL": "#dc3545",
-                        "MEDIUM": "#ffc107",
-                        "LOW": "#28a745",
-                    },
-                )
-                st.plotly_chart(fig1, use_container_width=True)
-
-            with c_a2:
-                fig2 = px.pie(
-                    filtered_ledger,
-                    names="Status",
-                    title="Incident Resolution Status",
-                    hole=0.4,
-                )
-                st.plotly_chart(fig2, use_container_width=True)
-        else:
-            with c_a1:
-                st.bar_chart(filtered_ledger["Hazard"].value_counts())
-            with c_a2:
-                st.bar_chart(filtered_ledger["Status"].value_counts())
-
-    # -------------------------------------------------------------------------
-    # VIEW 6: MASTER INCIDENT LEDGER
-    # -------------------------------------------------------------------------
-    elif current_view == "📋 Master Incident Ledger":
-        st.title("📋 City Incident Master Ledger")
-        st.caption("Central Database of all recorded municipal violations")
-
-        st.dataframe(filtered_ledger, use_container_width=True)
-
-        csv_data = filtered_ledger.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            label="📥 Export Filtered Ledger to CSV",
-            data=csv_data,
-            file_name="UrbanEye_Ledger_Export.csv",
-            mime="text/csv",
-            key="btn_export_csv",
-        )
-
-    # -------------------------------------------------------------------------
-    # VIEW 7: CITY REPORTS GENERATOR
-    # -------------------------------------------------------------------------
-    elif current_view == "📄 City Reports Generator":
-        st.title("📄 Executive City Reports Hub")
-        st.caption("Generate, view summaries, and export municipal reports")
-
-        r_col1, r_col2 = st.columns([2, 1])
-
-        with r_col1:
-            report_type = st.selectbox(
-                "Select Report Type:",
-                [
-                    "📊 Executive Summary Report",
-                    "🚨 Critical SLA Violations Audit",
-                    "🧹 Hazard Category Distribution",
-                    "📋 Complete Incident Master Log",
-                ],
-            )
-            report_notes = st.text_area(
-                "Officer Remarks / Directives:",
-                "All critical hazards must be prioritized within the 4-hour SLA window.",
-                height=100,
-            )
-
-        with r_col2:
-            st.markdown("### Report Summary")
-            st.metric("Total Records", len(filtered_ledger))
-            st.metric(
-                "Critical Hazards",
-                len(
-                    filtered_ledger[filtered_ledger["Severity"] == "CRITICAL"]
-                ),
-            )
-            st.metric(
-                "Pending Actions",
-                len(filtered_ledger[filtered_ledger["Status"] == "Pending"]),
-            )
-
-        st.divider()
-        st.subheader("📋 Report Data Preview")
-        st.dataframe(filtered_ledger, use_container_width=True)
-
-        st.divider()
-
-        rep_summary_text = (
-            f"UrbanEye AI Executive Report ({report_type.split(' ')[1]})\n\n"
-            f"Officer: {user_details['username']} ({user_details['address']})\n"
-            f"Total Incidents Recorded: {len(filtered_ledger)}\n"
-            f"Pending: {len(filtered_ledger[filtered_ledger['Status'] == 'Pending'])}\n"
-            f"Critical: {len(filtered_ledger[filtered_ledger['Severity'] == 'CRITICAL'])}\n\n"
-            f"Officer Directives:\n{report_notes}"
-        )
-
-        gen_pdf_bytes = create_pdf_report(
-            title=report_type.replace("📊 ", "")
-            .replace("🚨 ", "")
-            .replace("🧹 ", "")
-            .replace("📋 ", ""),
-            user_details=user_details,
-            summary_text=rep_summary_text,
-            detected_image=None,
-        )
-
-        b1, b2 = st.columns(2)
-        with b1:
-            if gen_pdf_bytes:
-                st.download_button(
-                    label="📥 Export Full PDF Report",
-                    data=gen_pdf_bytes,
-                    file_name="UrbanEye_Executive_Report.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                    key="btn_gen_pdf_rep",
-                )
-            else:
-                st.warning("PDF generation utility unavailable.")
-
-        with b2:
-            rep_csv = filtered_ledger.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="📥 Export Report Data (CSV)",
-                data=rep_csv,
-                file_name="UrbanEye_Report_Data.csv",
-                mime="text/csv",
-                use_container_width=True,
-                key="btn_gen_csv_rep",
-            )
-
-    # -------------------------------------------------------------------------
-    # VIEW 8: FIX VERIFICATION (BEFORE / AFTER)
-    # -------------------------------------------------------------------------
-    elif current_view == "✅ Fix Verification (Before/After)":
-        st.title("✅ Municipal Fix Verification Engine")
-        st.caption(
-            "Upload 'After Fix' evidence to resolve active pending incidents"
-        )
-
-        pending_incidents = df_ledger[df_ledger["Status"] != "Resolved"]
-
-        if pending_incidents.empty:
-            st.success("🎉 All incidents have been verified and resolved!")
-        else:
-            selected_inc_id = st.selectbox(
-                "Select Tracking ID to Verify & Close:",
-                pending_incidents["Tracking ID"].tolist(),
-                key="select_pending_id",
-            )
-
-            inc_details = pending_incidents[
-                pending_incidents["Tracking ID"] == selected_inc_id
-            ].iloc[0]
-
-            st.info(
-                f"**Selected:** {inc_details['Tracking ID']} | **Hazard:** {inc_details['Hazard']} | **Current Status:** `{inc_details['Status']}`"
-            )
-
-            c1, c2 = st.columns(2)
-            with c1:
-                st.subheader("📷 Original Hazard (Before)")
-                st.warning("Original inspection evidence logged in database.")
-
-            with c2:
-                st.subheader("📸 Upload Fix Evidence (After)")
-                after_file = st.file_uploader(
-                    "Upload Repair Photo",
-                    type=["jpg", "png"],
-                    key="after_repair_upload",
-                )
-                if after_file:
-                    st.image(
-                        Image.open(after_file),
-                        caption="After Repair Evidence",
-                        use_container_width=True,
-                    )
-
-            if after_file and st.button(
-                "🟢 Mark as Resolved & Verify", key="btn_verify_fix"
-            ):
-                st.session_state["incident_ledger"].loc[
-                    st.session_state["incident_ledger"]["Tracking ID"]
-                    == selected_inc_id,
-                    "Status",
-                ] = "Resolved"
-                st.success(
-                    f"✅ Incident {selected_inc_id} status updated to RESOLVED!"
-                )
-                st.balloons()
+if __name__ == "__main__":
+    render_dashboard_page()
