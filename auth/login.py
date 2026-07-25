@@ -17,21 +17,15 @@ def render_login_page():
         if "logged_in_email" in st.query_params and supabase_admin:
             try:
                 saved_email = st.query_params["logged_in_email"]
-                users = supabase_admin.auth.admin.list_users()
-                for u in users:
-                    if (u.email or "").strip().lower() == saved_email.strip().lower():
-                        st.session_state["user"] = u
-                        # Profile bhi fetch karke cache kar lein
-                        res = supabase_admin.table("profiles").select("*").eq("email", saved_email.strip().lower()).execute()
-                        if res.data and len(res.data) > 0:
-                            profile = res.data[0]
-                            st.session_state["user_profile"] = {
-                                "email": profile.get("email", saved_email),
-                                "username": profile.get("username", "Inspector Ahmed"),
-                                "phone": profile.get("phone", "+92 300 1234567"),
-                                "address": profile.get("address", "Lahore Urban Sector 4"),
-                            }
-                        break
+                res = supabase_admin.table("profiles").select("*").eq("email", saved_email.strip().lower()).execute()
+                if res.data and len(res.data) > 0:
+                    profile = res.data[0]
+                    st.session_state["user_profile"] = {
+                        "email": profile.get("email", saved_email),
+                        "username": profile.get("username", "Inspector Ahmed"),
+                        "phone": profile.get("phone", "+92 300 1234567"),
+                        "address": profile.get("address", "Lahore Urban Sector 4"),
+                    }
             except Exception:
                 pass
 
@@ -137,7 +131,8 @@ def render_login_page():
     with tab_forgot:
         st.subheader("🔑 Reset Password")
 
-        if not st.status if "reset_verified" in st.session_state and not st.session_state["reset_verified"] else not st.session_state["reset_verified"]:
+        # Agar account abhi tak verify nahi hua, toh email aur phone mangay ga
+        if not st.session_state["reset_verified"]:
             st.info("💡 Enter your registered **Email Address** and **Phone Number** to verify your account.")
 
             reset_email = st.text_input("Registered Email Address", key="reset_email_input")
@@ -149,25 +144,14 @@ def render_login_page():
                 else:
                     with st.spinner("Checking database for matching account..."):
                         try:
-                            users = supabase_admin.auth.admin.list_users()
-                            target_user = None
+                            # Direct check from profiles table (Extremely fast & accurate)
+                            res = supabase_admin.table("profiles").select("id, email, phone").eq("email", reset_email.strip().lower()).eq("phone", reset_phone.strip()).execute()
 
-                            cleaned_email = reset_email.strip().lower()
-                            cleaned_phone = reset_phone.strip()
-
-                            for u in users:
-                                u_email = (u.email or "").strip().lower()
-                                user_metadata = getattr(u, "user_metadata", {}) or {}
-                                u_phone = str(user_metadata.get("phone", "")).strip()
-
-                                if u_email == cleaned_email and u_phone == cleaned_phone:
-                                    target_user = u
-                                    break
-
-                            if target_user:
+                            if res.data and len(res.data) > 0:
+                                target_user = res.data[0]
                                 st.session_state["reset_verified"] = True
-                                st.session_state["reset_target_user_id"] = target_user.id
-                                st.session_state["reset_matched_email"] = cleaned_email
+                                st.session_state["reset_target_user_id"] = target_user["id"]
+                                st.session_state["reset_matched_email"] = target_user["email"]
                                 st.success("✅ Account verified successfully!")
                                 st.rerun()
                             else:
@@ -175,7 +159,9 @@ def render_login_page():
                         except Exception as e:
                             st.error(f"❌ Verification failed: {e}")
         else:
+            # Jab account verify ho jaye, tab naya password set karne ka form aaye ga
             st.success(f"✅ Verified Account: **{st.session_state['reset_matched_email']}**")
+            
             st.subheader("Set Your New Password")
 
             pass_1 = st.text_input("New Password", type="password", key="reset_new_pass")
