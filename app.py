@@ -14,14 +14,17 @@ st.set_page_config(
 # Initialize Cookie Controller
 controller = CookieController()
 
-# Session State Check & Cookie Restoration
-if "user" not in st.session_state or st.session_state["user"] is None:
+# Safely Initialize Session State & Check Cookie Restoration
+if "user" not in st.session_state:
+    st.session_state["user"] = None
+
+if st.session_state.get("user") is None:
     saved_user = controller.get("urbaneye_logged_in_user")
     if saved_user:
         st.session_state["user"] = saved_user
 
 # Navigation Guard: User Login Required
-if st.session_state["user"] is None:
+if st.session_state.get("user") is None:
     render_login_page()
 else:
     # Sidebar User Info & Logout
