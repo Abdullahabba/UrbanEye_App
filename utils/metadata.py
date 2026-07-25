@@ -6,7 +6,6 @@ except ImportError:
     supabase = None
 
 def get_user_metadata():
-    # Refresh hone par session restore karne ke liye Supabase session check karein
     if "user" not in st.session_state or st.session_state["user"] is None:
         if supabase:
             try:
@@ -17,6 +16,7 @@ def get_user_metadata():
                 pass
 
     user = st.session_state.get("user", None)
+    
     details = {
         "email": "officer@urbaneye.ai",
         "username": "Inspector Ahmed",
@@ -25,24 +25,43 @@ def get_user_metadata():
     }
     
     if user:
-        # If user data is stored as a dictionary (Supabase standard response)
-        if isinstance(user, dict):
-            details["email"] = user.get("email", details["email"])
-            meta = user.get("user_metadata") or user.get("raw_user_meta_data") or {}
-            if meta:
-                details["username"] = meta.get("username", details["username"])
-                details["phone"] = meta.get("phone", details["phone"])
-                details["address"] = meta.get("address", details["address"])
+        user_id = getattr(user, "id", None) or (user.get("id") if isinstance(user, dict) else None)
+        email = getattr(user, "email", None) or (user.get("email") if isinstance(user, dict) else None)
         
-        # If user data is stored as an object
+        if email:
+            details["email"] = email
+
+        # Database ki 'profiles' table se fresh data fetch karein (Using Admin/Bypass logic)
+        if user_id and supabase:
+            try:
+                res = supabase.table("profiles").select("*").eq("id", user_id).execute()
+                if res.data and len(res.data) > 0:
+                    profile = res.data[0]
+                    if profile.get("username"):
+                        details["username"] = profile.get("username")
+                    if profile.get("phone"):
+                        details["phone"] = profile.get("phone")
+                    if profile.get("address"):
+                        details["address"] = profile.get("address")
+                    return details  # Yahan foran return karein agar profile mil jaye!
+            except Exception:
+                pass
+
+        # Fallback to Auth metadata
+        meta = {}
+        if isinstance(user, dict):
+            meta = user.get("user_metadata") or user.get("raw_user_meta_data") or {}
         else:
-            if hasattr(user, "email") and user.email:
-                details["email"] = user.email
+            meta = getattr(user, "user_metadata", None) or getattr(user, "raw_user_meta_data", None) or {}
+
+        if meta.get("username"):
+            details["username"] = meta.get("username")
+        elif email:
+            details["username"] = email.split("@")[0].replace(".", " ").replace("_", " ").title()
+
+        if meta.get("phone"):
+            details["phone"] = meta.get("phone")
+        if meta.get("address"):
+            details["address"] = meta.get("address")
             
-            meta = getattr(user, "user_metadata", None) or getattr(user, "raw_user_meta_data", None)
-            if meta:
-                details["username"] = meta.get("username", details["username"]) if isinstance(meta, dict) else getattr(meta, "username", details["username"])
-                details["phone"] = meta.get("phone", details["phone"]) if isinstance(meta, dict) else getattr(meta, "phone", details["phone"])
-                details["address"] = meta.get("address", details["address"]) if isinstance(meta, dict) else getattr(meta, "address", details["address"])
-                
     return details
