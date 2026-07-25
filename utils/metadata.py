@@ -31,23 +31,26 @@ def get_user_metadata():
         if email:
             details["email"] = email
 
-        # Database ki 'profiles' table se fresh data fetch karein (Using Admin/Bypass logic)
+        # Database ki 'profiles' table se fresh data fetch karein
         if user_id and supabase:
             try:
                 res = supabase.table("profiles").select("*").eq("id", user_id).execute()
                 if res.data and len(res.data) > 0:
                     profile = res.data[0]
+                    
                     if profile.get("username"):
                         details["username"] = profile.get("username")
                     if profile.get("phone"):
                         details["phone"] = profile.get("phone")
                     if profile.get("address"):
                         details["address"] = profile.get("address")
-                    return details  # Yahan foran return karein agar profile mil jaye!
+                    
+                    # Return details safely here once profile data is found
+                    return details
             except Exception:
                 pass
 
-        # Fallback to Auth metadata
+        # Fallback to Auth metadata if profiles table fails
         meta = {}
         if isinstance(user, dict):
             meta = user.get("user_metadata") or user.get("raw_user_meta_data") or {}
