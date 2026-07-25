@@ -1,6 +1,21 @@
 import streamlit as st
 
+try:
+    from database.supabase_client import supabase
+except ImportError:
+    supabase = None
+
 def get_user_metadata():
+    # Refresh hone par session restore karne ke liye Supabase session check karein
+    if "user" not in st.session_state or st.session_state["user"] is None:
+        if supabase:
+            try:
+                session_response = supabase.auth.get_session()
+                if session_response and session_response.session:
+                    st.session_state["user"] = session_response.session.user
+            except Exception:
+                pass
+
     user = st.session_state.get("user", None)
     details = {
         "email": "officer@urbaneye.ai",
