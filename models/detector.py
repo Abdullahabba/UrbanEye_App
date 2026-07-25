@@ -57,10 +57,10 @@ def generate_tracking_id():
 
 
 # -----------------------------------------------------------------------------
-# 4. SAVE REPORT TO SUPABASE
+# 4. SAVE REPORT TO SUPABASE (UPDATED WITH GEO-TAGGING)
 # -----------------------------------------------------------------------------
-def save_detection_report(user_id, counts, location, description=""):
-    """Detection results ko Supabase 'reports' table me submit karta hai."""
+def save_detection_report(user_id, counts, location, description="", latitude=None, longitude=None):
+    """Detection results ko Supabase 'reports' table me coordinates ke sath submit karta hai."""
     if not counts:
         issue_summary = "General Civic Defect"
     else:
@@ -76,6 +76,8 @@ def save_detection_report(user_id, counts, location, description=""):
         "location": location.strip() if location else "Location not specified",
         "description": description.strip(),
         "status": "Pending",
+        "latitude": latitude,   # Map view ke liye zaroori
+        "longitude": longitude, # Map view ke liye zaroori
     }
 
     response = supabase.table("reports").insert(data).execute()
