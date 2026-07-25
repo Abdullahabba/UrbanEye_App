@@ -19,17 +19,17 @@ SUPABASE_KEY = st.secrets.get(
     ),
 )
 
-# Secret Service Role Key (For Admin operations: RLS Bypass & Password Reset)
+# Secret Service Role Key (Cleaned & Fixed)
 SUPABASE_SERVICE_KEY = st.secrets.get(
     "SUPABASE_SERVICE_KEY",
     os.getenv(
         "SUPABASE_SERVICE_KEY",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNscml5cWJrZHhwanNjcHVmcW5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDc0MTAyNywiZXhwIjoyMTAwMzE3MDI3fQ.PpNmjWt6babeIB5b5ACghI7e633Cl0O1dtTsNWXPC_4",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNscml5cWJrZHhwanNjcHVmcW5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDc0MTAyNywiZXhwIjoyMTAwMzE3MDI3fQ.PpNmjWt6babeIB5b5ACghI7e633Cl0O1dtTsNWXPC_4",
     ),
 )
 
 # Standard Client for general app features
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Admin Client with elevated privileges (Bypasses RLS)
+# Admin Client with elevated privileges
 supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
