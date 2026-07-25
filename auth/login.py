@@ -13,7 +13,7 @@ supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 def render_login_page():
     st.title("👁️ Urban Eye AI - Security Portal")
 
-    # Session State Variables for 2-Step Password Reset Flow
+    # Session State Variables for 2-Step Password Reset Flow & Persistent Login
     if "reset_verified" not in st.session_state:
         st.session_state["reset_verified"] = False
     if "reset_target_user_id" not in st.session_state:
@@ -32,6 +32,7 @@ def render_login_page():
         st.subheader("Login to your account")
         email = st.text_input("Email Address", key="login_email")
         password = st.text_input("Password", type="password", key="login_pass")
+        remember_me = st.checkbox("Keep me logged in", key="login_remember_me")
 
         if st.button("Sign In", key="btn_login", use_container_width=True):
             if not email or not password:
@@ -42,7 +43,13 @@ def render_login_page():
                         {"email": email, "password": password}
                     )
                     st.session_state["user"] = response.user
-                    st.success("✅ Login successful!")
+                    st.session_state["remember_me"] = remember_me
+                    
+                    if remember_me:
+                        st.success("✅ Login successful! (Session remembered)")
+                    else:
+                        st.success("✅ Login successful!")
+                        
                     st.rerun()
                 except Exception as e:
                     st.error(f"❌ Login failed: {e}")
@@ -129,7 +136,6 @@ def render_login_page():
                 else:
                     with st.spinner("Checking database for matching account..."):
                         try:
-                            # Using Admin client with Service Role privileges
                             users = supabase_admin.auth.admin.list_users()
                             target_user = None
 
@@ -145,7 +151,6 @@ def render_login_page():
                                     user_metadata.get("phone", "")
                                 ).strip()
 
-                                # Check matching email and phone
                                 if (
                                     u_email == cleaned_email
                                     and u_phone == cleaned_phone
@@ -210,7 +215,6 @@ def render_login_page():
                                     {"password": new_password},
                                 )
 
-                                # Clear reset state
                                 st.session_state["reset_verified"] = False
                                 st.session_state["reset_target_user_id"] = None
                                 st.session_state["reset_matched_email"] = ""
