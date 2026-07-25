@@ -8,6 +8,7 @@ from PIL import Image
 
 from models.detector import run_detection
 from views.map_view import render_map_page
+from utils.metadata import get_user_metadata
 
 try:
     from utils.email_sender import send_email_with_pdf
@@ -43,23 +44,6 @@ if not create_pdf_report:
 # -----------------------------------------------------------------------------
 def generate_tracking_id():
     return f"UE-2026-{random.randint(1000, 9999)}"
-
-def get_user_metadata():
-    user = st.session_state.get("user", None)
-    details = {
-        "email": user.email if user and hasattr(user, "email") else "officer@urbaneye.ai",
-        "username": "Inspector Ahmed",
-        "phone": "+92 300 1234567",
-        "address": "Lahore Urban Sector 4",
-    }
-    if user and hasattr(user, "user_metadata") and user.user_metadata:
-        meta = user.user_metadata
-        details.update({
-            "username": meta.get("username", details["username"]),
-            "phone": meta.get("phone", details["phone"]),
-            "address": meta.get("address", details["address"]),
-        })
-    return details
 
 def calculate_severity_and_sla(counts: dict) -> tuple[str, str, str]:
     total_objects = sum(counts.values())
