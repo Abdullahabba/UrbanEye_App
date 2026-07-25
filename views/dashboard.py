@@ -12,22 +12,38 @@ from models.detector import run_detection
 try:
     from utils.email_sender import send_email_with_pdf
 except ImportError:
-    # Safe fallback if function name differs
     from utils.email_sender import send_email_alert as send_email_with_pdf
 
-# PDF Utility Import with Auto-Fallback (Fixes ModuleNotFoundError)
+# -----------------------------------------------------------------------------
+# 📑 INTEGRATED REPORT FOLDER & UTILITY IMPORTS
+# -----------------------------------------------------------------------------
+# Tries to import from your custom 'report' or 'reports' folder first
+create_pdf_report = None
+
 try:
-    from utils.pdf_sender import create_pdf_report
+    from report.pdf_generator import create_pdf_report
 except ModuleNotFoundError:
     try:
-        from utils.pdf_generator import create_pdf_report
+        from reports.pdf_generator import create_pdf_report
     except ModuleNotFoundError:
+        try:
+            from report.generator import create_pdf_report
+        except ModuleNotFoundError:
+            try:
+                from reports.generator import create_pdf_report
+            except ModuleNotFoundError:
+                try:
+                    from utils.pdf_sender import create_pdf_report
+                except ModuleNotFoundError:
+                    try:
+                        from utils.pdf_generator import create_pdf_report
+                    except ModuleNotFoundError:
 
-        def create_pdf_report(*args, **kwargs):
-            st.error(
-                "⚠️ PDF Module missing. Please check utils/pdf_sender.py file."
-            )
-            return b""
+                        def create_pdf_report(*args, **kwargs):
+                            st.error(
+                                "⚠️ Report Module Missing! Please verify your 'report' folder structure."
+                            )
+                            return b""
 
 
 # Optional Plotly handling
@@ -166,6 +182,7 @@ def render_dashboard_page():
                 "🗺️ GIS Live Incident Map",
                 "📊 City Analytics & BI",
                 "📋 Master Incident Ledger",
+                "📄 City Reports Generator",
                 "✅ Fix Verification (Before/After)",
             ],
             key="main_navigation",
@@ -201,6 +218,7 @@ def render_dashboard_page():
             "🗺️ GIS Live Incident Map",
             "📊 City Analytics & BI",
             "📋 Master Incident Ledger",
+            "📄 City Reports Generator",
         ]:
             st.subheader("🌪️ Global Data Filters")
             filter_status = st.multiselect(
@@ -479,7 +497,7 @@ def render_dashboard_page():
             )
             p_img = st.session_state.get("processed_img", None)
 
-            # Generate PDF using imported module
+            # Generate PDF using imported module from report folder
             pdf_bytes = create_pdf_report(
                 title=title,
                 user_details=user_details,
@@ -625,7 +643,97 @@ def render_dashboard_page():
         )
 
     # -------------------------------------------------------------------------
-    # VIEW 6: FIX VERIFICATION (BEFORE / AFTER)
+    # VIEW 6: CITY REPORTS GENERATOR
+    # -------------------------------------------------------------------------
+    elif current_view == "📄 City Reports Generator":
+        st.title("📄 Executive City Reports Hub")
+        st.caption("Generate, view summaries, and export municipal reports")
+
+        r_col1, r_col2 = st.columns([2, 1])
+
+        with r_col1:
+            report_type = st.selectbox(
+                "Select Report Type:",
+                [
+                    "📊 Executive Summary Report",
+                    "🚨 Critical SLA Violations Audit",
+                    "🧹 Hazard Category Distribution",
+                    "📋 Complete Incident Master Log",
+                ],
+            )
+            report_notes = st.text_area(
+                "Officer Remarks / Directives:",
+                "All critical hazards must be prioritized within the 4-hour SLA window.",
+                height=100,
+            )
+
+        with r_col2:
+            st.markdown("### Report Summary")
+            st.metric("Total Records", len(filtered_ledger))
+            st.metric(
+                "Critical Hazards",
+                len(
+                    filtered_ledger[filtered_ledger["Severity"] == "CRITICAL"]
+                ),
+            )
+            st.metric(
+                "Pending Actions",
+                len(filtered_ledger[filtered_ledger["Status"] == "Pending"]),
+            )
+
+        st.divider()
+        st.subheader("📋 Report Data Preview")
+        st.dataframe(filtered_ledger, use_container_width=True)
+
+        st.divider()
+
+        # Generate Custom PDF Report for current filtered ledger
+        rep_summary_text = (
+            f"UrbanEye AI Executive Report ({report_type.split(' ')[1]})\n\n"
+            f"Officer: {user_details['username']} ({user_details['address']})\n"
+            f"Total Incidents Recorded: {len(filtered_ledger)}\n"
+            f"Pending: {len(filtered_ledger[filtered_ledger['Status'] == 'Pending'])}\n"
+            f"Critical: {len(filtered_ledger[filtered_ledger['Severity'] == 'CRITICAL'])}\n\n"
+            f"Officer Directives:\n{report_notes}"
+        )
+
+        gen_pdf_bytes = create_pdf_report(
+            title=report_type.replace("📊 ", "")
+            .replace("🚨 ", "")
+            .replace("🧹 ", "")
+            .replace("📋 ", ""),
+            user_details=user_details,
+            summary_text=rep_summary_text,
+            detected_image=None,
+        )
+
+        b1, b2 = st.columns(2)
+        with b1:
+            if gen_pdf_bytes:
+                st.download_button(
+                    label="📥 Export Full PDF Report",
+                    data=gen_pdf_bytes,
+                    file_name="UrbanEye_Executive_Report.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="btn_gen_pdf_rep",
+                )
+            else:
+                st.warning("PDF generation utility unavailable.")
+
+        with b2:
+            rep_csv = filtered_ledger.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="📥 Export Report Data (CSV)",
+                data=rep_csv,
+                file_name="UrbanEye_Report_Data.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="btn_gen_csv_rep",
+            )
+
+    # -------------------------------------------------------------------------
+    # VIEW 7: FIX VERIFICATION (BEFORE / AFTER)
     # -------------------------------------------------------------------------
     elif current_view == "✅ Fix Verification (Before/After)":
         st.title("✅ Municipal Fix Verification Engine")
