@@ -7,6 +7,7 @@ import streamlit as st
 from PIL import Image
 
 from models.detector import run_detection
+from views.map_view import render_map_page
 
 try:
     from utils.email_sender import send_email_with_pdf
@@ -114,7 +115,15 @@ def render_dashboard_page():
         st.divider()
 
         st.subheader("🧭 Navigation Menu")
-        current_view = st.radio("Go To View:", ["🔍 AI Visual Detection Engine", "🔎 Public Hazard Tracker"], key="main_navigation")
+        current_view = st.radio(
+            "Go To View:", 
+            [
+                "🔍 AI Visual Detection Engine", 
+                "🔎 Public Hazard Tracker", 
+                "🗺️ Interactive Map"
+            ], 
+            key="main_navigation"
+        )
         st.divider()
 
         if current_view == "🔍 AI Visual Detection Engine":
@@ -315,6 +324,10 @@ def render_dashboard_page():
                 st.markdown(f"**🕒 Reported Time:** {record['Timestamp']}")
             else:
                 st.error(f"❌ No record found matching Tracking ID: `{search_id}`. Please check and try again.")
+
+    # VIEW 3: INTERACTIVE MAP & GEO-TAGGING
+    elif current_view == "🗺️ Interactive Map":
+        render_map_page()
 
 if __name__ == "__main__":
     render_dashboard_page()
