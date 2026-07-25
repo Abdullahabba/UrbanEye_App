@@ -8,7 +8,7 @@ controller = CookieController()
 
 # Direct Admin Client setup with Service Role Key to bypass module cache
 SUPABASE_URL = "https://clriyqbkdxpjscpufqns.supabase.co"
-SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNscml5cWJrZHhwanNjcHVmcW5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDc0MTAyNywiZXhwIjoyMTAwMzE3MDI3fQ.PpNmjWt6babeIB5b5ACghI7e633Cl0O1dtTsNWXPC_4"
+SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNscml5cWJrZHhwanNjcHVmcW5zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDc0MTAyNywiZXhwIjoyMTAwMzE3MDI3fQ.PpNmjWt6babeIB5b5ACghI7e633Cl0O1dtTsNWXPC_4"
 
 # Admin Client (Has full database access for password resets)
 supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -43,6 +43,7 @@ def render_login_page():
                 st.warning("Please enter both Email and Password!")
             else:
                 try:
+                    # 1. Supabase Authentication
                     response = supabase.auth.sign_in_with_password(
                         {"email": email, "password": password}
                     )
@@ -51,12 +52,18 @@ def render_login_page():
                     
                     user_data = {"email": email}
                     
-                    # 🍪 Keep Me Logged In Check based on Checkbox
+                    # 2. Cookie Handling in a separate try-except block
+                    try:
+                        if remember_me:
+                            controller.set("urbaneye_logged_in_user", user_data, max_age=60*60*24*7) # 7 days
+                        else:
+                            controller.remove("urbaneye_logged_in_user")
+                    except Exception as cookie_err:
+                        print(f"Cookie warning: {cookie_err}")
+
                     if remember_me:
-                        controller.set("urbaneye_logged_in_user", user_data, max_age=60*60*24*7) # 7 days
                         st.success("✅ Login successful! (Session remembered)")
                     else:
-                        controller.remove("urbaneye_logged_in_user")
                         st.success("✅ Login successful!")
                         
                     st.rerun()
