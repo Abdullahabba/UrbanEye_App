@@ -11,7 +11,7 @@ except ImportError:
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
-    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location (Manual or Real Auto-GPS) $\rightarrow$ Step 3: Dispatch Reports & Sync.")
+    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location (Manual without coordinates or Live GPS) $\rightarrow$ Step 3: Dispatch Reports & Sync.")
 
     # Initialize session state variables for location
     if "selected_lat" not in st.session_state:
@@ -34,7 +34,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=100)
 
-    # 2️⃣ Step 2: Location Option (Manual or Real Auto GPS)
+    # 2️⃣ Step 2: Location Option (Manual Address without coords or Live GPS)
     st.markdown("##### 📍 Step 2: Select Location Method")
     loc_mode = st.radio(
         "Choose Location Mode",
@@ -49,18 +49,18 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         if st.button("✅ Confirm Manual Location", use_container_width=True):
             if manual_input and manual_input.strip():
                 st.session_state["selected_loc_name"] = manual_input.strip()
-                # Default fallback coordinates for manual entry if GPS not provided
-                st.session_state["selected_lat"] = 31.5204
-                st.session_state["selected_lon"] = 74.3587
+                # No coordinates added for manual address
+                st.session_state["selected_lat"] = None
+                st.session_state["selected_lon"] = None
                 st.session_state["location_confirmed"] = True
-                st.success(f"✅ Manual Location Confirmed: `{manual_input.strip()}`")
+                st.success(f"✅ Manual Location Confirmed (No GPS coordinates): `{manual_input.strip()}`")
                 st.rerun()
             else:
                 st.warning("⚠️ Please enter a valid location name.")
         
         if st.session_state["location_confirmed"] and loc_mode == "Manual Address":
             location_ready = True
-            st.info(f"📌 Current Active Location: **{st.session_state['selected_loc_name']}**")
+            st.info(f"📌 Current Active Location: **{st.session_state['selected_loc_name']}** (Manual - No Coordinates)")
 
     else:
         st.markdown("🛰️ Click below to fetch your **real browser GPS coordinates**:")
@@ -86,10 +86,14 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.divider()
 
         final_location_name = st.session_state["selected_loc_name"]
-        lat = st.session_state["selected_lat"] or 31.5204
-        lon = st.session_state["selected_lon"] or 74.3587
+        lat = st.session_state["selected_lat"]
+        lon = st.session_state["selected_lon"]
 
-        full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat}, {lon})\nTracking ID: {tracking_id}"
+        # Conditionally format summary text based on whether coordinates exist
+        if lat is not None and lon is not None:
+            full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat:.4f}, {lon:.4f})\nTracking ID: {tracking_id}"
+        else:
+            full_summary_text = summary_text + f"Location: {final_location_name} (Manual Entry - No GPS)\nTracking ID: {tracking_id}"
 
         # Gather all captured/detected evidence images
         raw_images = st.session_state.get("captured_images", [])
@@ -200,8 +204,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                         "sla_target": "12 Hours",
                         "status": "Pending",
                         "assigned_dept": str(assigned_department),
-                        "latitude": lat,
-                        "longitude": lon,
+                        "latitude": lat,  # Will be None if manual address
+                        "longitude": lon, # Will be None if manual address
                         "location_name": str(final_location_name),
                         "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                     }
