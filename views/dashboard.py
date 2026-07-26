@@ -32,6 +32,10 @@ def render_dashboard_page():
     initialize_mock_history()
     user_details = get_user_metadata()
 
+    # Initialize captured images list for multi-image PDF reports
+    if "captured_images" not in st.session_state:
+        st.session_state["captured_images"] = []
+
     # SIDEBAR CONTROL CENTER
     with st.sidebar:
         st.title("👁️ UrbanEye AI")
@@ -94,8 +98,17 @@ def render_dashboard_page():
         elif input_mode == "📸 Live Camera":
             render_live_camera_mode(conf_threshold)
 
-        # DISPATCH & REPORTING PANEL
-        render_dispatch_panel(st.session_state["current_tracking_id"], manual_loc_name, user_details, create_pdf_report)
+        # DISPATCH & REPORTING PANEL (Passing captured images list for multi-image PDF reports)
+        all_evidence_images = st.session_state.get("captured_images", [])
+        if not all_evidence_images and "processed_img" in st.session_state:
+            all_evidence_images = [st.session_state["processed_img"]]
+
+        render_dispatch_panel(
+            st.session_state["current_tracking_id"], 
+            manual_loc_name, 
+            user_details, 
+            create_pdf_report
+        )
 
     elif current_view == "🔎 Public Hazard Tracker":
         render_report_tracker()
