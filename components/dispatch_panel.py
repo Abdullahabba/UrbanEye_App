@@ -64,11 +64,11 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             try:
                 from database.supabase_client import supabase
                 
-                # 🔄 Fixed payload column name: 'issue_type' matches Supabase schema constraint
                 detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
                 
+                # Payload matching standard Supabase 'reports' table schema
                 payload = {
-                    "tracking_id": tracking_id,
+                    "tracking_id": str(tracking_id),
                     "issue_type": str(detected_hazard_name),
                     "severity": "MEDIUM",
                     "sla_target": "12 Hours",
@@ -76,20 +76,35 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     "assigned_dept": "Road Maintenance",
                     "latitude": 31.5204,
                     "longitude": 74.3587,
-                    "location_name": manual_loc_name,
+                    "location_name": str(manual_loc_name),
                     "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                 }
                 
-                if supabase:
-                    supabase.table("reports").insert(payload).execute()
+                success_pushed = False
+                if supabase is not None:
+                    try:
+                        # Try inserting into Supabase
+                        response = supabase.table("reports").insert(payload).execute()
+                        success_pushed = True
+                    except Exception as sb_err:
+                        st.warning(f"⚠️ Supabase Cloud insert warning: {sb_err}")
+                else:
+                    st.info("ℹ️ Supabase client is not initialized. Saving to local session ledger.")
 
-                if "incident_ledger" not in st.session_state:
+                # Always ensure it gets added to local session ledger so Tracker can find it instantly
+                if "incident_ledger" not in st.session_state or st.session_state["incident_ledger"] is None:
                     st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
                 
-                new_row_df = pd.DataFrame([payload])
-                st.session_state["incident_ledger"] = pd.concat([st.session_state["incident_ledger"], new_row_df], ignore_index=True)
+                existing_ledger = st.session_state["incident_ledger"]
+                if tracking_id not in existing_ledger["tracking_id"].values:
+                    new_row_df = pd.DataFrame([payload])
+                    st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
                 
-                st.success(f"✅ Synced to Supabase successfully!")
+                if success_pushed:
+                    st.success(f"✅ Successfully pushed to Supabase & registered in Tracker!")
+                else:
+                    st.success(f"✅ Registered in local tracker ledger successfully!")
+
             except Exception as e:
                 st.error("❌ Sync Error Details:")
                 st.exception(e)
