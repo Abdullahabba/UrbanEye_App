@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+from PIL import Image
 
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
@@ -19,16 +21,24 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=120)
 
-    # Gather all captured/detected evidence images from session state
-    all_images = st.session_state.get("captured_images", [])
-    if not all_images and "processed_img" in st.session_state:
-        all_images = [st.session_state["processed_img"]]
+    # 1️⃣ Gather all captured/detected evidence images (Single image, live camera, or video stream frames)
+    raw_images = st.session_state.get("captured_images", [])
+    if not raw_images and "processed_img" in st.session_state:
+        raw_images = [st.session_state["processed_img"]]
+
+    # 🛡️ Ensure all captured numpy arrays/images are properly converted to PIL Image objects for PDF compatibility
+    all_images = []
+    for img in raw_images:
+        if isinstance(img, np.ndarray):
+            all_images.append(Image.fromarray(img))
+        elif isinstance(img, Image.Image):
+            all_images.append(img)
 
     detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
     severity_level = "HIGH" if counts and any(v > 2 for v in counts.values()) else "MEDIUM"
     assigned_department = "Road Maintenance"
 
-    # Generate PDF Bytes
+    # Generate PDF Bytes with converted images
     pdf_bytes = None
     if create_pdf_report_func:
         try:
@@ -62,7 +72,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         
         if st.button("📧 Send via Email", use_container_width=True):
             try:
-                # Safe dynamic import to avoid any namespace collision
                 import smtplib
                 from email.mime.multipart import MIMEMultipart
                 from email.mime.text import MIMEText
