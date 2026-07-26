@@ -71,50 +71,55 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.markdown(f"**👤 CC (Officer):** `{officer_email}`")
         
         if st.button("📧 Send via Email", use_container_width=True):
-            try:
-                import smtplib
-                from email.mime.multipart import MIMEMultipart
-                from email.mime.text import MIMEText
-                from email.mime.application import MIMEBase
-                from email import encoders
+            with st.spinner("Sending official report via email..."):
+                try:
+                    import smtplib
+                    from email.mime.multipart import MIMEMultipart
+                    from email.mime.text import MIMEText
+                    from email.mime.application import MIMEBase
+                    from email import encoders
 
-                email_cfg = st.secrets.get("email", {})
-                sender_email = email_cfg.get("sender_email")
-                sender_password = email_cfg.get("sender_password")
+                    # 🛡️ FIX: Fetch credentials supporting both top-level and nested secrets formats
+                    email_cfg = st.secrets.get("email", {})
+                    sender_email = email_cfg.get("sender_email") or st.secrets.get("SMTP_USER")
+                    sender_password = email_cfg.get("sender_password") or st.secrets.get("SMTP_PASS")
 
-                if not sender_email or not sender_password:
-                    st.warning("⚠️ Email credentials not found in st.secrets. Dispatched successfully via simulated gateway.")
-                    st.success(f"✅ Report successfully dispatched to {target_dept_email} (CC: {officer_email})!")
-                else:
-                    msg = MIMEMultipart()
-                    msg["From"] = sender_email
-                    msg["To"] = target_dept_email
-                    msg["Cc"] = officer_email
-                    msg["Subject"] = f"[UrbanEye Dispatch] Incident Report - ID: {tracking_id}"
+                    if not sender_email or not sender_password:
+                        st.error("❌ Email credentials not found in st.secrets (`SMTP_USER` / `SMTP_PASS`).")
+                    else:
+                        msg = MIMEMultipart()
+                        msg["From"] = sender_email
+                        msg["To"] = target_dept_email
+                        msg["Cc"] = officer_email
+                        msg["Subject"] = f"[UrbanEye Dispatch] Incident Report - ID: {tracking_id}"
 
-                    body = f"Incident Report Summary:\n\n{summary_text}\n\nAssigned Dept: {assigned_department}"
-                    msg.attach(MIMEText(body, "plain"))
+                        body = f"Incident Report Summary:\n\n{summary_text}\n\nAssigned Dept: {assigned_department}"
+                        msg.attach(MIMEText(body, "plain"))
 
-                    if pdf_bytes:
-                        part = MIMEBase("application", "octet-stream")
-                        part.set_payload(pdf_bytes)
-                        encoders.encode_base64(part)
-                        part.add_header("Content-Disposition", f"attachment; filename=UrbanEye_Report_{tracking_id}.pdf")
-                        msg.attach(part)
+                        if pdf_bytes:
+                            part = MIMEBase("application", "octet-stream")
+                            part.set_payload(pdf_bytes)
+                            encoders.encode_base64(part)
+                            part.add_header("Content-Disposition", f"attachment; filename=UrbanEye_Report_{tracking_id}.pdf")
+                            msg.attach(part)
 
-                    recipients = [target_dept_email]
-                    if officer_email:
-                        recipients.append(officer_email)
+                        recipients = [target_dept_email]
+                        if officer_email:
+                            recipients.append(officer_email)
 
-                    server = smtplib.SMTP(email_cfg.get("smtp_server", "smtp.gmail.com"), int(email_cfg.get("smtp_port", 587)))
-                    server.starttls()
-                    server.login(sender_email, sender_password)
-                    server.sendmail(sender_email, recipients, msg.as_string())
-                    server.quit()
+                        smtp_server = email_cfg.get("smtp_server", "smtp.gmail.com")
+                        smtp_port = int(email_cfg.get("smtp_port", 587))
 
-                    st.success(f"✅ Email successfully sent to {target_dept_email} (CC: {officer_email})!")
-            except Exception as mail_err:
-                st.success(f"✅ Report successfully registered & dispatched to {target_dept_email}!")
+                        server = smtplib.SMTP(smtp_server, smtp_port)
+                        server.starttls()
+                        server.login(sender_email, sender_password)
+                        server.sendmail(sender_email, recipients, msg.as_string())
+                        server.quit()
+
+                        st.success(f"✅ Email successfully sent to {target_dept_email} (CC: {officer_email})!")
+                except Exception as mail_err:
+                    # 🛡️ FIX: Show actual error instead of fake success message
+                    st.error(f"❌ Email sending failed: {str(mail_err)}")
 
     with col3:
         if st.button("🚀 Push to Supabase", use_container_width=True):
