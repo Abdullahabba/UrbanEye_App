@@ -64,7 +64,7 @@ def render_video_stream_mode(conf_threshold):
         if last_frame is not None: 
             st.session_state["processed_img"] = last_frame
 
-        # 🔄 Auto-register record into incident_ledger so Tracker can find it instantly
+        # Payload definition
         detected_hazard_name = list(v_counts.keys())[0] if v_counts else "Video Stream Hazard"
         payload = {
             "tracking_id": tracking_id,
@@ -79,13 +79,20 @@ def render_video_stream_mode(conf_threshold):
             "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
         }
 
-        if "incident_ledger" not in st.session_state or st.session_state["incident_ledger"] is None:
+        # 🛡️ ROBUST LEDGER INITIALIZATION & SAFE CHECK
+        if "incident_ledger" not in st.session_state or not isinstance(st.session_state["incident_ledger"], pd.DataFrame):
             st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
         
-        # Check if tracking_id already exists in ledger, if not append it
         existing_ledger = st.session_state["incident_ledger"]
+        
+        # Check if 'tracking_id' column exists to prevent KeyError
+        if "tracking_id" not in existing_ledger.columns:
+            st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
+            existing_ledger = st.session_state["incident_ledger"]
+
+        # Safely append if tracking_id doesn't already exist
         if tracking_id not in existing_ledger["tracking_id"].values:
             new_row_df = pd.DataFrame([payload])
             st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
 
-        st.success(f"✅ Video Analysis Completed! Tracking ID `{tracking_id}` registered successfully for Tracker lookup.")
+        st.success(f"✅ Video Analysis Completed! Tracking ID `{tracking_id}` registered successfully.")
