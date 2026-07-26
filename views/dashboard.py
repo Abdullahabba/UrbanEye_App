@@ -12,15 +12,15 @@ from components.video_stream import render_video_stream_mode
 from components.live_camera import render_live_camera_mode
 from components.dispatch_panel import render_dispatch_panel
 
-# 🌌 Page Configuration - Cyber Command Center
+# 🌌 Page Configuration - Cyber Command Center (Mobile Optimized)
 st.set_page_config(
     page_title="UrbanEye AI — Global Command Center",
     page_icon="🛡️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# ⚡ Advanced Glassmorphism & Cyber-Dark CSS Styling
+# ⚡ Advanced Glassmorphism & Mobile-Responsive CSS Styling
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;700&display=swap');
@@ -43,18 +43,19 @@ st.markdown("""
         backdrop-filter: blur(12px);
         border: 1px solid rgba(56, 189, 248, 0.2);
         border-radius: 14px;
-        padding: 22px;
+        padding: 20px;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        margin-bottom: 15px;
     }
 
     /* Hero Command Banner */
     .cyber-banner {
         background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
         border: 1px solid #38bdf8;
-        padding: 28px 35px;
+        padding: 24px 28px;
         border-radius: 16px;
         color: #ffffff;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
         box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
     }
 
@@ -62,12 +63,12 @@ st.markdown("""
     .emergency-ticker {
         background: rgba(239, 68, 68, 0.15);
         border-left: 4px solid #ef4444;
-        padding: 10px 15px;
+        padding: 10px 14px;
         border-radius: 4px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 13px;
+        font-size: 12px;
         color: #fca5a5;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
     }
 
     /* Futuristic Monospace Metrics */
@@ -75,7 +76,7 @@ st.markdown("""
         font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Custom Buttons */
+    /* Custom Buttons - Touch Friendly */
     .stButton>button {
         background: linear-gradient(90deg, #0284c7 0%, #2563eb 100%);
         color: white;
@@ -83,11 +84,41 @@ st.markdown("""
         border-radius: 8px;
         font-weight: 600;
         letter-spacing: 0.5px;
+        padding: 10px 16px;
+        width: 100%;
         transition: all 0.3s ease;
     }
     .stButton>button:hover {
         background: linear-gradient(90deg, #0ea5e9 0%, #3b82f6 100%);
         box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+    }
+
+    /* 📱 MOBILE RESPONSIVE MEDIA QUERIES */
+    @media (max-width: 768px) {
+        .cyber-banner {
+            padding: 16px 18px;
+            margin-bottom: 15px;
+        }
+        .cyber-banner h1 {
+            font-size: 20px !important;
+        }
+        .cyber-banner p {
+            font-size: 12px !important;
+        }
+        /* Force Streamlit columns to stack vertically on mobile */
+        [data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+            margin-bottom: 12px;
+        }
+        /* Adjust metrics padding for mobile screens */
+        [data-testid="stMetric"] {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(56, 189, 248, 0.1);
+        }
     }
 
     #MainMenu {visibility: hidden;}
@@ -160,22 +191,22 @@ def render_dashboard_page():
         # Cyber Banner
         st.markdown("""
             <div class="cyber-banner">
-                <h1 style="margin:0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">🛡️ AI Visual Detection & Autonomous Dispatch Core</h1>
-                <p style="margin:8px 0 0 0; color: #94a3b8; font-size: 14px;">Real-time multi-hazard vector classification and encrypted municipal transmission.</p>
+                <h1 style="margin:0; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">🛡️ AI Visual Detection & Autonomous Dispatch Core</h1>
+                <p style="margin:6px 0 0 0; color: #94a3b8; font-size: 13px;">Real-time multi-hazard vector classification and encrypted municipal transmission.</p>
             </div>
         """, unsafe_allow_html=True)
 
         # Live Emergency Incident Ticker
         st.markdown("""
             <div class="emergency-ticker">
-                🚨 <b>SYSTEM BROADCAST:</b> Active surveillance running across Sector Grid. Zero-tolerance policy engaged for high-severity structural anomalies.
+                🚨 <b>SYSTEM BROADCAST:</b> Active surveillance running across Sector Grid. Zero-tolerance policy engaged.
             </div>
         """, unsafe_allow_html=True)
 
         if "current_tracking_id" not in st.session_state:
             st.session_state["current_tracking_id"] = generate_tracking_id()
 
-        # Extreme Telemetry Bar (CPU, GPU, Latency, SLA)
+        # Extreme Telemetry Bar (CPU, GPU, Latency, SLA) - Stacks automatically on mobile
         col_t1, col_t2, col_t3, col_t4 = st.columns(4)
         with col_t1:
             st.metric("TRACKING ID", st.session_state["current_tracking_id"])
@@ -212,8 +243,8 @@ def render_dashboard_page():
     elif current_view == "🔎 Public Hazard Tracker":
         st.markdown("""
             <div class="cyber-banner">
-                <h1 style="margin:0; font-size: 28px; font-weight: 700;">🔎 Public Hazard Ledger & Audit Trail</h1>
-                <p style="margin:8px 0 0 0; color: #94a3b8; font-size: 14px;">Immutable event logs, verification states, and department routing history.</p>
+                <h1 style="margin:0; font-size: 26px; font-weight: 700;">🔎 Public Hazard Ledger & Audit Trail</h1>
+                <p style="margin:6px 0 0 0; color: #94a3b8; font-size: 13px;">Immutable event logs, verification states, and department routing history.</p>
             </div>
         """, unsafe_allow_html=True)
         render_report_tracker()
@@ -221,8 +252,8 @@ def render_dashboard_page():
     elif current_view == "🗺️ Interactive Map":
         st.markdown("""
             <div class="cyber-banner">
-                <h1 style="margin:0; font-size: 28px; font-weight: 700;">🗺️ Geo-Spatial Threat Heatmap</h1>
-                <p style="margin:8px 0 0 0; color: #94a3b8; font-size: 14px;">Live satellite grid overlay tracking infrastructure degradation metrics.</p>
+                <h1 style="margin:0; font-size: 26px; font-weight: 700;">🗺️ Geo-Spatial Threat Heatmap</h1>
+                <p style="margin:6px 0 0 0; color: #94a3b8; font-size: 13px;">Live satellite grid overlay tracking infrastructure degradation metrics.</p>
             </div>
         """, unsafe_allow_html=True)
         render_map_page()
