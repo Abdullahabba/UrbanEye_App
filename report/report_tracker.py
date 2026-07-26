@@ -8,10 +8,9 @@ def render_report_tracker():
 
     reports_data = []
 
-    # 1. Sabse pehle Supabase Cloud Database se data fetch karein
+    # 1. Supabase Cloud Database se data fetch karein
     try:
-        from utils.supabase_client import init_supabase
-        supabase = init_supabase()
+        from database.supabase_client import supabase
         if supabase:
             response = supabase.table("reports").select("*").execute()
             if response.data:
@@ -19,7 +18,7 @@ def render_report_tracker():
     except Exception as e:
         st.warning(f"Could not connect to Supabase: {e}")
 
-    # 2. Agar Supabase se data na mile, tab local session state / CSV fallback use karein
+    # 2. Fallback to session state if empty
     if not reports_data and "incident_ledger" in st.session_state and not st.session_state["incident_ledger"].empty:
         reports_data = st.session_state["incident_ledger"].to_dict(orient="records")
 
@@ -27,10 +26,8 @@ def render_report_tracker():
     if reports_data:
         df = pd.DataFrame(reports_data)
         
-        # Search filter by Tracking ID
         search_id = st.text_input("🔍 Search by Tracking ID", key="search_tracker_id")
         if search_id:
-            # Check column name case sensitivity
             id_col = "Tracking ID" if "Tracking ID" in df.columns else "tracking_id"
             if id_col in df.columns:
                 df = df[df[id_col].astype(str).str.contains(search_id, case=False, na=False)]
