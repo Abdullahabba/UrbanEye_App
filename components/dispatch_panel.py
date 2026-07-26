@@ -72,7 +72,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     # 4️⃣ Actions (PDF, Email, Supabase) will ONLY appear after location is ready
     if location_ready:
-        st.divider("🚀 Step 3: Dispatch & Reports")
+        st.markdown("##### 🚀 Step 3: Dispatch & Reports")
+        st.divider()
         
         full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat}, {lon})\nTracking ID: {tracking_id}"
 
