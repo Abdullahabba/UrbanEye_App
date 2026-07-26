@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import traceback
 
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
@@ -27,14 +28,14 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     col1, col2 = st.columns(2)
 
     with col1:
-        # PDF Report Download Button (Passing detected_images safely)
+        # PDF Report Download Button
         if create_pdf_report_func:
             try:
                 pdf_bytes = create_pdf_report_func(
                     title=f"Incident Report (ID: {tracking_id})",
                     user_details=user_details,
                     summary_text=summary_text,
-                    detected_images=all_images  # 🔄 Fixed parameter name (plural)
+                    detected_images=all_images
                 )
                 st.download_button(
                     label="📥 Download Multi-Image PDF Report",
@@ -44,11 +45,13 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     use_container_width=True
                 )
             except Exception as e:
-                st.error(f"❌ PDF Generation Error: {e}")
+                # 🔍 DETAILED ERROR LOGGING FOR DEBUGGING
+                st.error("❌ PDF Generation Error Details:")
+                st.exception(e)
+                print(traceback.format_exc())
 
     with col2:
         if st.button("🚀 Push to Supabase Cloud & Tracker", use_container_width=True):
-            # Save to local session ledger & Supabase
             try:
                 from database.supabase_client import supabase
                 payload = {
@@ -64,11 +67,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                 }
                 
-                # Push to Supabase if connected
                 if supabase:
                     supabase.table("reports").insert(payload).execute()
 
-                # Push to local session ledger dataframe
                 if "incident_ledger" not in st.session_state:
                     st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
                 
@@ -77,4 +78,5 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 
                 st.success(f"✅ Incident {tracking_id} successfully dispatched and synced!")
             except Exception as e:
-                st.error(f"❌ Sync Error: {e}")
+                st.error("❌ Sync Error Details:")
+                st.exception(e)
