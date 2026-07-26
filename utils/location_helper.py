@@ -1,42 +1,54 @@
-import streamlit.components.v1 as components
 import streamlit as st
+import streamlit.components.v1 as components
 
 def get_live_location():
     """
-    Fetches real-time authentic GPS coordinates from the user's browser.
+    Captures browser GPS coordinates and reloads the page with query parameters.
     """
-    location_component = """
-    <div>
-        <p id="status" style="font-size: 14px; color: #555; font-family: sans-serif;">Fetching real-time GPS location...</p>
+    # 1. Check if GPS coordinates already exist in URL query parameters
+    params = st.query_params
+    if "lat" in params and "lon" in params:
+        try:
+            lat = float(params["lat"])
+            lon = float(params["lon"])
+            return lat, lon
+        except ValueError:
+            pass
+
+    # 2. HTML/JS Component with a button to force GPS capture and update URL
+    location_html = """
+    <div style="font-family: sans-serif; padding: 10px; background: #f0f2f6; border-radius: 8px; text-align: center; border: 1px solid #d6d6d6;">
+        <p id="gps-status" style="font-size: 13px; color: #31333F; margin: 0 0 8px 0; font-weight: 500;">🛰️ Live GPS Location Required</p>
+        <button onclick="getGPS()" style="background: #FF4B4B; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">📍 Detect My Live GPS</button>
     </div>
     <script>
-    function getLocation() {
-        const status = document.getElementById('status');
-        if (!navigator.geolocation) {
-            status.innerHTML = "Geolocation is not supported by your browser";
-            return;
+    function getGPS() {
+        const statusEl = document.getElementById('gps-status');
+        if (navigator.geolocation) {
+            statusEl.innerHTML = "🛰️ Connecting to satellite / GPS...";
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    statusEl.innerHTML = "✅ GPS Locked! Updating app...";
+                    
+                    // Append coordinates to URL query parameters and reload page
+                    const url = new URL(window.parent.location.href);
+                    url.searchParams.set('lat', lat);
+                    url.searchParams.set('lon', lon);
+                    window.parent.location.href = url.toString();
+                },
+                (error) => {
+                    statusEl.innerHTML = "⚠️ Location permission denied. Please allow location in browser.";
+                    console.warn("Geolocation error: ", error.message);
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        } else {
+            statusEl.innerHTML = "❌ Geolocation is not supported by this browser.";
         }
-
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                status.innerHTML = "✅ Live GPS Location Acquired!";
-                
-                // Send data back to Streamlit via parent window postMessage
-                const data = { lat: lat, lon: lon };
-                window.parent.postMessage({ type: 'streamlit:set_component_value', value: data }, "*");
-            },
-            (error) => {
-                status.innerHTML = "⚠️ Location access denied or unavailable. Using default.";
-                console.warn(`ERROR(${error.code}): ${error.message}`);
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
     }
-    getLocation();
     </script>
     """
-    # Render component and catch returned value
-    loc_data = components.html(location_component, height=40)
-    return loc_data
+    components.html(location_html, height=90)
+    return None, None
