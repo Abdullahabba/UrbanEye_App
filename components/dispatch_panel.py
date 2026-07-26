@@ -9,7 +9,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.subheader("📤 Dispatch & Verification Panel")
     st.caption("Review incident summary, download PDF reports, send via email, or push logs to Supabase cloud.")
 
-    # 📍 Seamless Location Mode Selection (No separate extra buttons)
+    # 📍 Seamless Location Mode Selection
     st.markdown("##### 📍 Location & GPS Settings")
     
     loc_mode = st.radio(
@@ -24,7 +24,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     final_location_name = manual_loc_name
 
     if loc_mode == "Fetch Live GPS Location":
-        # Automatically triggers when user switches to Live GPS
         loc = streamlit_geolocation()
         if loc and loc.get("latitude") and loc.get("longitude"):
             lat = loc["latitude"]
@@ -34,17 +33,15 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             final_location_name = f"Auto-GPS Live (Lat: {lat:.4f}, Lon: {lon:.4f})"
             st.success(f"✅ Live GPS Connected -> Lat: {lat:.4f}, Lon: {lon:.4f}")
         else:
-            # Fallback to session state if already fetched
             lat = st.session_state.get("live_lat", 31.5204)
             lon = st.session_state.get("live_lon", 74.3587)
             st.info("🛰️ Please allow location permission in your browser if prompted.")
     else:
-        # Uses manual location passed from form
-        st.caption(using location: f"**{manual_loc_name}** (Default coordinates)")
+        st.caption(f"Using location: **{manual_loc_name}** (Default coordinates)")
 
     # Get counts from session state
     counts = st.session_state.get("counts", {})
-    summary_text = f"Detected Hazards Summary:\n"
+    summary_text = "Detected Hazards Summary:\n"
     if counts:
         for k, v in counts.items():
             summary_text += f"- {k.capitalize()}: {v}\n"
@@ -55,7 +52,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=120)
 
-    # 1️⃣ Gather all captured/detected evidence images
+    # Gather all captured/detected evidence images
     raw_images = st.session_state.get("captured_images", [])
     if not raw_images and "processed_img" in st.session_state:
         raw_images = [st.session_state["processed_img"]]
@@ -164,8 +161,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     "sla_target": "12 Hours",
                     "status": "Pending",
                     "assigned_dept": str(assigned_department),
-                    "latitude": lat,   # 📌 Active Latitude (Manual or Live GPS)
-                    "longitude": lon,  # 📌 Active Longitude (Manual or Live GPS)
+                    "latitude": lat,
+                    "longitude": lon,
                     "location_name": str(final_location_name),
                     "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                 }
@@ -194,9 +191,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
                 
                 if success_pushed:
-                    st.success(f"✅ Synced to Supabase & registered in Tracker!")
+                    st.success("✅ Synced to Supabase & registered in Tracker!")
                 else:
-                    st.success(f"✅ Registered in local tracker ledger successfully!")
+                    st.success("✅ Registered in local tracker ledger successfully!")
 
             except Exception as e:
                 st.error("❌ Sync Error Details:")
