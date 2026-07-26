@@ -3,20 +3,25 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 
+try:
+    from streamlit_geolocation import streamlit_geolocation
+except ImportError:
+    streamlit_geolocation = None
+
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
-    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Lock Location $\rightarrow$ Step 3: Dispatch Reports & Sync.")
+    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location (Manual or Real Auto-GPS) $\rightarrow$ Step 3: Dispatch Reports & Sync.")
 
-    # Initialize location lock state to prevent resets
-    if "location_locked" not in st.session_state:
-        st.session_state["location_locked"] = False
-    if "locked_location_name" not in st.session_state:
-        st.session_state["locked_location_name"] = manual_loc_name
-    if "locked_lat" not in st.session_state:
-        st.session_state["locked_lat"] = 31.5204
-    if "locked_lon" not in st.session_state:
-        st.session_state["locked_lon"] = 74.3587
+    # Initialize session state variables for location
+    if "selected_lat" not in st.session_state:
+        st.session_state["selected_lat"] = None
+    if "selected_lon" not in st.session_state:
+        st.session_state["selected_lon"] = None
+    if "selected_loc_name" not in st.session_state:
+        st.session_state["selected_loc_name"] = manual_loc_name
+    if "location_confirmed" not in st.session_state:
+        st.session_state["location_confirmed"] = False
 
     # 1️⃣ Step 1: Detection Summary Displayed First
     counts = st.session_state.get("counts", {})
@@ -29,44 +34,60 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=100)
 
-    # 2️⃣ Step 2: Location Setting & Locking
-    st.markdown("##### 📍 Step 2: Location Setup")
-    
-    if not st.session_state["location_locked"]:
-        loc_mode = st.radio("Choose Location Entry Method", ["Manual Address", "Default GPS Coordinates"], horizontal=True)
-        
-        if loc_mode == "Manual Address":
-            input_loc = st.text_input("✍️ Enter Location Name / Address:", value=st.session_state["locked_location_name"])
-            if st.button("🔒 Lock Manual Location", use_container_width=True):
-                if input_loc and input_loc.strip():
-                    st.session_state["locked_location_name"] = input_loc.strip()
-                    st.session_state["location_locked"] = True
-                    st.rerun()
-                else:
-                    st.warning("⚠️ Please enter a valid location name.")
-        else:
-            st.info("🛰️ Using standard municipal coordinates (Lahore Center: 31.5204, 74.3587).")
-            if st.button("🔒 Lock Default GPS Location", use_container_width=True):
-                st.session_state["locked_location_name"] = "Lahore Center (GPS)"
-                st.session_state["locked_lat"] = 31.5204
-                st.session_state["locked_lon"] = 74.3587
-                st.session_state["location_locked"] = True
-                st.rerun()
-    else:
-        # Location is locked, show confirmation and edit option
-        st.success(f"✅ Location Successfully Locked: **{st.session_state['locked_location_name']}**")
-        if st.button("✏️ Change Location", use_container_width=True):
-            st.session_state["location_locked"] = False
-            st.rerun()
+    # 2️⃣ Step 2: Location Option (Manual or Real Auto GPS)
+    st.markdown("##### 📍 Step 2: Select Location Method")
+    loc_mode = st.radio(
+        "Choose Location Mode",
+        ["Manual Address", "Automatic Live GPS"],
+        horizontal=True
+    )
 
-    # 3️⃣ Step 3: Actions (PDF, Email, Supabase Push) - Unlocked ONLY when location is locked
-    if st.session_state["location_locked"]:
+    location_ready = False
+
+    if loc_mode == "Manual Address":
+        manual_input = st.text_input("✍️ Enter Location Name / Address:", value=st.session_state.get("selected_loc_name", manual_loc_name))
+        if st.button("✅ Confirm Manual Location", use_container_width=True):
+            if manual_input and manual_input.strip():
+                st.session_state["selected_loc_name"] = manual_input.strip()
+                # Default fallback coordinates for manual entry if GPS not provided
+                st.session_state["selected_lat"] = 31.5204
+                st.session_state["selected_lon"] = 74.3587
+                st.session_state["location_confirmed"] = True
+                st.success(f"✅ Manual Location Confirmed: `{manual_input.strip()}`")
+                st.rerun()
+            else:
+                st.warning("⚠️ Please enter a valid location name.")
+        
+        if st.session_state["location_confirmed"] and loc_mode == "Manual Address":
+            location_ready = True
+            st.info(f"📌 Current Active Location: **{st.session_state['selected_loc_name']}**")
+
+    else:
+        st.markdown("🛰️ Click below to fetch your **real browser GPS coordinates**:")
+        if streamlit_geolocation is not None:
+            loc = streamlit_geolocation()
+            if loc and loc.get("latitude") and loc.get("longitude"):
+                lat = loc["latitude"]
+                lon = loc["longitude"]
+                st.session_state["selected_lat"] = lat
+                st.session_state["selected_lon"] = lon
+                st.session_state["selected_loc_name"] = f"Live GPS (Lat: {lat:.4f}, Lon: {lon:.4f})"
+                st.session_state["location_confirmed"] = True
+                
+            if st.session_state["location_confirmed"] and st.session_state["selected_lat"] is not None:
+                location_ready = True
+                st.success(f"✅ Live GPS Locked! Lat: `{st.session_state['selected_lat']:.4f}`, Lon: `{st.session_state['selected_lon']:.4f}`")
+        else:
+            st.error("❌ `streamlit-geolocation` library is not installed. Run `pip install streamlit-geolocation` in your terminal.")
+
+    # 3️⃣ Step 3: Actions (PDF, Email, Supabase Push) - Unlocked ONLY after location is confirmed
+    if location_ready or st.session_state["location_confirmed"]:
         st.markdown("##### 🚀 Step 3: Dispatch & Reports")
         st.divider()
 
-        final_location_name = st.session_state["locked_location_name"]
-        lat = st.session_state["locked_lat"]
-        lon = st.session_state["locked_lon"]
+        final_location_name = st.session_state["selected_loc_name"]
+        lat = st.session_state["selected_lat"] or 31.5204
+        lon = st.session_state["selected_lon"] or 74.3587
 
         full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat}, {lon})\nTracking ID: {tracking_id}"
 
@@ -217,4 +238,4 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     st.error("❌ Sync Error Details:")
                     st.exception(e)
     else:
-        st.info("🔒 Please complete **Step 2 (Lock Manual Location or Default GPS)** above to unlock PDF download, Email dispatch, and Supabase cloud sync.")
+        st.info("🔒 Please complete **Step 2 (Confirm Manual Address or Allow Live GPS)** above to unlock PDF download, Email dispatch, and Supabase cloud sync.")
