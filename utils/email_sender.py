@@ -15,7 +15,7 @@ def send_email_with_pdf(
     counts: dict = None,
 ) -> tuple[bool, str]:
     """
-    Sends an automated incident report email with PDF attachment.
+    Sends an automated incident report email with PDF attachment and CC to the officer/user.
     Location: utils/email_sender.py
     """
     # 1. Fetch Credentials safely from Secrets
@@ -31,18 +31,26 @@ def send_email_with_pdf(
     officer_name = user_details.get("username", "Inspector / Officer")
     officer_phone = user_details.get("phone", "N/A")
     officer_address = user_details.get("address", "N/A")
+    
+    # Extract user's actual email for CC (falls back to sender_email parameter)
+    user_email = user_details.get("email", sender_email)
 
     # Format AI Detection breakdown if available
     breakdown_text = ""
     if counts:
         breakdown_text = "\n• Detected Hazards:\n" + "\n".join(
-            [f"   - {k.title()}: {v} instance(s)" for k, v in counts.items()]
+            [f"    - {k.title()}: {v} instance(s)" for k, v in counts.items()]
         )
 
     # 3. Create Email Container
     msg = MIMEMultipart()
     msg["From"] = f"Urban Eye AI <{SMTP_USER}>"
     msg["To"] = target_department_email
+    
+    # 📌 Add User/Officer Email to CC Header
+    if user_email:
+        msg["Cc"] = user_email
+
     msg["Reply-To"] = sender_email
     msg["Subject"] = f"🚨 URGENT INCIDENT REPORT: {title}"
 
@@ -72,7 +80,6 @@ Urban Eye AI Operations Team
 
     # 5. Attach PDF File (Sanitized Filename)
     if pdf_bytes:
-        # Replace spaces and special chars to prevent email corruption
         safe_title = "".join(c if c.isalnum() else "_" for c in title).strip("_")
         part = MIMEBase("application", "octet-stream")
         part.set_payload(pdf_bytes)
@@ -83,13 +90,19 @@ Urban Eye AI Operations Team
         )
         msg.attach(part)
 
-    # 6. Send Email via SMTP
+    # 6. Send Email via SMTP with CC Recipients included
     try:
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.starttls()
         server.login(SMTP_USER, SMTP_PASS)
-        server.send_message(msg)
+        
+        # Compile all recipients (To + Cc) so the SMTP server delivers to both
+        recipients = [target_department_email]
+        if user_email and user_email != target_department_email:
+            recipients.append(user_email)
+
+        server.sendmail(SMTP_USER, recipients, msg.as_string())
         server.quit()
-        return True, "Report email sent successfully!"
+        return True, "Report email sent successfully with officer in CC!"
     except Exception as e:
         return False, f"Email sending failed: {str(e)}"
