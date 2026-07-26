@@ -32,7 +32,7 @@ def render_report_tracker():
         if "created_at" in df.columns:
             df = df.drop(columns=["created_at"])
 
-        # Rename columns to user-friendly titles for display
+        # Rename columns to user-friendly titles for display if they exist in lowercase
         rename_map = {
             "tracking_id": "Tracking ID",
             "hazard": "Hazard",
@@ -47,13 +47,14 @@ def render_report_tracker():
         }
         df = df.rename(columns=rename_map)
 
-        # Search filter by Tracking ID
+        # Search filter by Tracking ID (Bulletproof check)
         search_id = st.text_input("🔍 Search by Tracking ID", key="search_tracker_id")
         if search_id:
-            id_col = "Tracking ID" if "Tracking ID" in df.columns else "tracking_id"
-            if id_col in df.columns:
-                df = df[df[id_col].astype(str).str.contains(search_id, case=False, na=False)]
-            
+            possible_cols = ["Tracking ID", "tracking_id"]
+            found_col = next((col for col in possible_cols if col in df.columns), None)
+            if found_col:
+                df = df[df[found_col].astype(str).str.contains(str(search_id), case=False, na=False)]
+
         st.dataframe(df, use_container_width=True)
     else:
         st.info("📭 No reports found in the database yet. Submit a report from the detection engine to see it here!")
