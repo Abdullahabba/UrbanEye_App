@@ -1,39 +1,33 @@
-import streamlit.components.v1 as components
+import random
+import string
+import pandas as pd
 import streamlit as st
 
-def get_live_location():
+def generate_tracking_id() -> str:
     """
-    Forces browser geolocation capture and securely returns coordinates to Streamlit.
+    Generates a unique alpha-numeric tracking ID for civic incidents.
     """
-    location_html = """
-    <div style="font-family: sans-serif; padding: 5px; background: #f0f2f6; border-radius: 5px; margin-bottom: 10px;">
-        <span id="gps-status" style="font-size: 13px; color: #31333F;">🛰️ Acquiring live GPS coordinates from browser...</span>
-    </div>
-    <script>
-    const statusEl = document.getElementById('gps-status');
+    letters = "".join(random.choices(string.ascii_uppercase, k=2))
+    digits = "".join(random.choices(string.digits, k=4))
+    return f"UE-{letters}-{digits}"
 
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                statusEl.innerHTML = "✅ Live GPS Locked: (" + lat.toFixed(4) + ", " + lon.toFixed(4) + ")";
-                
-                // Streamlit component communication protocol
-                const data = { lat: lat, lon: lon };
-                window.parent.postMessage({ type: 'streamlit:set_component_value', value: data }, "*");
-            },
-            (error) => {
-                statusEl.innerHTML = "⚠️ GPS Access Blocked/Unavailable. Using default sector coordinates.";
-                console.warn("Geolocation error: ", error.message);
-            },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        );
-    } else {
-        statusEl.innerHTML = "❌ Geolocation is not supported by this browser.";
-    }
-    </script>
+def initialize_mock_history():
     """
-    # Render component and return captured dictionary if available
-    val = components.html(location_html, height=45)
-    return val
+    Initializes mock incident history/ledger in Streamlit session state if not already present.
+    """
+    if "incident_ledger" not in st.session_state or not isinstance(st.session_state["incident_ledger"], pd.DataFrame):
+        mock_data = [
+            {
+                "tracking_id": "UE-AB-5541",
+                "issue_type": "Pothole / Road Damage",
+                "severity": "HIGH",
+                "sla_target": "12 Hours",
+                "status": "Pending Dispatch",
+                "assigned_dept": "Road & Infrastructure",
+                "latitude": 31.5204,
+                "longitude": 74.3587,
+                "location_name": "Main Boulevard Gulberg",
+                "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+            }
+        ]
+        st.session_state["incident_ledger"] = pd.DataFrame(mock_data)
