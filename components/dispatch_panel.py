@@ -7,9 +7,9 @@ from streamlit_geolocation import streamlit_geolocation
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
-    st.caption("Step 1: Review detection summary $\rightarrow$ Step 2: Set location $\rightarrow$ Step 3: Dispatch report.")
+    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location $\rightarrow$ Step 3: Dispatch Reports & Sync.")
 
-    # 1️⃣ Detection Summary Displayed First
+    # 1️⃣ Step 1: Detection Summary Displayed First
     counts = st.session_state.get("counts", {})
     summary_text = "Detected Hazards Summary:\n"
     if counts:
@@ -20,7 +20,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=100)
 
-    # 2️⃣ Ask user for location method after detection
+    # 2️⃣ Step 2: Location Option (Manual or Auto GPS)
     st.markdown("##### 📍 Step 2: Select Location Method")
     loc_choice = st.radio(
         "Choose Location Entry Type",
@@ -34,7 +34,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     final_location_name = manual_loc_name
     location_ready = False
 
-    # 3️⃣ Conditional location handling
+    # Conditional location handling
     if loc_choice == "Manual":
         final_location_name = st.text_input("✍️ Enter Location Name / Address:", value=manual_loc_name)
         if final_location_name and final_location_name.strip():
@@ -70,11 +70,12 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             st.info("ℹ️ Click the button above to lock current GPS coordinates.")
             location_ready = False
 
-    # 4️⃣ Actions (PDF, Email, Supabase) will ONLY appear after location is ready
+    # 3️⃣ Step 3: Actions (PDF, Email, Supabase Push) - Unlocked ONLY after location is ready
     if location_ready:
         st.markdown("##### 🚀 Step 3: Dispatch & Reports")
         st.divider()
-        
+
+        # Update summary text with final location & tracking ID
         full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat}, {lon})\nTracking ID: {tracking_id}"
 
         # Gather all captured/detected evidence images
@@ -224,4 +225,4 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     st.error("❌ Sync Error Details:")
                     st.exception(e)
     else:
-        st.info("🔒 Please complete **Step 2 (Location Selection / Auto-GPS Detection)** above to unlock PDF download, Email dispatch, and Supabase cloud sync.")
+        st.info("🔒 Please complete **Step 2 (Location Selection or Auto-GPS Detection)** above to unlock PDF generation, Email dispatch, and Supabase cloud sync.")
