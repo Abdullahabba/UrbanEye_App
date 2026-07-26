@@ -8,43 +8,44 @@ def render_map_page():
 
     reports_data = []
 
-    # 1. Pehle Local Session Ledger se data check karein
-    if "incident_ledger" in st.session_state and not st.session_state["incident_ledger"].empty:
-        df_local = st.session_state["incident_ledger"]
-        reports_data.extend(df_local.to_dict(orient="records"))
-
-    # 2. Phir Supabase Database se fetch karne ki koshish karein (Agar connected ho)
+    # 1. Fetch data directly from Supabase Cloud Database using correct client import
     try:
-        from utils.supabase_client import init_supabase
-        supabase = init_supabase()
+        from database.supabase_client import supabase
         if supabase:
             response = supabase.table("reports").select("*").execute()
             if response.data:
-                # Merge or append supabase data
-                db_reports = response.data
-                # Avoid duplicates based on tracking_id if needed
-                existing_ids = {r.get("Tracking ID") or r.get("tracking_id") for r in reports_data}
-                for r in db_reports:
-                    t_id = r.get("Tracking ID") or r.get("tracking_id")
-                    if t_id not in existing_ids:
-                        reports_data.append(r)
-    except Exception:
-        pass # Supabase offline ho toh local session chalta rahega
+                reports_data = response.data
+    except Exception as e:
+        st.error(f"❌ Supabase Fetch Error: {e}")
 
-    # 3. Render Map agar data mojood hai
+    # 2. Fallback or merge with local session state if ledger has records
+    if "incident_ledger" in st.session_state and not st.session_state["incident_ledger"].empty:
+        df_local = st.session_state["incident_ledger"]
+        local_records = df_local.to_dict(orient="records")
+        existing_ids = {r.get("Tracking ID") or r.get("tracking_id") for r in reports_data}
+        for r in local_records:
+            t_id = r.get("Tracking ID") or r.get("tracking_id")
+            if t_id not in existing_ids:
+                reports_data.append(r)
+
+    # 3. Render Map if data exists
     if reports_data:
         df = pd.DataFrame(reports_data)
         
-        # Ensure column names match expected case
+        # Clean up duplicate columns if any
+        df = df.loc[:, ~df.columns.duplicated()]
+
+        # Ensure column names match expected case for mapping
+        map_df = pd.DataFrame()
         if "latitude" in df.columns and "longitude" in df.columns:
             map_df = df.rename(columns={"latitude": "lat", "longitude": "lon"})
         elif "Latitude" in df.columns and "Longitude" in df.columns:
             map_df = df.rename(columns={"Latitude": "lat", "Longitude": "lon"})
-        else:
-            map_df = pd.DataFrame()
 
         if not map_df.empty and "lat" in map_df.columns and "lon" in map_df.columns:
-            # Drop rows with null coords
+            # Ensure numeric conversion for coordinates
+            map_df["lat"] = pd.to_numeric(map_df["lat"], errors="coerce")
+            map_df["lon"] = pd.to_numeric(map_df["lon"], errors="coerce")
             map_df = map_df.dropna(subset=["lat", "lon"])
             
             if not map_df.empty:
