@@ -76,10 +76,10 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     import smtplib
                     from email.mime.multipart import MIMEMultipart
                     from email.mime.text import MIMEText
-                    from email.mime.application import MIMEBase
+                    from email.mime.base import MIMEBase  # 🛠️ FIXED IMPORT LOCATION
                     from email import encoders
 
-                    # 🛡️ FIX: Fetch credentials supporting both top-level and nested secrets formats
+                    # 🛡️ Fetch credentials supporting both top-level and nested secrets formats
                     email_cfg = st.secrets.get("email", {})
                     sender_email = email_cfg.get("sender_email") or st.secrets.get("SMTP_USER")
                     sender_password = email_cfg.get("sender_password") or st.secrets.get("SMTP_PASS")
@@ -118,7 +118,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
                         st.success(f"✅ Email successfully sent to {target_dept_email} (CC: {officer_email})!")
                 except Exception as mail_err:
-                    # 🛡️ FIX: Show actual error instead of fake success message
                     st.error(f"❌ Email sending failed: {str(mail_err)}")
 
     with col3:
