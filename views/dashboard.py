@@ -1,6 +1,5 @@
-import random
-import time
 import streamlit as st
+import streamlit.components.v1 as components
 from utils.metadata import get_user_metadata
 from utils.helpers import initialize_mock_history, generate_tracking_id
 from views.map_view import render_map_page
@@ -12,138 +11,101 @@ from components.video_stream import render_video_stream_mode
 from components.live_camera import render_live_camera_mode
 from components.dispatch_panel import render_dispatch_panel
 
-# 🌌 Page Configuration - Animated Enterprise Command Center
+# 🌌 Page Configuration
 st.set_page_config(
-    page_title="UrbanEye AI — Municipal Intelligence",
-    page_icon="👁️",
+    page_title="UrbanEye AI — Enterprise Command",
+    page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# ⚡ Ultra-Professional CSS with Smooth Keyframe Animations & Micro-Interactions
+# ⚡ Extreme Custom UI Injection (Tailwind + Custom Glassmorphic CSS + JS Animations)
 st.markdown("""
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
 
     .stApp {
-        background-color: #0b0f19;
-        color: #e2e8f0;
+        background: #030712;
+        color: #f3f4f6;
         font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
-    /* 🎬 Smooth Page Entrance Animation */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(12px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
+    /* Hide Default Streamlit Elements */
+    #MainMenu, footer, header {visibility: hidden;}
 
-    /* Apply Fade-in to main structural containers */
-    .block-container {
-        animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    /* Premium Sidebar with Fade */
-    [data-testid="stSidebar"] {
-        background-color: #0f172a;
-        border-right: 1px solid #1e293b;
-        animation: fadeIn 0.4s ease-out forwards;
-    }
-
-    /* Sleek Animated Header Banner */
-    .app-header {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border: 1px solid #334155;
-        padding: 24px 28px;
+    /* Custom SaaS Navbar Component */
+    .saas-nav {
+        background: rgba(17, 24, 39, 0.7);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 16px;
-        color: #ffffff;
+        padding: 16px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 24px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    /* High-End Glass Card */
+    .saas-card {
+        background: linear-gradient(145deg, rgba(17, 24, 39, 0.6) 0%, rgba(3, 7, 18, 0.8) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 24px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .app-header:hover {
-        border-color: rgba(56, 189, 248, 0.4);
-        box-shadow: 0 15px 30px -5px rgba(56, 189, 248, 0.1);
+    .saas-card:hover {
+        border-color: rgba(59, 130, 246, 0.4);
+        box-shadow: 0 15px 40px rgba(59, 130, 246, 0.15);
+        transform: translateY(-2px);
     }
 
-    /* Modern Radio / Selectors */
-    .stRadio > div {
-        background: rgba(30, 41, 59, 0.5);
-        padding: 6px;
-        border-radius: 12px;
-        border: 1px solid #334155;
-        transition: background 0.2s ease;
+    /* Glowing Status Badge */
+    .glow-dot {
+        height: 8px;
+        width: 8px;
+        background-color: #22c55e;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 12px #22c55e;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
     }
 
-    /* ⚡ High-End Animated Action Buttons */
+    /* Custom Input & Button Overrides */
     .stButton>button {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         color: white;
         border: none;
         border-radius: 10px;
         font-weight: 600;
-        padding: 10px 20px;
+        padding: 12px 24px;
         width: 100%;
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+        transition: all 0.25s ease;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
     }
     .stButton>button:hover {
-        background: linear-gradient(135deg, #2563eb 100%, #1e40af 100%);
-        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.45);
-        transform: translateY(-2px);
-    }
-    .stButton>button:active {
-        transform: translateY(0px);
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+        transform: translateY(-1px);
     }
 
-    /* Card Containers with Hover Lift */
-    .content-card {
-        background: #111827;
-        border: 1px solid #1f2937;
-        border-radius: 14px;
-        padding: 20px;
-        margin-bottom: 20px;
-        transition: transform 0.25s ease, border-color 0.25s ease;
+    .stRadio > div {
+        background: rgba(17, 24, 39, 0.5);
+        padding: 8px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    .content-card:hover {
-        border-color: #374151;
-        transform: translateY(-2px);
-    }
-
-    /* Glowing Pulse Effect for Active Status */
-    @keyframes pulseGlow {
-        0% { transform: scale(0.95); opacity: 0.8; }
-        50% { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.6)); }
-        100% { transform: scale(0.95); opacity: 0.8; }
-    }
-    .pulsing-status {
-        display: inline-block;
-        animation: pulseGlow 2s infinite ease-in-out;
-    }
-
-    /* 📱 Mobile Responsiveness Fixes */
-    @media (max-width: 768px) {
-        .app-header {
-            padding: 18px;
-        }
-        .app-header h1 {
-            font-size: 20px !important;
-        }
-        [data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-            margin-bottom: 12px;
-        }
-    }
-
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -171,51 +133,60 @@ def render_dashboard_page():
     if "captured_images" not in st.session_state:
         st.session_state["captured_images"] = []
 
-    # 🧭 SIDEBAR PANEL
-    with st.sidebar:
-        st.markdown("### 👁️ UrbanEye AI")
-        st.caption("Enterprise Municipal Core")
-        st.divider()
-        
-        st.markdown(f"**👤 Officer:** `{user_details['username']}`")
-        st.markdown(f"**📍 Sector:** `{user_details['address']}`")
-        st.markdown("🟢 **Status:** <span class='pulsing-status'>`Active Session`</span>", unsafe_allow_html=True)
-        st.divider()
+    # 🚀 Custom SaaS Header Navigation Bar
+    st.markdown(f"""
+        <div class="saas-nav">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); padding: 10px; border-radius: 12px; font-size: 20px;">⚡</div>
+                <div>
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.5px;">UrbanEye AI <span style="color: #3b82f6; font-size: 12px; border: 1px solid #3b82f6; padding: 2px 6px; border-radius: 6px; margin-left: 8px;">ENTERPRISE v2.5</span></h3>
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">Autonomous Municipal Surveillance & Dispatch Core</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 20px; font-size: 13px;">
+                <div>👤 <span style="color: #f3f4f6; font-weight: 600;">{user_details['username']}</span></div>
+                <div>📍 <span style="color: #9ca3af;">{user_details['address']}</span></div>
+                <div style="display: flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); padding: 4px 10px; border-radius: 20px;">
+                    <span class="glow-dot"></span>
+                    <span style="color: #4ade80; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">ONLINE</span>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-        st.subheader("📌 Navigation")
+    # 🎛️ Sleek Control Dock (Tabs / Selectors)
+    col_nav1, col_nav2 = st.columns([3, 1])
+    with col_nav1:
         current_view = st.radio(
-            "Select View:", 
-            [
-                "🔍 AI Visual Detection Engine", 
-                "🔎 Public Hazard Tracker", 
-                "🗺️ Interactive Map"
-            ], 
+            "Navigation Core",
+            ["🔍 AI Visual Detection Engine", "🔎 Public Hazard Tracker", "🗺️ Interactive Map"],
             key="main_navigation",
+            horizontal=True,
             label_visibility="collapsed"
         )
-        st.divider()
-
+    with col_nav2:
         if current_view == "🔍 AI Visual Detection Engine":
-            st.subheader("⚙️ Model Sensitivity")
-            conf_threshold = st.slider("YOLO Confidence Threshold", 0.1, 1.0, 0.45, step=0.05)
-            st.subheader("📁 Input Channel")
-            input_mode = st.radio("Select Source:", ["🖼️ Single Image", "📂 Batch Processing", "🎥 Video Stream", "📸 Live Camera"], key="input_source_mode", label_visibility="collapsed")
+            conf_threshold = st.slider("YOLO Confidence", 0.1, 1.0, 0.45, step=0.05, label_visibility="collapsed")
         else:
-            conf_threshold, input_mode = 0.45, "🖼️ Single Image"
+            conf_threshold = 0.45
 
-    # 🖥️ MAIN CONTENT AREA
-    if current_view == "🔍 AI Visual Detection Engine":
+    st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+
+    # 🖥️ MAIN VIEW ROUTING
+    if current_view == "🔍 AIVisual Detection Engine" or current_view == "🔍 AI Visual Detection Engine":
         
-        # Animated Sleek Header Banner
-        st.markdown("""
-            <div class="app-header">
-                <h1 style="margin:0; font-size: 24px; font-weight: 700; letter-spacing: -0.3px;">🔍 AI Visual Detection & Automated Dispatch</h1>
-                <p style="margin:6px 0 0 0; color: #94a3b8; font-size: 13px;">Upload municipal infrastructure media to trigger computer vision detection and report compilation.</p>
-            </div>
-        """, unsafe_allow_html=True)
+        # Sub-feed selection inside a card layout
+        input_mode = st.radio(
+            "Input Channel",
+            ["🖼️ Single Image", "📂 Batch Processing", "🎥 Video Stream", "📸 Live Camera"],
+            key="input_source_mode",
+            horizontal=True
+        )
 
         if "current_tracking_id" not in st.session_state:
             st.session_state["current_tracking_id"] = generate_tracking_id()
+
+        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
 
         # ROUTING TO MODULAR COMPONENTS
         if input_mode == "🖼️ Single Image":
@@ -227,7 +198,6 @@ def render_dashboard_page():
         elif input_mode == "📸 Live Camera":
             render_live_camera_mode(conf_threshold)
 
-        # Base default location fallback from officer user metadata
         default_manual_loc = user_details.get("address", "Iqbal Sector, Block AA, Lahore")
 
         # DISPATCH & REPORTING PANEL
@@ -239,21 +209,9 @@ def render_dashboard_page():
         )
 
     elif current_view == "🔎 Public Hazard Tracker":
-        st.markdown("""
-            <div class="app-header">
-                <h1 style="margin:0; font-size: 24px; font-weight: 700;">🔎 Public Hazard Ledger</h1>
-                <p style="margin:6px 0 0 0; color: #94a3b8; font-size: 13px;">Track registered municipal incidents, status updates, and department routing.</p>
-            </div>
-        """, unsafe_allow_html=True)
         render_report_tracker()
 
     elif current_view == "🗺️ Interactive Map":
-        st.markdown("""
-            <div class="app-header">
-                <h1 style="margin:0; font-size: 24px; font-weight: 700;">🗺️ Geo-Spatial Incident Map</h1>
-                <p style="margin:6px 0 0 0; color: #94a3b8; font-size: 13px;">Visual satellite mapping of reported hazards across regional sectors.</p>
-            </div>
-        """, unsafe_allow_html=True)
         render_map_page()
 
 if __name__ == "__main__":
