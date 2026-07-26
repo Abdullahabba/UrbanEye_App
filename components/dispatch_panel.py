@@ -74,17 +74,18 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 "Timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
             }
 
-            # 1. Save to Session State Ledger
-            new_row_df = pd.DataFrame([new_record])
-            st.session_state["incident_ledger"] = pd.concat([st.session_state["incident_ledger"], new_row_df], ignore_index=True)
+            # 1. Update Session State Ledger
+            if "incident_ledger" in st.session_state:
+                new_row_df = pd.DataFrame([new_record])
+                st.session_state["incident_ledger"] = pd.concat([st.session_state["incident_ledger"], new_row_df], ignore_index=True)
 
-            # 2. Save to Supabase (Optional backup)
+            # 2. Save directly to Supabase Database with Error Debugging
             try:
-                from utils.supabase_client import init_supabase
-                supabase = init_supabase()
+                from database.supabase_client import supabase
                 if supabase:
-                    supabase.table("reports").insert(new_record).execute()
-            except Exception:
-                pass
-
-            st.success(f"✅ Incident submitted successfully! Tracking ID: **{tracking_id}**")
+                    res = supabase.table("reports").insert(new_record).execute()
+                    st.success(f"✅ Incident submitted & synced to Supabase successfully! Tracking ID: **{tracking_id}**")
+                else:
+                    st.error("❌ Supabase client is None. Check configuration.")
+            except Exception as e:
+                st.error(f"❌ Supabase Insert Error: {e}")
