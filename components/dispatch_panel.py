@@ -2,12 +2,21 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from PIL import Image
-from utils.location_helper import get_live_location
 
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
-    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location $\rightarrow$ Step 3: Dispatch Reports & Sync.")
+    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Lock Location $\rightarrow$ Step 3: Dispatch Reports & Sync.")
+
+    # Initialize location lock state to prevent resets
+    if "location_locked" not in st.session_state:
+        st.session_state["location_locked"] = False
+    if "locked_location_name" not in st.session_state:
+        st.session_state["locked_location_name"] = manual_loc_name
+    if "locked_lat" not in st.session_state:
+        st.session_state["locked_lat"] = 31.5204
+    if "locked_lon" not in st.session_state:
+        st.session_state["locked_lon"] = 74.3587
 
     # 1️⃣ Step 1: Detection Summary Displayed First
     counts = st.session_state.get("counts", {})
@@ -20,47 +29,45 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=100)
 
-    # 2️⃣ Step 2: Location Option (Manual or Auto GPS)
-    st.markdown("##### 📍 Step 2: Select Location Method")
-    loc_choice = st.radio(
-        "Choose Location Entry Type",
-        ["Manual", "Automatic GPS"],
-        horizontal=True,
-        label_visibility="collapsed"
-    )
-
-    lat = 31.5204
-    lon = 74.3587
-    final_location_name = manual_loc_name
-    location_ready = False
-
-    # Conditional location handling
-    if loc_choice == "Manual":
-        final_location_name = st.text_input("✍️ Enter Location Name / Address:", value=manual_loc_name)
-        if final_location_name and final_location_name.strip():
-            location_ready = True
-            st.success(f"✅ Manual Location Set: `{final_location_name}`")
+    # 2️⃣ Step 2: Location Setting & Locking
+    st.markdown("##### 📍 Step 2: Location Setup")
+    
+    if not st.session_state["location_locked"]:
+        loc_mode = st.radio("Choose Location Entry Method", ["Manual Address", "Default GPS Coordinates"], horizontal=True)
+        
+        if loc_mode == "Manual Address":
+            input_loc = st.text_input("✍️ Enter Location Name / Address:", value=st.session_state["locked_location_name"])
+            if st.button("🔒 Lock Manual Location", use_container_width=True):
+                if input_loc and input_loc.strip():
+                    st.session_state["locked_location_name"] = input_loc.strip()
+                    st.session_state["location_locked"] = True
+                    st.rerun()
+                else:
+                    st.warning("⚠️ Please enter a valid location name.")
         else:
-            st.warning("⚠️ Please enter a valid location name to proceed.")
+            st.info("🛰️ Using standard municipal coordinates (Lahore Center: 31.5204, 74.3587).")
+            if st.button("🔒 Lock Default GPS Location", use_container_width=True):
+                st.session_state["locked_location_name"] = "Lahore Center (GPS)"
+                st.session_state["locked_lat"] = 31.5204
+                st.session_state["locked_lon"] = 74.3587
+                st.session_state["location_locked"] = True
+                st.rerun()
     else:
-        # Automatic GPS using location helper
-        live_lat, live_lon = get_live_location()
-        if live_lat is not None and live_lon is not None:
-            lat = live_lat
-            lon = live_lon
-            final_location_name = f"Auto-GPS Location (Lat: {lat:.4f}, Lon: {lon:.4f})"
-            st.success(f"✅ Automatic GPS Locked -> Lat: {lat:.4f}, Lon: {lon:.4f}")
-            location_ready = True
-        else:
-            final_location_name = "Auto-GPS (Pending)"
-            location_ready = False
+        # Location is locked, show confirmation and edit option
+        st.success(f"✅ Location Successfully Locked: **{st.session_state['locked_location_name']}**")
+        if st.button("✏️ Change Location", use_container_width=True):
+            st.session_state["location_locked"] = False
+            st.rerun()
 
-    # 3️⃣ Step 3: Actions (PDF, Email, Supabase Push) - Unlocked ONLY after location is ready
-    if location_ready:
+    # 3️⃣ Step 3: Actions (PDF, Email, Supabase Push) - Unlocked ONLY when location is locked
+    if st.session_state["location_locked"]:
         st.markdown("##### 🚀 Step 3: Dispatch & Reports")
         st.divider()
 
-        # Update summary text with final location & tracking ID
+        final_location_name = st.session_state["locked_location_name"]
+        lat = st.session_state["locked_lat"]
+        lon = st.session_state["locked_lon"]
+
         full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat}, {lon})\nTracking ID: {tracking_id}"
 
         # Gather all captured/detected evidence images
@@ -210,4 +217,4 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     st.error("❌ Sync Error Details:")
                     st.exception(e)
     else:
-        st.info("🔒 Please complete **Step 2 (Enter Manual Location or Click 'Detect My Live GPS')** above to unlock PDF download, Email dispatch, and Supabase cloud sync.")
+        st.info("🔒 Please complete **Step 2 (Lock Manual Location or Default GPS)** above to unlock PDF download, Email dispatch, and Supabase cloud sync.")
