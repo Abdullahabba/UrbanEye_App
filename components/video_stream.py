@@ -11,12 +11,8 @@ def render_video_stream_mode(conf_threshold):
     uploaded_video = st.file_uploader("Upload CCTV or Drone Footage", type=["mp4", "avi", "mov"], key="video_upload")
     
     if uploaded_video and st.button("🎥 Start Video Analysis", key="btn_video"):
-        # Initialize captured images list if not present
-        if "captured_images" not in st.session_state:
-            st.session_state["captured_images"] = []
-        else:
-            # Purani images clear karna chahein taake nayi video ki fresh images aayein
-            st.session_state["captured_images"] = []
+        # Fresh list initialize karein taake purani images clear ho jayein
+        st.session_state["captured_images"] = []
 
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_video.read())
@@ -38,28 +34,41 @@ def render_video_stream_mode(conf_threshold):
                 last_frame = proc_frame
                 st_frame.image(proc_frame, caption=f"Live Frame (Frame {frame_count})", use_container_width=True)
                 
-                for k, v in counts.items():
-                    v_counts[k] = v_counts.get(k, 0) + v
+                # Robust counts calculation for any format (dict, list, int)
+                total_detected = 0
+                if isinstance(counts, dict):
+                    for k, v in counts.items():
+                        v_counts[k] = v_counts.get(k, 0) + v
+                    total_detected = sum(counts.values()) if counts else 0
+                elif isinstance(counts, (int, float)):
+                    total_detected = int(counts)
+                elif isinstance(counts, (list, tuple)):
+                    total_detected = len(counts)
 
-                # 🚨 STRIKING FIX: Sirf wahi frame save hoga jahan actual detections/issues milein!
-                total_detected_objects = sum(counts.values()) if isinstance(counts, dict) else 0
-                if total_detected_objects > 0:
-                    # Convert processed frame (PIL or numpy) to numpy array if needed for storage
+                # 🚨 Sirf wahi frame save hoga jahan actual detections/issues milein!
+                if total_detected > 0:
                     if isinstance(proc_frame, Image.Image):
                         frame_to_store = np.array(proc_frame)
                     else:
                         frame_to_store = proc_frame
                     
-                    # Avoid exact duplicate continuous frames
-                    if len(st.session_state["captured_images"]) == 0 or not np.array_equal(st.session_state["captured_images"][-1], frame_to_store):
-                        st.session_state["captured_images"].append(frame_to_store)
+                    # List mein append kar dein
+                    st.session_state["captured_images"].append(frame_to_store)
 
         cap.release()
         st.session_state.update({
             "counts": v_counts, 
             "current_tracking_id": generate_tracking_id()
         })
+        
         if last_frame is not None: 
             st.session_state["processed_img"] = last_frame
             
-        st.success(f"✅ Video Stream Analysis Completed! Captured {len(st.session_state['captured_images'])} frames containing hazards.")
+        # Agar video mein kisi frame par detection nahi mili, toh user ko guide karne ke liye last frame daal dein taake blank na rahe
+        if not st.session_state["captured_images"] and last_frame is not None:
+            if isinstance(last_frame, Image.Image):
+                st.session_state["captured_images"].append(np.array(last_frame))
+            else:
+                st.session_state["captured_images"].append(last_frame)
+
+        st.success(f"✅ Video Analysis Completed! Successfully captured {len(st.session_state['captured_images'])} relevant evidence frame(s).")
