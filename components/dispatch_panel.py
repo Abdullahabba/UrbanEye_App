@@ -37,10 +37,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         except Exception as e:
             st.error(f"❌ PDF Generation Error: {e}")
 
-    # Automatically extract officer email from user_details metadata
     officer_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
 
-    # Layout for actions (Download, Email, Supabase)
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -65,9 +63,13 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         if st.button("🚀 Push to Supabase", use_container_width=True):
             try:
                 from database.supabase_client import supabase
+                
+                # 🔄 Fixed payload column name: 'issue_type' matches Supabase schema constraint
+                detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
+                
                 payload = {
                     "tracking_id": tracking_id,
-                    "hazard": list(counts.keys())[0] if counts else "General Hazard",
+                    "issue_type": str(detected_hazard_name),
                     "severity": "MEDIUM",
                     "sla_target": "12 Hours",
                     "status": "Pending",
@@ -87,6 +89,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 new_row_df = pd.DataFrame([payload])
                 st.session_state["incident_ledger"] = pd.concat([st.session_state["incident_ledger"], new_row_df], ignore_index=True)
                 
-                st.success(f"✅ Synced to Supabase!")
+                st.success(f"✅ Synced to Supabase successfully!")
             except Exception as e:
-                st.error(f"❌ Sync Error: {e}")
+                st.error("❌ Sync Error Details:")
+                st.exception(e)
