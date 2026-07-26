@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from PIL import Image
-from streamlit_geolocation import streamlit_geolocation
+from utils.location_helper import get_live_location
 
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
@@ -43,31 +43,16 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         else:
             st.warning("⚠️ Please enter a valid location name to proceed.")
     else:
-        st.markdown("Click the button below to fetch live GPS coordinates automatically:")
-        
-        if "auto_gps_fetched" not in st.session_state:
-            st.session_state["auto_gps_fetched"] = False
-
-        if st.button("🛰️ Detect Automatic Location", use_container_width=True):
-            loc = streamlit_geolocation()
-            if loc and loc.get("latitude") and loc.get("longitude"):
-                lat = loc["latitude"]
-                lon = loc["longitude"]
-                st.session_state["live_lat"] = lat
-                st.session_state["live_lon"] = lon
-                st.session_state["auto_gps_fetched"] = True
-            
-        if st.session_state.get("auto_gps_fetched", False):
-            lat = st.session_state.get("live_lat", lat)
-            lon = st.session_state.get("live_lon", lon)
+        # Automatic GPS using location helper
+        live_lat, live_lon = get_live_location()
+        if live_lat is not None and live_lon is not None:
+            lat = live_lat
+            lon = live_lon
             final_location_name = f"Auto-GPS Location (Lat: {lat:.4f}, Lon: {lon:.4f})"
-            st.success(f"✅ Automatic Location Locked -> Lat: {lat:.4f}, Lon: {lon:.4f}")
+            st.success(f"✅ Automatic GPS Locked -> Lat: {lat:.4f}, Lon: {lon:.4f}")
             location_ready = True
         else:
-            lat = st.session_state.get("live_lat", 31.5204)
-            lon = st.session_state.get("live_lon", 74.3587)
             final_location_name = "Auto-GPS (Pending)"
-            st.info("ℹ️ Click the button above to lock current GPS coordinates.")
             location_ready = False
 
     # 3️⃣ Step 3: Actions (PDF, Email, Supabase Push) - Unlocked ONLY after location is ready
@@ -225,4 +210,4 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     st.error("❌ Sync Error Details:")
                     st.exception(e)
     else:
-        st.info("🔒 Please complete **Step 2 (Location Selection or Auto-GPS Detection)** above to unlock PDF generation, Email dispatch, and Supabase cloud sync.")
+        st.info("🔒 Please complete **Step 2 (Enter Manual Location or Click 'Detect My Live GPS')** above to unlock PDF download, Email dispatch, and Supabase cloud sync.")
