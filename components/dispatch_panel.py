@@ -9,24 +9,38 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.subheader("📤 Dispatch & Verification Panel")
     st.caption("Review incident summary, download PDF reports, send via email, or push logs to Supabase cloud.")
 
-    # 📍 Instant Non-Blocking Live GPS Location Integration
-    st.markdown("##### 📍 Live GPS Coordinates")
+    # 📍 Seamless Location Mode Selection (No separate extra buttons)
+    st.markdown("##### 📍 Location & GPS Settings")
     
-    # Fetch coordinates instantly without page reloads
-    loc = streamlit_geolocation()
-    
-    # Fallback initialization from session state or default
-    lat = st.session_state.get("live_lat", 31.5204)
-    lon = st.session_state.get("live_lon", 74.3587)
+    loc_mode = st.radio(
+        "Choose Location Mode", 
+        ["Use Current Manual Location", "Fetch Live GPS Location"], 
+        horizontal=True,
+        label_visibility="collapsed"
+    )
 
-    if loc and loc.get("latitude") and loc.get("longitude"):
-        lat = loc["latitude"]
-        lon = loc["longitude"]
-        st.session_state["live_lat"] = lat
-        st.session_state["live_lon"] = lon
-        st.success(f"✅ Live GPS Locked Instantly -> Lat: {lat:.4f}, Lon: {lon:.4f}")
+    lat = 31.5204
+    lon = 74.3587
+    final_location_name = manual_loc_name
+
+    if loc_mode == "Fetch Live GPS Location":
+        # Automatically triggers when user switches to Live GPS
+        loc = streamlit_geolocation()
+        if loc and loc.get("latitude") and loc.get("longitude"):
+            lat = loc["latitude"]
+            lon = loc["longitude"]
+            st.session_state["live_lat"] = lat
+            st.session_state["live_lon"] = lon
+            final_location_name = f"Auto-GPS Live (Lat: {lat:.4f}, Lon: {lon:.4f})"
+            st.success(f"✅ Live GPS Connected -> Lat: {lat:.4f}, Lon: {lon:.4f}")
+        else:
+            # Fallback to session state if already fetched
+            lat = st.session_state.get("live_lat", 31.5204)
+            lon = st.session_state.get("live_lon", 74.3587)
+            st.info("🛰️ Please allow location permission in your browser if prompted.")
     else:
-        st.caption(f"Active Coordinates -> **Latitude:** `{lat}`, **Longitude:** `{lon}`")
+        # Uses manual location passed from form
+        st.caption(using location: f"**{manual_loc_name}** (Default coordinates)")
 
     # Get counts from session state
     counts = st.session_state.get("counts", {})
@@ -37,16 +51,15 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     else:
         summary_text += "- General Municipal Infrastructure Issue\n"
 
-    summary_text += f"Location: {manual_loc_name} (GPS: {lat}, {lon})\nTracking ID: {tracking_id}"
+    summary_text += f"Location: {final_location_name} (GPS: {lat}, {lon})\nTracking ID: {tracking_id}"
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=120)
 
-    # 1️⃣ Gather all captured/detected evidence images (Single image, live camera, or video stream frames)
+    # 1️⃣ Gather all captured/detected evidence images
     raw_images = st.session_state.get("captured_images", [])
     if not raw_images and "processed_img" in st.session_state:
         raw_images = [st.session_state["processed_img"]]
 
-    # 🛡️ Ensure all captured numpy arrays/images are properly converted to PIL Image objects for PDF compatibility
     all_images = []
     for img in raw_images:
         if isinstance(img, np.ndarray):
@@ -151,9 +164,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     "sla_target": "12 Hours",
                     "status": "Pending",
                     "assigned_dept": str(assigned_department),
-                    "latitude": lat,   # 📌 Instant Live GPS Latitude
-                    "longitude": lon,  # 📌 Instant Live GPS Longitude
-                    "location_name": str(manual_loc_name),
+                    "latitude": lat,   # 📌 Active Latitude (Manual or Live GPS)
+                    "longitude": lon,  # 📌 Active Longitude (Manual or Live GPS)
+                    "location_name": str(final_location_name),
                     "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                 }
                 
@@ -181,7 +194,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
                 
                 if success_pushed:
-                    st.success(f"✅ Synced to Supabase with instant live GPS & registered in Tracker!")
+                    st.success(f"✅ Synced to Supabase & registered in Tracker!")
                 else:
                     st.success(f"✅ Registered in local tracker ledger successfully!")
 
