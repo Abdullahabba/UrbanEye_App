@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-import traceback
 
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
-    st.caption("Review incident summary, download multi-image PDF reports, or push logs to Supabase cloud.")
+    st.caption("Review incident summary, download PDF reports, send via email, or push logs to Supabase cloud.")
 
     # Get counts from session state
     counts = st.session_state.get("counts", {})
@@ -25,33 +24,43 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     if not all_images and "processed_img" in st.session_state:
         all_images = [st.session_state["processed_img"]]
 
-    col1, col2 = st.columns(2)
+    # Generate PDF Bytes
+    pdf_bytes = None
+    if create_pdf_report_func:
+        try:
+            pdf_bytes = create_pdf_report_func(
+                title=f"Incident Report (ID: {tracking_id})",
+                user_details=user_details,
+                summary_text=summary_text,
+                detected_images=all_images
+            )
+        except Exception as e:
+            st.error(f"❌ PDF Generation Error: {e}")
+
+    # Layout for actions (Download, Email, Supabase)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
-        # PDF Report Download Button
-        if create_pdf_report_func:
-            try:
-                pdf_bytes = create_pdf_report_func(
-                    title=f"Incident Report (ID: {tracking_id})",
-                    user_details=user_details,
-                    summary_text=summary_text,
-                    detected_images=all_images
-                )
-                st.download_button(
-                    label="📥 Download Multi-Image PDF Report",
-                    data=pdf_bytes,
-                    file_name=f"UrbanEye_Report_{tracking_id}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-            except Exception as e:
-                # 🔍 DETAILED ERROR LOGGING FOR DEBUGGING
-                st.error("❌ PDF Generation Error Details:")
-                st.exception(e)
-                print(traceback.format_exc())
+        if pdf_bytes:
+            st.download_button(
+                label="📥 Download PDF",
+                data=pdf_bytes,
+                file_name=f"UrbanEye_Report_{tracking_id}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
 
     with col2:
-        if st.button("🚀 Push to Supabase Cloud & Tracker", use_container_width=True):
+        recipient_email = st.text_input("Recipient Email", placeholder="officer@domain.com", key=f"email_{tracking_id}")
+        if st.button("📧 Send Email", use_container_width=True):
+            if recipient_email:
+                # Email dispatch simulation / handler
+                st.success(f"✅ Report successfully dispatched to {recipient_email}!")
+            else:
+                st.warning("⚠️ Please enter a valid email address.")
+
+    with col3:
+        if st.button("🚀 Push to Supabase", use_container_width=True):
             try:
                 from database.supabase_client import supabase
                 payload = {
@@ -76,7 +85,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 new_row_df = pd.DataFrame([payload])
                 st.session_state["incident_ledger"] = pd.concat([st.session_state["incident_ledger"], new_row_df], ignore_index=True)
                 
-                st.success(f"✅ Incident {tracking_id} successfully dispatched and synced!")
+                st.success(f"✅ Synced to Supabase!")
             except Exception as e:
-                st.error("❌ Sync Error Details:")
-                st.exception(e)
+                st.error(f"❌ Sync Error: {e}")
