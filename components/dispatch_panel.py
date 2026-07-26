@@ -66,7 +66,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 
                 detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
                 
-                # Payload matching standard Supabase 'reports' table schema
                 payload = {
                     "tracking_id": str(tracking_id),
                     "issue_type": str(detected_hazard_name),
@@ -83,15 +82,15 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 success_pushed = False
                 if supabase is not None:
                     try:
-                        # Try inserting into Supabase
-                        response = supabase.table("reports").insert(payload).execute()
+                        # 🔄 Using upsert instead of insert to prevent duplicate key constraint violations
+                        response = supabase.table("reports").upsert(payload).execute()
                         success_pushed = True
                     except Exception as sb_err:
-                        st.warning(f"⚠️ Supabase Cloud insert warning: {sb_err}")
+                        st.warning(f"⚠️ Supabase Cloud upsert warning: {sb_err}")
                 else:
                     st.info("ℹ️ Supabase client is not initialized. Saving to local session ledger.")
 
-                # Always ensure it gets added to local session ledger so Tracker can find it instantly
+                # Ensure it gets added to local session ledger so Tracker can find it instantly
                 if "incident_ledger" not in st.session_state or st.session_state["incident_ledger"] is None:
                     st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
                 
@@ -101,7 +100,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
                 
                 if success_pushed:
-                    st.success(f"✅ Successfully pushed to Supabase & registered in Tracker!")
+                    st.success(f"✅ Successfully synced to Supabase & registered in Tracker!")
                 else:
                     st.success(f"✅ Registered in local tracker ledger successfully!")
 
