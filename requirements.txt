@@ -5,3 +5,4 @@ pillow
 supabase
 fpdf2
 streamlit-cookies-controller
+pip install streamlit-geolocation
