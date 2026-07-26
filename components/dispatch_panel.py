@@ -7,39 +7,9 @@ from streamlit_geolocation import streamlit_geolocation
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
-    st.caption("Review incident summary, download PDF reports, send via email, or push logs to Supabase cloud.")
+    st.caption("Review incident summary, choose location method, and dispatch report.")
 
-    # 📍 Seamless Location Mode Selection
-    st.markdown("##### 📍 Location & GPS Settings")
-    
-    loc_mode = st.radio(
-        "Choose Location Mode", 
-        ["Use Current Manual Location", "Fetch Live GPS Location"], 
-        horizontal=True,
-        label_visibility="collapsed"
-    )
-
-    lat = 31.5204
-    lon = 74.3587
-    final_location_name = manual_loc_name
-
-    if loc_mode == "Fetch Live GPS Location":
-        loc = streamlit_geolocation()
-        if loc and loc.get("latitude") and loc.get("longitude"):
-            lat = loc["latitude"]
-            lon = loc["longitude"]
-            st.session_state["live_lat"] = lat
-            st.session_state["live_lon"] = lon
-            final_location_name = f"Auto-GPS Live (Lat: {lat:.4f}, Lon: {lon:.4f})"
-            st.success(f"✅ Live GPS Connected -> Lat: {lat:.4f}, Lon: {lon:.4f}")
-        else:
-            lat = st.session_state.get("live_lat", 31.5204)
-            lon = st.session_state.get("live_lon", 74.3587)
-            st.info("🛰️ Please allow location permission in your browser if prompted.")
-    else:
-        st.caption(f"Using location: **{manual_loc_name}** (Default coordinates)")
-
-    # Get counts from session state
+    # 1️⃣ Detection Summary Displayed First
     counts = st.session_state.get("counts", {})
     summary_text = "Detected Hazards Summary:\n"
     if counts:
@@ -48,9 +18,55 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     else:
         summary_text += "- General Municipal Infrastructure Issue\n"
 
-    summary_text += f"Location: {final_location_name} (GPS: {lat}, {lon})\nTracking ID: {tracking_id}"
+    st.text_area("📋 Generated Incident Summary", value=summary_text, height=100)
 
-    st.text_area("📋 Generated Incident Summary", value=summary_text, height=120)
+    # 2️⃣ Ask user for location method after detection
+    st.markdown("##### 📍 Select Location Method")
+    loc_choice = st.radio(
+        "Choose Location Entry Type",
+        ["Manual", "Automatic GPS"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+
+    lat = 31.5204
+    lon = 74.3587
+    final_location_name = manual_loc_name
+
+    # 3️⃣ Conditional rendering based on user selection
+    if loc_choice == "Manual":
+        # Manual location typing field
+        final_location_name = st.text_input("✍️ Enter Location Name / Address:", value=manual_loc_name)
+        st.caption(f"Using manual location: `{final_location_name}`")
+    else:
+        # Automatic GPS single button interface
+        st.markdown("Click the button below to fetch live GPS coordinates automatically:")
+        
+        if "auto_gps_fetched" not in st.session_state:
+            st.session_state["auto_gps_fetched"] = False
+
+        if st.button("🛰️ Detect Automatic Location", use_container_width=True):
+            loc = streamlit_geolocation()
+            if loc and loc.get("latitude") and loc.get("longitude"):
+                lat = loc["latitude"]
+                lon = loc["longitude"]
+                st.session_state["live_lat"] = lat
+                st.session_state["live_lon"] = lon
+                st.session_state["auto_gps_fetched"] = True
+            
+        if st.session_state.get("auto_gps_fetched", False):
+            lat = st.session_state.get("live_lat", lat)
+            lon = st.session_state.get("live_lon", lon)
+            final_location_name = f"Auto-GPS Location (Lat: {lat:.4f}, Lon: {lon:.4f})"
+            st.success(f"✅ Automatic Location Locked -> Lat: {lat:.4f}, Lon: {lon:.4f}")
+        else:
+            lat = st.session_state.get("live_lat", 31.5204)
+            lon = st.session_state.get("live_lon", 74.3587)
+            final_location_name = "Auto-GPS (Pending)"
+            st.info("ℹ️ Click the button above to lock current GPS coordinates.")
+
+    # Final complete summary text for reports
+    full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat}, {lon})\nTracking ID: {tracking_id}"
 
     # Gather all captured/detected evidence images
     raw_images = st.session_state.get("captured_images", [])
@@ -75,7 +91,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             pdf_bytes = create_pdf_report_func(
                 title=f"Incident Report (ID: {tracking_id})",
                 user_details=user_details,
-                summary_text=summary_text,
+                summary_text=full_summary_text,
                 detected_images=all_images
             )
         except Exception as e:
@@ -122,7 +138,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                         msg["Cc"] = officer_email
                         msg["Subject"] = f"[UrbanEye Dispatch] Incident Report - ID: {tracking_id}"
 
-                        body = f"Incident Report Summary:\n\n{summary_text}\n\nAssigned Dept: {assigned_department}"
+                        body = f"Incident Report Summary:\n\n{full_summary_text}\n\nAssigned Dept: {assigned_department}"
                         msg.attach(MIMEText(body, "plain"))
 
                         if pdf_bytes:
