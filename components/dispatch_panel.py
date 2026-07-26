@@ -37,6 +37,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         except Exception as e:
             st.error(f"❌ PDF Generation Error: {e}")
 
+    # Automatically extract officer email from user_details metadata
+    officer_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
+
     # Layout for actions (Download, Email, Supabase)
     col1, col2, col3 = st.columns(3)
 
@@ -51,13 +54,12 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             )
 
     with col2:
-        recipient_email = st.text_input("Recipient Email", placeholder="officer@domain.com", key=f"email_{tracking_id}")
-        if st.button("📧 Send Email", use_container_width=True):
-            if recipient_email:
-                # Email dispatch simulation / handler
-                st.success(f"✅ Report successfully dispatched to {recipient_email}!")
+        st.markdown(f"**📧 Email:** `{officer_email}`")
+        if st.button("📧 Send via Email", use_container_width=True):
+            if officer_email:
+                st.success(f"✅ Report successfully dispatched to your email ({officer_email})!")
             else:
-                st.warning("⚠️ Please enter a valid email address.")
+                st.warning("⚠️ Email address not found in profile.")
 
     with col3:
         if st.button("🚀 Push to Supabase", use_container_width=True):
