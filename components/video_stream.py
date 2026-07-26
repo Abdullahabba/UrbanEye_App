@@ -40,18 +40,20 @@ def render_video_stream_mode(conf_threshold):
                 st_frame.image(proc_frame, caption=f"Live Frame (Frame {frame_count})", use_container_width=True)
                 
                 # Counts tallying
-                if isinstance(counts, dict):
+                if isinstance(counts, dict) and len(counts) > 0:
                     for k, v in counts.items():
                         v_counts[k] = v_counts.get(k, 0) + v
 
-                # Frame capture storage
-                if isinstance(proc_frame, Image.Image):
-                    frame_to_store = np.array(proc_frame)
-                else:
-                    frame_to_store = proc_frame
-                
-                if len(st.session_state["captured_images"]) < 6:
-                    st.session_state["captured_images"].append(frame_to_store)
+                    # 🎯 Sirf un frames ko PIL Image bana kar store karein jahan issue detect hua ho
+                    pil_to_store = None
+                    if isinstance(proc_frame, Image.Image):
+                        pil_to_store = proc_frame
+                    elif isinstance(proc_frame, np.ndarray):
+                        rgb_arr = cv2.cvtColor(proc_frame, cv2.COLOR_BGR2RGB) if len(proc_frame.shape) == 3 and proc_frame.shape[2] == 3 else proc_frame
+                        pil_to_store = Image.fromarray(rgb_arr)
+                    
+                    if pil_to_store and len(st.session_state["captured_images"]) < 6:
+                        st.session_state["captured_images"].append(pil_to_store)
 
         cap.release()
         
@@ -85,12 +87,10 @@ def render_video_stream_mode(conf_threshold):
         
         existing_ledger = st.session_state["incident_ledger"]
         
-        # Check if 'tracking_id' column exists to prevent KeyError
         if "tracking_id" not in existing_ledger.columns:
             st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
             existing_ledger = st.session_state["incident_ledger"]
 
-        # Safely append if tracking_id doesn't already exist
         if tracking_id not in existing_ledger["tracking_id"].values:
             new_row_df = pd.DataFrame([payload])
             st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
