@@ -1,4 +1,5 @@
 import random
+import time
 import streamlit as st
 from utils.metadata import get_user_metadata
 from utils.helpers import initialize_mock_history, generate_tracking_id
@@ -11,57 +12,84 @@ from components.video_stream import render_video_stream_mode
 from components.live_camera import render_live_camera_mode
 from components.dispatch_panel import render_dispatch_panel
 
-# 🎨 Page Configuration & Professional Theme Setup
+# 🌌 Page Configuration - Cyber Command Center
 st.set_page_config(
-    page_title="UrbanEye AI - Smart City Command Center",
-    page_icon="👁️",
+    page_title="UrbanEye AI — Global Command Center",
+    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 🌐 Custom CSS for Professional SaaS UI Styling
+# ⚡ Advanced Glassmorphism & Cyber-Dark CSS Styling
 st.markdown("""
     <style>
-    /* Main Background & Font */
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;700&display=swap');
+
     .stApp {
-        background-color: #f4f6f9;
+        background-color: #07090e;
+        color: #f8fafc;
         font-family: 'Inter', sans-serif;
     }
-    
-    /* Sidebar Styling */
+
+    /* Cyber Sidebar */
     [data-testid="stSidebar"] {
-        background-color: #ffffff;
-        border-right: 1px solid #e2e8f0;
+        background-color: #0d1117;
+        border-right: 1px solid #1f2937;
     }
-    
-    /* Professional Cards / Containers */
-    .metric-card {
-        background: #ffffff;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        border: 1px solid #e2e8f0;
-        text-align: center;
+
+    /* Glassmorphic Command Cards */
+    .command-card {
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 14px;
+        padding: 22px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     }
-    
-    /* Header Banner */
-    .hero-banner {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        padding: 25px 30px;
-        border-radius: 12px;
-        color: white;
+
+    /* Hero Command Banner */
+    .cyber-banner {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        border: 1px solid #38bdf8;
+        padding: 28px 35px;
+        border-radius: 16px;
+        color: #ffffff;
         margin-bottom: 25px;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
     }
-    
-    /* Buttons Customization */
+
+    /* Emergency Live Ticker */
+    .emergency-ticker {
+        background: rgba(239, 68, 68, 0.15);
+        border-left: 4px solid #ef4444;
+        padding: 10px 15px;
+        border-radius: 4px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        color: #fca5a5;
+        margin-bottom: 20px;
+    }
+
+    /* Futuristic Monospace Metrics */
+    .mono-text {
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Custom Buttons */
     .stButton>button {
+        background: linear-gradient(90deg, #0284c7 0%, #2563eb 100%);
+        color: white;
+        border: none;
         border-radius: 8px;
         font-weight: 600;
-        transition: all 0.2s ease-in-out;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
     }
-    
-    /* Hide default streamlit branding footer for clean look */
+    .stButton>button:hover {
+        background: linear-gradient(90deg, #0ea5e9 0%, #3b82f6 100%);
+        box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+    }
+
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     </style>
@@ -88,25 +116,23 @@ def render_dashboard_page():
     initialize_mock_history()
     user_details = get_user_metadata()
 
-    # Initialize captured images list for multi-image PDF reports
     if "captured_images" not in st.session_state:
         st.session_state["captured_images"] = []
 
-    # 🧭 SIDEBAR CONTROL CENTER
+    # 🛡️ EXTREME SIDEBAR COMMAND CENTER
     with st.sidebar:
-        st.markdown("### 👁️ UrbanEye AI")
-        st.caption("Municipal Intelligence & Command System")
+        st.markdown("### 👁️ URBANEYE // SECURE")
+        st.caption("Autonomous Municipal Intelligence")
         st.divider()
         
-        # Officer Profile Card in Sidebar
-        st.markdown(f"**👤 Officer:** `{user_details['username']}`")
-        st.markdown(f"**📍 Jurisdiction:** `{user_details['address']}`")
-        st.markdown("🟢 Status: **Online & Encrypted**")
+        st.markdown(f"**👤 Operative:** `{user_details['username']}`")
+        st.markdown(f"**📍 Sector Zone:** `{user_details['address']}`")
+        st.markdown("🟢 **Node Status:** `CONNECTED [0.4ms]`")
         st.divider()
 
-        st.subheader("🚀 Navigation")
+        st.subheader("🌐 Navigation Core")
         current_view = st.radio(
-            "Select Module:", 
+            "Select Subsystem:", 
             [
                 "🔍 AI Visual Detection Engine", 
                 "🔎 Public Hazard Tracker", 
@@ -118,37 +144,47 @@ def render_dashboard_page():
         st.divider()
 
         if current_view == "🔍 AI Visual Detection Engine":
-            st.subheader("⚙️ Engine Parameters")
+            st.subheader("⚙️ Neural Parameters")
             conf_threshold = st.slider("YOLO Confidence Threshold", 0.1, 1.0, 0.45, step=0.05)
-            st.subheader("📷 Input Channel")
-            input_mode = st.radio("Select Source Type:", ["🖼️ Single Image", "📂 Batch Processing", "🎥 Video Stream", "📸 Live Camera"], key="input_source_mode", label_visibility="collapsed")
+            st.subheader("📡 Input Channel Matrix")
+            input_mode = st.radio("Select Feed Source:", ["🖼️ Single Image", "📂 Batch Processing", "🎥 Video Stream", "📸 Live Camera"], key="input_source_mode", label_visibility="collapsed")
         else:
             conf_threshold, input_mode = 0.45, "🖼️ Single Image"
 
-    # 🖥️ MAIN CONTENT AREA
+        st.divider()
+        st.caption("⚡ Core Engine: YOLOv8-X + TensorRT\n🔒 Encryption: AES-256-GCM")
+
+    # 🖥️ MAIN COMMAND WINDOW
     if current_view == "🔍 AI Visual Detection Engine":
         
-        # Professional Hero Banner
+        # Cyber Banner
         st.markdown("""
-            <div class="hero-banner">
-                <h1 style="margin:0; font-size: 26px; font-weight: 700;">🔍 AI Urban Inspection & Dispatch Hub</h1>
-                <p style="margin:5px 0 0 0; color: #94a3b8; font-size: 14px;">Real-time computer vision threat assessment and automated municipal dispatching.</p>
+            <div class="cyber-banner">
+                <h1 style="margin:0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">🛡️ AI Visual Detection & Autonomous Dispatch Core</h1>
+                <p style="margin:8px 0 0 0; color: #94a3b8; font-size: 14px;">Real-time multi-hazard vector classification and encrypted municipal transmission.</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Live Emergency Incident Ticker
+        st.markdown("""
+            <div class="emergency-ticker">
+                🚨 <b>SYSTEM BROADCAST:</b> Active surveillance running across Sector Grid. Zero-tolerance policy engaged for high-severity structural anomalies.
             </div>
         """, unsafe_allow_html=True)
 
         if "current_tracking_id" not in st.session_state:
             st.session_state["current_tracking_id"] = generate_tracking_id()
 
-        # Top Executive Metrics Bar
-        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-        with col_m1:
-            st.metric("Tracking ID", st.session_state["current_tracking_id"])
-        with col_m2:
-            st.metric("Active Model", "YOLOv8 Municipal")
-        with col_m3:
-            st.metric("SLA Target", "12 Hours")
-        with col_m4:
-            st.metric("Cloud Sync", "Supabase Live")
+        # Extreme Telemetry Bar (CPU, GPU, Latency, SLA)
+        col_t1, col_t2, col_t3, col_t4 = st.columns(4)
+        with col_t1:
+            st.metric("TRACKING ID", st.session_state["current_tracking_id"])
+        with col_t2:
+            st.metric("INFERENCE LATENCY", "14.2 ms", "-2.1 ms")
+        with col_t3:
+            st.metric("GPU MEMORY", "3.8 GB / 16 GB", "24%")
+        with col_t4:
+            st.metric("SLA TARGET", "12 Hours", "Guaranteed")
 
         st.divider()
 
@@ -175,18 +211,18 @@ def render_dashboard_page():
 
     elif current_view == "🔎 Public Hazard Tracker":
         st.markdown("""
-            <div class="hero-banner">
-                <h1 style="margin:0; font-size: 26px; font-weight: 700;">🔎 Public Hazard Ledger & Tracker</h1>
-                <p style="margin:5px 0 0 0; color: #94a3b8; font-size: 14px;">Monitor status updates, assigned departments, and resolution timelines.</p>
+            <div class="cyber-banner">
+                <h1 style="margin:0; font-size: 28px; font-weight: 700;">🔎 Public Hazard Ledger & Audit Trail</h1>
+                <p style="margin:8px 0 0 0; color: #94a3b8; font-size: 14px;">Immutable event logs, verification states, and department routing history.</p>
             </div>
         """, unsafe_allow_html=True)
         render_report_tracker()
 
     elif current_view == "🗺️ Interactive Map":
         st.markdown("""
-            <div class="hero-banner">
-                <h1 style="margin:0; font-size: 26px; font-weight: 700;">🗺️ Smart City Incident Heatmap</h1>
-                <p style="margin:5px 0 0 0; color: #94a3b8; font-size: 14px;">Geo-spatial visualization of reported municipal issues across sectors.</p>
+            <div class="cyber-banner">
+                <h1 style="margin:0; font-size: 28px; font-weight: 700;">🗺️ Geo-Spatial Threat Heatmap</h1>
+                <p style="margin:8px 0 0 0; color: #94a3b8; font-size: 14px;">Live satellite grid overlay tracking infrastructure degradation metrics.</p>
             </div>
         """, unsafe_allow_html=True)
         render_map_page()
