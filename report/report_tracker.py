@@ -32,10 +32,11 @@ def render_report_tracker():
         if "created_at" in df.columns:
             df = df.drop(columns=["created_at"])
 
-        # Rename columns to user-friendly titles for display if they exist in lowercase
+        # Rename columns to user-friendly titles for display if they exist
         rename_map = {
             "tracking_id": "Tracking ID",
             "hazard": "Hazard",
+            "issue_type": "Issue Type",
             "severity": "Severity",
             "sla_target": "SLA Target",
             "status": "Status",
@@ -46,6 +47,9 @@ def render_report_tracker():
             "timestamp": "Timestamp"
         }
         df = df.rename(columns=rename_map)
+
+        # Drop any duplicate columns to prevent PyArrow / Streamlit crash
+        df = df.loc[:, ~df.columns.duplicated()]
 
         # Search filter by Tracking ID (Bulletproof check)
         search_id = st.text_input("🔍 Search by Tracking ID", key="search_tracker_id")
