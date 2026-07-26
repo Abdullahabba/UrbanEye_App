@@ -8,7 +8,7 @@ def render_report_tracker():
 
     reports_data = []
 
-    # 1. Supabase Cloud Database se data fetch karein
+    # 1. Fetch data from Supabase Cloud Database with Debugging
     try:
         from database.supabase_client import supabase
         if supabase:
@@ -16,16 +16,23 @@ def render_report_tracker():
             if response.data:
                 reports_data = response.data
     except Exception as e:
-        st.warning(f"Could not connect to Supabase: {e}")
+        st.error(f"❌ Supabase Fetch Error: {e}")
 
-    # 2. Fallback to session state if empty
+    # 2. Fallback to session state if Supabase data is empty
     if not reports_data and "incident_ledger" in st.session_state and not st.session_state["incident_ledger"].empty:
         reports_data = st.session_state["incident_ledger"].to_dict(orient="records")
 
-    # 3. Data Render Karein
+    # 3. Render Data in DataFrame
     if reports_data:
         df = pd.DataFrame(reports_data)
         
+        # Clean up unwanted internal columns if present
+        if "id" in df.columns:
+            df = df.drop(columns=["id"])
+        if "created_at" in df.columns:
+            df = df.drop(columns=["created_at"])
+
+        # Search filter by Tracking ID
         search_id = st.text_input("🔍 Search by Tracking ID", key="search_tracker_id")
         if search_id:
             id_col = "Tracking ID" if "Tracking ID" in df.columns else "tracking_id"
