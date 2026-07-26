@@ -8,7 +8,7 @@ def render_report_tracker():
 
     reports_data = []
 
-    # 1. Fetch data from Supabase Cloud Database with Debugging
+    # 1. Fetch data from Supabase Cloud Database
     try:
         from database.supabase_client import supabase
         if supabase:
@@ -26,11 +26,26 @@ def render_report_tracker():
     if reports_data:
         df = pd.DataFrame(reports_data)
         
-        # Clean up unwanted internal columns if present
+        # Clean up internal columns if present
         if "id" in df.columns:
             df = df.drop(columns=["id"])
         if "created_at" in df.columns:
             df = df.drop(columns=["created_at"])
+
+        # Rename columns to user-friendly titles for display
+        rename_map = {
+            "tracking_id": "Tracking ID",
+            "hazard": "Hazard",
+            "severity": "Severity",
+            "sla_target": "SLA Target",
+            "status": "Status",
+            "assigned_dept": "Assigned Dept",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "location_name": "Location Name",
+            "timestamp": "Timestamp"
+        }
+        df = df.rename(columns=rename_map)
 
         # Search filter by Tracking ID
         search_id = st.text_input("🔍 Search by Tracking ID", key="search_tracker_id")
