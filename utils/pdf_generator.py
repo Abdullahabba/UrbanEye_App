@@ -1,9 +1,9 @@
 import os
 import tempfile
-from fpdf import FPDF
+import numpy as np
 from PIL import Image
+from fpdf import FPDF
 from utils.metadata import get_user_metadata  # <-- Metadata function import kiya gaya hai
-
 
 def sanitize_text(text: str) -> str:
     """Non-Latin1 characters ko replace karta hai taake PDF crash na ho."""
@@ -11,7 +11,6 @@ def sanitize_text(text: str) -> str:
         return "N/A"
     text = str(text).replace("•", "-")
     return text.encode("latin-1", "replace").decode("latin-1")
-
 
 class ProfessionalPDF(FPDF):
 
@@ -58,12 +57,11 @@ class ProfessionalPDF(FPDF):
         self.cell(0, 7, f"  {title}", 0, 1, "L", fill=True)
         self.ln(3)
 
-
 def create_pdf_report(
     title: str,
-    user_details: dict = None,  # Optional rakha hai taake agar pass na bhi ho toh khud fetch kar le
+    user_details: dict = None,  
     summary_text: str = "",
-    detected_image: Image.Image = None,
+    detected_images=None,  # 🔄 Updated parameter to support lists, numpy arrays, or single images
 ) -> bytes:
     pdf = ProfessionalPDF()
     pdf.add_page()
@@ -90,7 +88,6 @@ def create_pdf_report(
     pdf.set_draw_color(210, 215, 220)
     pdf.set_fill_color(248, 249, 250)
     
-    # Dynamic Box Height based on contents
     box_y = pdf.get_y()
     pdf.rect(10, box_y, 190, 32, "DF")
 
@@ -115,30 +112,50 @@ def create_pdf_report(
     pdf.set_y(box_y + 36)
 
     # ---------------------------------------------------------
-    # SECTION 2: AI VISUAL EVIDENCE (EMBEDDED IMAGE)
+    # SECTION 2: AI VISUAL EVIDENCE (MULTI-IMAGE SUPPORT)
     # ---------------------------------------------------------
-    if detected_image:
-        pdf.section_heading("2. VISUAL INSPECTION EVIDENCE (AI DETECTION GRID)")
+    if detected_images:
+        # Agar single image pass ho jaye toh usay list mein convert kar dein
+        if not isinstance(detected_images, list):
+            detected_images = [detected_images]
 
-        # Temporary Image File Banana
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-            if detected_image.mode in ("RGBA", "P"):
-                img_to_save = detected_image.convert("RGB")
+        pdf.section_heading(f"2. VISUAL INSPECTION EVIDENCE ({len(detected_images)} AI SNAPSHOTS)")
+
+        for idx, img in enumerate(detected_images):
+            if img is None:
+                continue
+
+            # Convert numpy array or PIL Image correctly
+            if isinstance(img, np.ndarray):
+                img_pil = Image.fromarray(img)
+            elif isinstance(img, Image.Image):
+                img_pil = img
             else:
-                img_to_save = detected_image
+                continue
 
-            img_to_save.save(tmp.name, format="PNG")
-            tmp_path = tmp.name
+            if img_pil.mode in ("RGBA", "P"):
+                img_to_save = img_pil.convert("RGB")
+            else:
+                img_to_save = img_pil
 
-        # Center image nicely with a clean border width
-        pdf.ln(2)
-        image_x = (210 - 130) / 2  # Centering 130mm width image
-        pdf.image(tmp_path, x=image_x, w=130)
-        pdf.ln(6)
+            # Temporary Image File Banana
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                img_to_save.save(tmp.name, format="PNG")
+                tmp_path = tmp.name
 
-        # Temporary file cleanup
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+            # Snapshot Label & Centered Image Embedding
+            pdf.ln(2)
+            pdf.set_font("Helvetica", "I", 9)
+            pdf.set_text_color(100, 100, 100)
+            pdf.cell(0, 5, f"Evidence Snapshot #{idx + 1}", ln=True)
+
+            image_x = (210 - 130) / 2  # Centering 130mm width image
+            pdf.image(tmp_path, x=image_x, w=130)
+            pdf.ln(6)
+
+            # Temporary file cleanup
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
 
     # ---------------------------------------------------------
     # SECTION 3: DETECTION BREAKDOWN & LOGS
@@ -147,12 +164,10 @@ def create_pdf_report(
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(50, 50, 50)
     
-    # Adding padding box for summary text block
     summary_y = pdf.get_y()
     pdf.set_fill_color(252, 253, 255)
     pdf.set_draw_color(225, 230, 238)
     
-    # Multi-cell inside a clean container block
     pdf.set_xy(10, summary_y)
     pdf.ln(2)
     pdf.set_x(14)
