@@ -61,17 +61,18 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         if st.button("💾 Submit & Log to Tracker", use_container_width=True, key="btn_save_ledger"):
             primary_hazard = list(st.session_state["counts"].keys())[0].title() if st.session_state["counts"] else "General Hazard"
             
+            # Using clean lowercase keys to match Supabase schema columns perfectly
             new_record = {
-                "Tracking ID": tracking_id,
-                "Hazard": primary_hazard,
-                "Severity": severity_label,
-                "SLA Target": sla_target,
-                "Status": "Pending",
-                "Assigned Dept": dept_email.split("@")[0].replace("_", " ").title(),
-                "Latitude": 31.5204,
-                "Longitude": 74.3587,
-                "Location Name": manual_loc_name,
-                "Timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+                "tracking_id": tracking_id,
+                "hazard": primary_hazard,
+                "severity": severity_label,
+                "sla_target": sla_target,
+                "status": "Pending",
+                "assigned_dept": dept_email.split("@")[0].replace("_", " ").title(),
+                "latitude": 31.5204,
+                "longitude": 74.3587,
+                "location_name": manual_loc_name,
+                "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
             }
 
             # 1. Update Session State Ledger
@@ -79,7 +80,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 new_row_df = pd.DataFrame([new_record])
                 st.session_state["incident_ledger"] = pd.concat([st.session_state["incident_ledger"], new_row_df], ignore_index=True)
 
-            # 2. Save directly to Supabase Database with Error Debugging
+            # 2. Save directly to Supabase Database
             try:
                 from database.supabase_client import supabase
                 if supabase:
