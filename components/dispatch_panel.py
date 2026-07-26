@@ -2,34 +2,31 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from PIL import Image
+from streamlit_geolocation import streamlit_geolocation
 
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
     st.caption("Review incident summary, download PDF reports, send via email, or push logs to Supabase cloud.")
 
-    # 📍 Live Authentic GPS Location Integration
+    # 📍 Instant Non-Blocking Live GPS Location Integration
     st.markdown("##### 📍 Live GPS Coordinates")
     
-    # Initialize session state fallbacks if not present
-    if "live_lat" not in st.session_state:
-        st.session_state["live_lat"] = 31.5204
-    if "live_lon" not in st.session_state:
-        st.session_state["live_lon"] = 74.3587
+    # Fetch coordinates instantly without page reloads
+    loc = streamlit_geolocation()
+    
+    # Fallback initialization from session state or default
+    lat = st.session_state.get("live_lat", 31.5204)
+    lon = st.session_state.get("live_lon", 74.3587)
 
-    # Render lightweight browser geolocation fetcher component
-    try:
-        from utils.location_helper import get_live_location
-        gps_coords = get_live_location()
-        if gps_coords and isinstance(gps_coords, dict):
-            st.session_state["live_lat"] = gps_coords.get("lat", st.session_state["live_lat"])
-            st.session_state["live_lon"] = gps_coords.get("lon", st.session_state["live_lon"])
-    except Exception:
-        pass
-
-    lat = st.session_state["live_lat"]
-    lon = st.session_state["live_lon"]
-    st.caption(f"Active Coordinates -> **Latitude:** `{lat}`, **Longitude:** `{lon}`")
+    if loc and loc.get("latitude") and loc.get("longitude"):
+        lat = loc["latitude"]
+        lon = loc["longitude"]
+        st.session_state["live_lat"] = lat
+        st.session_state["live_lon"] = lon
+        st.success(f"✅ Live GPS Locked Instantly -> Lat: {lat:.4f}, Lon: {lon:.4f}")
+    else:
+        st.caption(f"Active Coordinates -> **Latitude:** `{lat}`, **Longitude:** `{lon}`")
 
     # Get counts from session state
     counts = st.session_state.get("counts", {})
@@ -154,8 +151,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     "sla_target": "12 Hours",
                     "status": "Pending",
                     "assigned_dept": str(assigned_department),
-                    "latitude": lat,   # 📌 Authentic Live GPS Latitude
-                    "longitude": lon,  # 📌 Authentic Live GPS Longitude
+                    "latitude": lat,   # 📌 Instant Live GPS Latitude
+                    "longitude": lon,  # 📌 Instant Live GPS Longitude
                     "location_name": str(manual_loc_name),
                     "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                 }
@@ -184,7 +181,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
                 
                 if success_pushed:
-                    st.success(f"✅ Synced to Supabase with live GPS & registered in Tracker!")
+                    st.success(f"✅ Synced to Supabase with instant live GPS & registered in Tracker!")
                 else:
                     st.success(f"✅ Registered in local tracker ledger successfully!")
 
