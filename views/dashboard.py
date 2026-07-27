@@ -1,3 +1,4 @@
+import random
 import streamlit as st
 from utils.metadata import get_user_metadata
 from utils.helpers import initialize_mock_history, generate_tracking_id
@@ -9,63 +10,6 @@ from components.batch_processing import render_batch_processing_mode
 from components.video_stream import render_video_stream_mode
 from components.live_camera import render_live_camera_mode
 from components.dispatch_panel import render_dispatch_panel
-from components.ui_cards import render_cyber_header
-
-# 🌌 Page Configuration
-st.set_page_config(
-    page_title="UrbanEye AI — Enterprise Command",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# ⚡ Aggressive CSS Cleanup to eliminate Streamlit's default awkward padding
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
-    .stApp {
-        background-color: #030712;
-        color: #f8fafc;
-        font-family: 'Plus Jakarta Sans', sans-serif;
-    }
-
-    /* Wipe out default Streamlit header & margins */
-    #MainMenu, footer, header {visibility: hidden;}
-    .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 2rem !important;
-        max-width: 96% !important;
-    }
-
-    /* Sleek Custom Radio / Tabs container */
-    .stRadio > div {
-        background: rgba(15, 23, 42, 0.6);
-        padding: 6px;
-        border-radius: 12px;
-        border: 1px solid rgba(56, 189, 248, 0.15);
-        backdrop-filter: blur(10px);
-    }
-
-    /* Premium Button styling */
-    .stButton>button {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        font-weight: 600;
-        padding: 10px 20px;
-        width: 100%;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-        transition: all 0.25s ease;
-    }
-    .stButton>button:hover {
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
-        transform: translateY(-1px);
-    }
-    </style>
-""", unsafe_allow_html=True)
 
 # Report Module Import Fallback
 create_pdf_report = None
@@ -88,51 +32,61 @@ def render_dashboard_page():
     initialize_mock_history()
     user_details = get_user_metadata()
 
+    # Initialize captured images list for multi-image PDF reports
     if "captured_images" not in st.session_state:
         st.session_state["captured_images"] = []
 
-    # 🚀 Render High-End Custom SaaS Header Component
-    render_cyber_header(
-        title="UrbanEye AI",
-        subtitle="Autonomous Municipal Surveillance & Dispatch Core",
-        username=user_details['username'],
-        sector=user_details['address']
-    )
+    # SIDEBAR CONTROL CENTER
+    with st.sidebar:
+        st.title("👁️ UrbanEye AI")
+        st.caption("Smart City Detection & Tracking")
+        st.divider()
+        st.markdown(f"**👤 Officer:** {user_details['username']}")
+        st.markdown(f"**📍 Sector:** {user_details['address']}")
+        st.caption("🟢 System Status: **Online & Synced**")
+        st.divider()
 
-    st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
-
-    # 🎛️ Navigation and Controls Bar
-    col_nav, col_conf = st.columns([3, 1])
-    with col_nav:
+        st.subheader("🧭 Navigation Menu")
         current_view = st.radio(
-            "Navigation Core",
-            ["🔍 AI Visual Detection Engine", "🔎 Public Hazard Tracker", "🗺️ Interactive Map"],
-            key="main_navigation",
-            horizontal=True,
-            label_visibility="collapsed"
+            "Go To View:", 
+            [
+                "🔍 AI Visual Detection Engine", 
+                "🔎 Public Hazard Tracker", 
+                "🗺️ Interactive Map"
+            ], 
+            key="main_navigation"
         )
-    with col_conf:
+        st.divider()
+
         if current_view == "🔍 AI Visual Detection Engine":
+            st.subheader("⚙️ Detector Settings")
             conf_threshold = st.slider("YOLO Confidence Threshold", 0.1, 1.0, 0.45, step=0.05)
+            st.subheader("📷 Input Media Source")
+            input_mode = st.radio("Select Source Type:", ["🖼️ Single Image", "📂 Batch Processing", "🎥 Video Stream", "📸 Live Camera"], key="input_source_mode")
         else:
-            conf_threshold = 0.45
+            conf_threshold, input_mode = 0.45, "🖼️ Single Image"
 
-    st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
-
-    # 🖥️ MAIN VIEW ROUTING
+    # MAIN AREA CONTENT
     if current_view == "🔍 AI Visual Detection Engine":
-        
-        input_mode = st.radio(
-            "Input Channel Matrix",
-            ["🖼️ Single Image", "📂 Batch Processing", "🎥 Video Stream", "📸 Live Camera"],
-            key="input_source_mode",
-            horizontal=True
-        )
+        st.title("🔍 AI Inspection Engine")
+        st.caption(f"Active Mode: **{input_mode}** | YOLO Confidence Threshold: `{conf_threshold}`")
 
         if "current_tracking_id" not in st.session_state:
             st.session_state["current_tracking_id"] = generate_tracking_id()
 
-        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+        # LOCATION CONFIGURATION
+        st.markdown("### 📍 Location Configuration")
+        location_mode = st.selectbox("Location Method", ["📡 Auto GPS (Device Simulation)", "✍️ Manual Address / Sector Entry"], key="input_location_method")
+
+        if location_mode == "✍️ Manual Address / Sector Entry":
+            manual_loc_name = st.text_input("Enter Location / Street / Sector Name", value="Iqbal Sector, Block AA, Lahore", key="man_loc_name")
+        else:
+            manual_lat = 31.5204 + (random.random() * 0.005)
+            manual_lon = 74.3587 + (random.random() * 0.005)
+            manual_loc_name = f"Auto-GPS Location (Sector 4 - Lat: {manual_lat:.4f})"
+            st.info(f"📡 GPS Locked Successfully! Coords: `{manual_lat:.4f}, {manual_lon:.4f}`")
+
+        st.divider()
 
         # ROUTING TO MODULAR COMPONENTS
         if input_mode == "🖼️ Single Image":
@@ -144,12 +98,14 @@ def render_dashboard_page():
         elif input_mode == "📸 Live Camera":
             render_live_camera_mode(conf_threshold)
 
-        default_manual_loc = user_details.get("address", "Iqbal Sector, Block AA, Lahore")
+        # DISPATCH & REPORTING PANEL (Passing captured images list for multi-image PDF reports)
+        all_evidence_images = st.session_state.get("captured_images", [])
+        if not all_evidence_images and "processed_img" in st.session_state:
+            all_evidence_images = [st.session_state["processed_img"]]
 
-        # DISPATCH & REPORTING PANEL
         render_dispatch_panel(
             st.session_state["current_tracking_id"], 
-            default_manual_loc, 
+            manual_loc_name, 
             user_details, 
             create_pdf_report
         )
