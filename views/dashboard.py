@@ -36,13 +36,12 @@ def render_dashboard_page():
     if "captured_images" not in st.session_state:
         st.session_state["captured_images"] = []
 
-    # SIDEBAR CONTROL CENTER
+    # SIDEBAR CONTROL CENTER (Upper location reference removed)
     with st.sidebar:
         st.title("👁️ UrbanEye AI")
         st.caption("Smart City Detection & Tracking")
         st.divider()
         st.markdown(f"**👤 Officer:** {user_details['username']}")
-        st.markdown(f"**📍 Sector:** {user_details['address']}")
         st.caption("🟢 System Status: **Online & Synced**")
         st.divider()
 
@@ -79,7 +78,7 @@ def render_dashboard_page():
         location_mode = st.selectbox("Location Method", ["📡 Auto GPS (Device Simulation)", "✍️ Manual Address / Sector Entry"], key="input_location_method")
 
         if location_mode == "✍️ Manual Address / Sector Entry":
-            manual_loc_name = st.text_input("Enter Location / Street / Sector Name", value="Iqbal Sector, Block AA, Lahore", key="man_loc_name")
+            manual_loc_name = st.text_input("Enter Location / Street / Sector Name", value=user_details.get("address", "Iqbal Sector, Block AA, Lahore"), key="man_loc_name")
         else:
             manual_lat = 31.5204 + (random.random() * 0.005)
             manual_lon = 74.3587 + (random.random() * 0.005)
