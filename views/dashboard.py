@@ -36,7 +36,7 @@ def render_dashboard_page():
     if "captured_images" not in st.session_state:
         st.session_state["captured_images"] = []
 
-    # SIDEBAR CONTROL CENTER (Upper location reference removed)
+    # SIDEBAR CONTROL CENTER
     with st.sidebar:
         st.title("👁️ UrbanEye AI")
         st.caption("Smart City Detection & Tracking")
@@ -73,18 +73,6 @@ def render_dashboard_page():
         if "current_tracking_id" not in st.session_state:
             st.session_state["current_tracking_id"] = generate_tracking_id()
 
-        # LOCATION CONFIGURATION
-        st.markdown("### 📍 Location Configuration")
-        location_mode = st.selectbox("Location Method", ["📡 Auto GPS (Device Simulation)", "✍️ Manual Address / Sector Entry"], key="input_location_method")
-
-        if location_mode == "✍️ Manual Address / Sector Entry":
-            manual_loc_name = st.text_input("Enter Location / Street / Sector Name", value=user_details.get("address", "Iqbal Sector, Block AA, Lahore"), key="man_loc_name")
-        else:
-            manual_lat = 31.5204 + (random.random() * 0.005)
-            manual_lon = 74.3587 + (random.random() * 0.005)
-            manual_loc_name = f"Auto-GPS Location (Sector 4 - Lat: {manual_lat:.4f})"
-            st.info(f"📡 GPS Locked Successfully! Coords: `{manual_lat:.4f}, {manual_lon:.4f}`")
-
         st.divider()
 
         # ROUTING TO MODULAR COMPONENTS
@@ -97,10 +85,12 @@ def render_dashboard_page():
         elif input_mode == "📸 Live Camera":
             render_live_camera_mode(conf_threshold)
 
-        # DISPATCH & REPORTING PANEL (Passing captured images list for multi-image PDF reports)
+        # DISPATCH & REPORTING PANEL
         all_evidence_images = st.session_state.get("captured_images", [])
         if not all_evidence_images and "processed_img" in st.session_state:
             all_evidence_images = [st.session_state["processed_img"]]
+
+        manual_loc_name = user_details.get("address", "Iqbal Sector, Block AA, Lahore")
 
         render_dispatch_panel(
             st.session_state["current_tracking_id"], 
