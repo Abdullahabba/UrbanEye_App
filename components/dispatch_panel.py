@@ -49,7 +49,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         if st.button("✅ Confirm Manual Location", use_container_width=True):
             if manual_input and manual_input.strip():
                 st.session_state["selected_loc_name"] = manual_input.strip()
-                # No coordinates added for manual address
                 st.session_state["selected_lat"] = None
                 st.session_state["selected_lon"] = None
                 st.session_state["location_confirmed"] = True
@@ -73,7 +72,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 st.session_state["selected_lon"] = lon
                 st.session_state["selected_loc_name"] = f"Live GPS (Lat: {lat:.4f}, Lon: {lon:.4f})"
                 st.session_state["location_confirmed"] = True
-                
+            
             if st.session_state["location_confirmed"] and st.session_state["selected_lat"] is not None:
                 location_ready = True
                 st.success(f"✅ Live GPS Locked! Lat: `{st.session_state['selected_lat']:.4f}`, Lon: `{st.session_state['selected_lon']:.4f}`")
@@ -146,49 +145,24 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             if st.button("📧 Send via Email", use_container_width=True):
                 with st.spinner("Sending official report via email..."):
                     try:
-                        import smtplib
-                        from email.mime.multipart import MIMEMultipart
-                        from email.mime.text import MIMEText
-                        from email.mime.base import MIMEBase
-                        from email import encoders
-
-                        email_cfg = st.secrets.get("email", {})
-                        sender_email = email_cfg.get("sender_email") or st.secrets.get("SMTP_USER")
-                        sender_password = email_cfg.get("sender_password") or st.secrets.get("SMTP_PASS")
-
-                        if not sender_email or not sender_password:
-                            st.error("❌ Email credentials not found in st.secrets (`SMTP_USER` / `SMTP_PASS`).")
+                        from utils.email_sender import send_email_with_pdf
+                        
+                        success, message = send_email_with_pdf(
+                            sender_email=officer_email,
+                            target_department_email=target_dept_email,
+                            pdf_bytes=pdf_bytes,
+                            title=f"Incident Report - ID: {tracking_id}",
+                            user_details=user_details,
+                            counts=counts
+                        )
+                        
+                        if success:
+                            st.success(f"✅ {message}")
                         else:
-                            msg = MIMEMultipart()
-                            msg["From"] = sender_email
-                            msg["To"] = target_dept_email
-                            msg["Cc"] = officer_email
-                            msg["Subject"] = f"[UrbanEye Dispatch] Incident Report - ID: {tracking_id}"
-
-                            body = f"Incident Report Summary:\n\n{full_summary_text}\n\nAssigned Dept: {assigned_department}"
-                            msg.attach(MIMEText(body, "plain"))
-
-                            if pdf_bytes:
-                                part = MIMEBase("application", "octet-stream")
-                                part.set_payload(pdf_bytes)
-                                encoders.encode_base64(part)
-                                part.add_header("Content-Disposition", f"attachment; filename=UrbanEye_Report_{tracking_id}.pdf")
-                                msg.attach(part)
-
-                            recipients = [target_dept_email]
-                            if officer_email:
-                                recipients.append(officer_email)
-
-                            smtp_server = email_cfg.get("smtp_server", "smtp.gmail.com")
-                            smtp_port = int(email_cfg.get("smtp_port", 587))
-
-                            server = smtplib.SMTP(smtp_server, smtp_port)
-                            server.starttls()
-                            server.login(sender_email, sender_password)
-                            server.sendmail(sender_email, recipients, msg.as_string())
-                            server.quit()
-
-                            st.success(f"✅ Email successfully sent to {target_dept_email} (CC: {officer_email})!")
+                            st.error(f"❌ {message}")
+                            
+                    except ImportError:
+                        st.error("❌ `utils.email_sender` module not found. Please ensure the file exists.")
                     except Exception as mail_err:
                         st.error(f"❌ Email sending failed: {str(mail_err)}")
 
