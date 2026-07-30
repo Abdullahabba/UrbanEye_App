@@ -1039,58 +1039,32 @@ div[data-testid="stVerticalBlock"]:hover{
 /* =====================================
    THE END
 ===================================== */
-/* ===========================
-   Text Visibility Fix
-=========================== */
-
-/* All headings */
-h1, h2, h3, h4, h5, h6 {
-    color: #FFFFFF !important;
+/* Login headings */
+h1, h2, h3 {
+    color: #ffffff !important;
 }
 
-/* Labels */
-label,
-.stMarkdown,
-.stText,
-p,
-span,
-div {
-    color: #F8FAFC !important;
+/* Input labels only */
+.stTextInput label,
+.stCheckbox label {
+    color: #E2E8F0 !important;
 }
 
 /* Input text */
-.stTextInput input,
-.stTextArea textarea {
-    color: #FFFFFF !important;
-    background: rgba(255,255,255,0.10) !important;
+.stTextInput input {
+    color: #ffffff !important;
 }
 
 /* Placeholder */
-.stTextInput input::placeholder,
-.stTextArea textarea::placeholder {
-    color: #CBD5E1 !important;
+.stTextInput input::placeholder {
+    color: #94A3B8 !important;
 }
 
-/* Checkbox text */
-.stCheckbox label {
-    color: #FFFFFF !important;
-}
-
-/* Tabs */
+/* Tab text */
 .stTabs [data-baseweb="tab"] {
     color: #E2E8F0 !important;
 }
 
 .stTabs [aria-selected="true"] {
-    color: #FFFFFF !important;
-}
-
-/* Info / Success / Error messages */
-[data-testid="stAlert"] * {
-    color: #FFFFFF !important;
-}
-
-/* Links */
-a {
-    color: #60A5FA !important;
+    color: #ffffff !important;
 }
