@@ -1039,32 +1039,3 @@ div[data-testid="stVerticalBlock"]:hover{
 /* =====================================
    THE END
 ===================================== */
-/* Login headings */
-h1, h2, h3 {
-    color: #ffffff !important;
-}
-
-/* Input labels only */
-.stTextInput label,
-.stCheckbox label {
-    color: #E2E8F0 !important;
-}
-
-/* Input text */
-.stTextInput input {
-    color: #ffffff !important;
-}
-
-/* Placeholder */
-.stTextInput input::placeholder {
-    color: #94A3B8 !important;
-}
-
-/* Tab text */
-.stTabs [data-baseweb="tab"] {
-    color: #E2E8F0 !important;
-}
-
-.stTabs [aria-selected="true"] {
-    color: #ffffff !important;
-}
