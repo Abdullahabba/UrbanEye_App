@@ -1,12 +1,15 @@
 import streamlit as st
 from database.supabase_client import supabase, supabase_admin
-
 from pathlib import Path
 
 def load_css():
-    css_path = Path(__file__).parent / "style.css"
-    css = css_path.read_text(encoding="utf-8")
-    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    css_file = Path(__file__).parent / "style.css"
+
+    if css_file.exists():
+        st.markdown(
+            f"<style>{css_file.read_text(encoding='utf-8')}</style>",
+            unsafe_allow_html=True,
+        )
 
 load_css()
 
