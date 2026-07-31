@@ -1,8 +1,16 @@
+import os
 import streamlit as st
 from database.supabase_client import supabase, supabase_admin
 
 def render_login_page():
+    # --- CSS Styling Import (Same Folder) ---
+    css_path = os.path.join(os.path.dirname(__file__), "style.css") # Agar file ka naam style.css hai
+    if os.path.exists(css_path):
+        with open(css_path, "r", encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
     st.title("👁️ Urban Eye AI - Security Portal")
+    
 
     # 1. Password Reset State Initialization
     if "reset_verified" not in st.session_state:
