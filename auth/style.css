@@ -1109,3 +1109,33 @@ svg *,
     color: #FFFFFF !important;
     fill: #FFFFFF !important;
 }
+
+/* =====================================
+   Input Fields - Black Text
+===================================== */
+
+.stTextInput input,
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+textarea {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    caret-color: #000000 !important;
+}
+
+.stTextInput input::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: #555555 !important;
+    opacity: 1 !important;
+}
+
+/* Focus ke baad bhi black hi rahe */
+.stTextInput input:focus,
+input:focus,
+textarea:focus {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
