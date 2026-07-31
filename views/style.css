@@ -1876,3 +1876,446 @@ backdrop-filter:blur(18px);
  Premium Dashboard UI
  End of File
 ==========================================================*/
+/*==========================================================
+ UrbanEye AI Dashboard
+ Dashboard.py New UI Components
+ Final Add-on
+==========================================================*/
+
+
+/*=========================
+ Hero Card
+=========================*/
+
+.hero-card{
+
+background:
+
+linear-gradient(
+135deg,
+rgba(59,130,246,.18),
+rgba(139,92,246,.18)
+);
+
+border:1px solid rgba(255,255,255,.15);
+
+border-radius:30px;
+
+padding:35px;
+
+margin-bottom:30px;
+
+backdrop-filter:blur(25px);
+
+-webkit-backdrop-filter:blur(25px);
+
+box-shadow:
+
+0 25px 70px rgba(0,0,0,.35);
+
+animation:heroEntry .8s ease;
+
+}
+
+
+.hero-card h1{
+
+font-size:42px;
+
+margin-bottom:10px;
+
+}
+
+
+.hero-card p{
+
+font-size:16px;
+
+color:#CBD5E1;
+
+}
+
+
+@keyframes heroEntry{
+
+from{
+
+opacity:0;
+
+transform:translateY(-25px);
+
+}
+
+to{
+
+opacity:1;
+
+transform:translateY(0);
+
+}
+
+}
+
+
+
+/*=========================
+ Status Badge
+=========================*/
+
+.status-badge{
+
+display:inline-block;
+
+margin-top:18px;
+
+padding:10px 20px;
+
+border-radius:30px;
+
+background:
+
+rgba(34,197,94,.15);
+
+border:
+
+1px solid rgba(34,197,94,.35);
+
+color:#86EFAC;
+
+font-weight:600;
+
+font-size:14px;
+
+}
+
+
+
+/*=========================
+ Sidebar Logo
+=========================*/
+
+.sidebar-logo{
+
+padding:20px;
+
+border-radius:22px;
+
+background:
+
+linear-gradient(
+
+135deg,
+
+rgba(59,130,246,.18),
+
+rgba(139,92,246,.18)
+
+);
+
+border:
+
+1px solid rgba(255,255,255,.12);
+
+text-align:center;
+
+margin-bottom:20px;
+
+}
+
+
+.sidebar-logo h1{
+
+font-size:28px!important;
+
+margin:0;
+
+}
+
+
+.sidebar-logo p{
+
+color:#CBD5E1;
+
+font-size:14px;
+
+}
+
+
+
+/*=========================
+ User Panel
+=========================*/
+
+.user-panel{
+
+padding:18px;
+
+border-radius:18px;
+
+background:
+
+rgba(255,255,255,.06);
+
+border:
+
+1px solid rgba(255,255,255,.10);
+
+line-height:1.8;
+
+color:white;
+
+}
+
+
+/*=========================
+ Section Title
+=========================*/
+
+.section-title{
+
+margin:25px 0;
+
+padding-bottom:15px;
+
+border-bottom:
+
+1px solid rgba(255,255,255,.10);
+
+}
+
+
+.section-title h2{
+
+font-size:32px;
+
+font-weight:800;
+
+background:
+
+linear-gradient(
+
+90deg,
+
+#ffffff,
+
+#60A5FA,
+
+#C084FC
+
+);
+
+-webkit-background-clip:text;
+
+-webkit-text-fill-color:transparent;
+
+}
+
+
+.section-title p{
+
+color:#CBD5E1;
+
+font-size:15px;
+
+}
+
+
+
+/*=========================
+ Feature Card
+=========================*/
+
+.feature-card{
+
+background:
+
+rgba(255,255,255,.06);
+
+border:
+
+1px solid rgba(255,255,255,.12);
+
+border-radius:24px;
+
+padding:25px;
+
+margin:20px 0;
+
+backdrop-filter:blur(20px);
+
+-webkit-backdrop-filter:blur(20px);
+
+box-shadow:
+
+0 20px 45px rgba(0,0,0,.25);
+
+transition:.35s;
+
+}
+
+
+.feature-card:hover{
+
+transform:translateY(-5px);
+
+border-color:
+
+rgba(96,165,250,.45);
+
+box-shadow:
+
+0 30px 60px rgba(0,0,0,.35),
+
+0 0 35px rgba(59,130,246,.15);
+
+}
+
+
+.feature-card h3{
+
+font-size:24px;
+
+margin-bottom:10px;
+
+}
+
+
+.feature-card p{
+
+color:#CBD5E1;
+
+}
+
+
+
+/*=========================
+ Dispatch Header
+=========================*/
+
+.dispatch-title{
+
+background:
+
+linear-gradient(
+
+135deg,
+
+rgba(6,182,212,.12),
+
+rgba(59,130,246,.12)
+
+);
+
+}
+
+
+
+/*=========================
+ Info Banner
+=========================*/
+
+.info-banner{
+
+padding:18px 22px;
+
+margin:20px 0;
+
+border-radius:18px;
+
+background:
+
+linear-gradient(
+
+135deg,
+
+rgba(59,130,246,.15),
+
+rgba(139,92,246,.15)
+
+);
+
+border:
+
+1px solid rgba(96,165,250,.25);
+
+color:#E0F2FE;
+
+font-weight:600;
+
+text-align:center;
+
+box-shadow:
+
+0 15px 35px rgba(0,0,0,.25);
+
+}
+
+
+
+/*=========================
+ Responsive
+=========================*/
+
+
+@media(max-width:768px){
+
+
+.hero-card{
+
+padding:22px;
+
+}
+
+
+.hero-card h1{
+
+font-size:28px;
+
+}
+
+
+.section-title h2{
+
+font-size:24px;
+
+}
+
+
+.feature-card{
+
+padding:18px;
+
+}
+
+
+}
+
+
+
+@media(max-width:480px){
+
+
+.hero-card h1{
+
+font-size:22px;
+
+}
+
+
+.status-badge{
+
+font-size:12px;
+
+padding:8px 14px;
+
+}
+
+
+.feature-card h3{
+
+font-size:20px;
+
+}
+
+
+}
