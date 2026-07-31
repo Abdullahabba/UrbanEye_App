@@ -1,1048 +1,340 @@
 /* ==========================================================
-   Urban Eye AI - Premium Login UI
-   Part 1
+   Urban Eye AI - Premium Login UI (Updated & Clean)
 ========================================================== */
-body {
-    background: red !important;
-}
+
 /* Google Font */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
-/* ===========================
-   Root Variables
-=========================== */
-
+/* Root Variables */
 :root{
-
     --primary:#3B82F6;
     --primary-dark:#2563EB;
     --secondary:#06B6D4;
     --accent:#8B5CF6;
-
     --success:#22C55E;
     --warning:#F59E0B;
     --danger:#EF4444;
-
     --glass:rgba(255,255,255,.08);
     --glass2:rgba(255,255,255,.12);
-
     --text:#FFFFFF;
     --muted:#E2E8F0;
-
     --border:rgba(255,255,255,.18);
-
     --shadow:0 20px 60px rgba(0,0,0,.35);
-
 }
 
-/* ===========================
-   Global
-=========================== */
-
-html,
-body,
-[class*="css"]{
-
+/* Global Styles */
+html, body, [class*="css"]{
     font-family:"Poppins",sans-serif;
     color: #FFFFFF !important;
 }
 
 /* Background */
-
 .stApp{
-
     background:
     radial-gradient(circle at top left,#1E3A8A 0%,transparent 35%),
     radial-gradient(circle at bottom right,#7C3AED 0%,transparent 35%),
     linear-gradient(135deg,#071226,#0F172A,#111827);
-
     background-size:cover;
-    color:#FFFFFF !important;
+    color: #FFFFFF !important;
 }
 
 /* Animated background */
-
 .stApp::before{
-
     content:"";
-
     position:fixed;
-
     width:700px;
     height:700px;
-
     top:-180px;
     left:-180px;
-
     background:rgba(59,130,246,.12);
-
     filter:blur(140px);
-
     animation:floatOne 18s infinite alternate;
-
     z-index:-2;
 }
 
 .stApp::after{
-
     content:"";
-
     position:fixed;
-
     width:600px;
     height:600px;
-
     bottom:-150px;
     right:-120px;
-
     background:rgba(139,92,246,.18);
-
     filter:blur(150px);
-
     animation:floatTwo 16s infinite alternate;
-
     z-index:-2;
 }
 
 @keyframes floatOne{
-
-0%{
-
-transform:translate(0,0);
-
-}
-
-50%{
-
-transform:translate(120px,80px);
-
-}
-
-100%{
-
-transform:translate(40px,180px);
-
-}
-
+    0%{transform:translate(0,0);}
+    50%{transform:translate(120px,80px);}
+    100%{transform:translate(40px,180px);}
 }
 
 @keyframes floatTwo{
-
-0%{
-
-transform:translate(0,0);
-
+    0%{transform:translate(0,0);}
+    100%{transform:translate(-130px,-110px);}
 }
 
-100%{
+/* Hide Streamlit Elements */
+#MainMenu{display:none;}
+footer{display:none;}
+header{display:none;}
 
-transform:translate(-130px,-110px);
-
-}
-
-}
-
-/* Hide Streamlit */
-
-#MainMenu{
-
-display:none;
-
-}
-
-footer{
-
-display:none;
-
-}
-
-header{
-
-display:none;
-
-}
-
-/* ===========================
-   Main Container
-=========================== */
-
+/* Main Container */
 .main .block-container{
-
-max-width:760px;
-
-padding-top:55px;
-
-padding-bottom:70px;
-
-animation:fadeUp .8s ease;
-
+    max-width:760px;
+    padding-top:55px;
+    padding-bottom:70px;
+    animation:fadeUp .8s ease;
 }
 
-/* ===========================
-   Title
-=========================== */
-
+/* Title */
 h1{
-
-text-align:center;
-
-font-size:42px;
-
-font-weight:800;
-
-letter-spacing:.5px;
-
-margin-bottom:35px;
-
-background:linear-gradient(90deg,#ffffff,#60A5FA,#C084FC);
-
--webkit-background-clip:text;
-
--webkit-text-fill-color:transparent;
-
+    text-align:center;
+    font-size:42px;
+    font-weight:800;
+    letter-spacing:.5px;
+    margin-bottom:35px;
+    background:linear-gradient(90deg,#ffffff,#60A5FA,#C084FC);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
 }
 
-/* ===========================
-   Glass Card
-=========================== */
-
+/* Glass Card */
 div[data-testid="stVerticalBlock"]{
-
-background:rgba(255,255,255,.07);
-
-backdrop-filter:blur(22px);
-
--webkit-backdrop-filter:blur(22px);
-
-border:1px solid rgba(255,255,255,.14);
-
-border-radius:24px;
-
-padding:28px;
-
-box-shadow:var(--shadow);
-
-transition:.35s;
-
+    background:rgba(255,255,255,.07);
+    backdrop-filter:blur(22px);
+    -webkit-backdrop-filter:blur(22px);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:24px;
+    padding:28px;
+    box-shadow:var(--shadow);
+    transition:.35s;
+    position:relative;
+    overflow:hidden;
 }
 
 div[data-testid="stVerticalBlock"]:hover{
-
-transform:translateY(-4px);
-
-box-shadow:0 25px 65px rgba(0,0,0,.45);
-
+    transform:translateY(-4px);
+    box-shadow:0 25px 65px rgba(0,0,0,.45);
+    border-color:rgba(96,165,250,.35);
 }
 
-/* ===========================
-   Tabs
-=========================== */
-
+/* Tabs */
 .stTabs{
-
-margin-top:20px;
-
+    margin-top:20px;
 }
 
 .stTabs [data-baseweb="tab-list"]{
-
-gap:10px;
-
-background:rgba(255,255,255,.06);
-
-padding:8px;
-
-border-radius:16px;
-
+    gap:10px;
+    background:rgba(255,255,255,.06);
+    padding:8px;
+    border-radius:16px;
 }
 
 .stTabs [data-baseweb="tab"]{
+    background:transparent;
+    color:#FFFFFF !important;
+    font-size:15px;
+    font-weight:600;
+    padding:14px 24px;
+    border-radius:12px;
+    transition:.35s;
+}
 
-background:transparent;
-
-color:#FFFFFF !important;
-
-font-size:15px;
-
-font-weight:600;
-
-padding:14px 24px;
-
-border-radius:12px;
-
-transition:.35s;
-
+.stTabs [data-baseweb="tab"]:hover{
+    background:rgba(255,255,255,.08);
+    color:#FFFFFF !important;
 }
 
 .stTabs [aria-selected="true"]{
-
-background:linear-gradient(135deg,#3B82F6,#8B5CF6);
-
-color:#FFFFFF !important;
-
-box-shadow:0 8px 24px rgba(59,130,246,.4);
-
+    background:linear-gradient(135deg,#3B82F6,#8B5CF6);
+    color:#FFFFFF !important;
+    box-shadow:0 8px 24px rgba(59,130,246,.4);
 }
 
-/* ===========================
-   Subheadings
-=========================== */
-
+/* Subheadings */
 h3{
-
-font-weight:700;
-
-font-size:26px;
-
-color:#FFFFFF !important;
-
-margin-bottom:20px;
-
+    font-weight:700;
+    font-size:26px;
+    color:#FFFFFF !important;
+    margin-bottom:20px;
 }
 
-/* ===========================
-   Labels
-=========================== */
-
+/* Labels */
 label{
-
-font-weight:600!important;
-
-font-size:15px!important;
-
-color:#FFFFFF !important;
-
+    font-weight:600!important;
+    font-size:15px!important;
+    color:#FFFFFF !important;
 }
 
-/* ===========================
-   Inputs
-=========================== */
-
+/* Inputs */
 .stTextInput input{
-
-background:rgba(255,255,255,.08)!important;
-
-border:1px solid rgba(255,255,255,.15)!important;
-
-border-radius:14px!important;
-
-padding:15px 18px!important;
-
-font-size:15px!important;
-
-color:#FFFFFF !important;
-
-transition:.35s!important;
-
+    background:rgba(255,255,255,.08)!important;
+    border:1px solid rgba(255,255,255,.15)!important;
+    border-radius:14px!important;
+    padding:15px 18px!important;
+    font-size:15px!important;
+    color:#FFFFFF !important;
+    transition:.35s!important;
 }
 
 .stTextInput input::placeholder{
-
-color:#E2E8F0 !important;
-
-opacity: 1 !important;
-
+    color:#E2E8F0 !important;
+    opacity:1 !important;
 }
 
 .stTextInput input:hover{
-
-border-color:#60A5FA!important;
-
+    border-color:#60A5FA!important;
 }
 
 .stTextInput input:focus{
-
-border:1px solid #60A5FA!important;
-
-box-shadow:0 0 0 4px rgba(96,165,250,.18)!important;
-
-background:rgba(255,255,255,.10)!important;
-
+    border:1px solid #60A5FA!important;
+    box-shadow:0 0 0 4px rgba(96,165,250,.18)!important;
+    background:rgba(255,255,255,.10)!important;
 }
 
 /* Password */
-
 input[type=password]{
-
-letter-spacing:2px;
-
-color:#FFFFFF !important;
-
+    letter-spacing:2px;
+    color:#FFFFFF !important;
 }
 
-/* ===========================
-   Checkbox
-=========================== */
-
+/* Checkbox */
 .stCheckbox{
-
-margin-top:8px;
-
-margin-bottom:18px;
-
+    margin-top:8px;
+    margin-bottom:18px;
 }
 
 .stCheckbox label{
-
-font-size:14px!important;
-
-color:#FFFFFF !important;
-
+    font-size:14px!important;
+    color:#FFFFFF !important;
 }
 
-/* ===========================
-   Buttons
-=========================== */
-
+/* Buttons */
 .stButton>button{
-
-width:100%;
-
-border:none;
-
-border-radius:14px;
-
-padding:14px;
-
-font-size:16px;
-
-font-weight:700;
-
-color:#FFFFFF !important;
-
-cursor:pointer;
-
-background:linear-gradient(135deg,#2563EB,#8B5CF6);
-
-transition:.35s;
-
-box-shadow:0 15px 35px rgba(59,130,246,.35);
-
+    width:100%;
+    border:none;
+    border-radius:14px;
+    padding:14px;
+    font-size:16px;
+    font-weight:700;
+    color:#FFFFFF !important;
+    cursor:pointer;
+    background:linear-gradient(135deg,#2563EB,#8B5CF6);
+    transition:.35s;
+    box-shadow:0 15px 35px rgba(59,130,246,.35);
 }
 
 .stButton>button:hover{
-
-transform:translateY(-3px);
-
-box-shadow:0 22px 42px rgba(59,130,246,.45);
-
-background:linear-gradient(135deg,#3B82F6,#9333EA);
-
+    transform:translateY(-3px);
+    box-shadow:0 22px 42px rgba(59,130,246,.45);
+    background:linear-gradient(135deg,#3B82F6,#9333EA);
+    filter:brightness(108%);
 }
 
 .stButton>button:active{
-
-transform:scale(.98);
-
+    transform:scale(.98);
 }
 
-/* ===========================
-   Spinner
-=========================== */
-
-.stSpinner{
-
-color:#FFFFFF !important;
-
-}
-
-/* ===========================
-   Divider Space
-=========================== */
-
-hr{
-
-border:none;
-
-height:1px;
-
-background:rgba(255,255,255,.08);
-
-margin:25px 0;
-
-}
-
-/* ===========================
-   Animation
-=========================== */
-
-@keyframes fadeUp{
-
-from{
-
-opacity:0;
-
-transform:translateY(40px);
-
-}
-
-to{
-
-opacity:1;
-
-transform:translateY(0);
-
-}
-
-}
-/* ==========================================================
-   Urban Eye AI - Premium Login UI
-   Part 2
-========================================================== */
-
-
-/* =====================================
-   Success / Error / Warning / Info
-===================================== */
-
+/* Success / Error / Warning / Info Alerts */
 .stSuccess{
-
     background:rgba(34,197,94,.15)!important;
     border:1px solid rgba(34,197,94,.45)!important;
     border-left:5px solid #22C55E!important;
     border-radius:14px!important;
     color:#FFFFFF !important;
-    animation:fadeAlert .45s ease;
-
+    backdrop-filter:blur(18px);
 }
 
 .stError{
-
     background:rgba(239,68,68,.15)!important;
     border:1px solid rgba(239,68,68,.45)!important;
     border-left:5px solid #EF4444!important;
     border-radius:14px!important;
     color:#FFFFFF !important;
-    animation:fadeAlert .45s ease;
-
 }
 
 .stWarning{
-
     background:rgba(245,158,11,.15)!important;
     border:1px solid rgba(245,158,11,.45)!important;
     border-left:5px solid #F59E0B!important;
     border-radius:14px!important;
     color:#FFFFFF !important;
-    animation:fadeAlert .45s ease;
-
 }
 
 .stInfo{
-
     background:rgba(59,130,246,.15)!important;
     border:1px solid rgba(59,130,246,.40)!important;
     border-left:5px solid #3B82F6!important;
     border-radius:14px!important;
     color:#FFFFFF !important;
-    animation:fadeAlert .45s ease;
-
+    backdrop-filter:blur(18px);
 }
-
-
-/* =====================================
-   Alert Animation
-===================================== */
-
-@keyframes fadeAlert{
-
-    from{
-
-        opacity:0;
-        transform:translateY(12px);
-
-    }
-
-    to{
-
-        opacity:1;
-        transform:translateY(0);
-
-    }
-
-}
-
-
-/* =====================================
-   Message Containers
-===================================== */
 
 [data-testid="stAlert"]{
-
     border-radius:16px!important;
     padding:14px 18px!important;
     margin-top:15px!important;
     margin-bottom:15px!important;
     box-shadow:0 12px 28px rgba(0,0,0,.25);
-    color: #FFFFFF !important;
-
-}
-
-
-/* =====================================
-   Password Reset Card
-===================================== */
-
-.stInfo,
-.stSuccess{
-
-    backdrop-filter:blur(18px);
-
-}
-
-
-/* =====================================
-   Column Styling
-===================================== */
-
-[data-testid="column"]{
-
-    padding-top:10px;
-
-}
-
-
-/* =====================================
-   Password Inputs
-===================================== */
-
-input[type="password"]{
-
-    font-weight:600;
-    color:#FFFFFF!important;
-
-}
-
-
-/* =====================================
-   Focus Glow
-===================================== */
-
-.stTextInput{
-
-    transition:.35s;
-
-}
-
-.stTextInput:focus-within{
-
-    transform:translateY(-2px);
-
-}
-
-
-/* =====================================
-   Checkbox
-===================================== */
-
-.stCheckbox input{
-
-    cursor:pointer;
-
-}
-
-.stCheckbox:hover{
-
-    transform:translateX(2px);
-    transition:.25s;
-
-}
-
-
-/* =====================================
-   Button Ripple Feeling
-===================================== */
-
-.stButton{
-
-    position:relative;
-
-}
-
-.stButton>button{
-
-    overflow:hidden;
-
-}
-
-.stButton>button::after{
-
-    content:"";
-
-    position:absolute;
-
-    width:0;
-    height:0;
-
-    top:50%;
-    left:50%;
-
-    background:rgba(255,255,255,.25);
-
-    border-radius:50%;
-
-    transform:translate(-50%,-50%);
-
-    transition:.6s;
-
-}
-
-.stButton>button:hover::after{
-
-    width:420px;
-    height:420px;
-
-    opacity:0;
-
-}
-
-
-/* =====================================
-   Hover Glow
-===================================== */
-
-.stButton>button:hover{
-
-    filter:brightness(108%);
-
-}
-
-
-/* =====================================
-   Input Placeholder
-===================================== */
-
-::placeholder{
-
-    opacity:.85;
-    color: #E2E8F0 !important;
-
-}
-
-
-/* =====================================
-   Spinner
-===================================== */
-
-[data-testid="stSpinner"]{
-
-    color:#60A5FA!important;
-
-}
-
-
-/* =====================================
-   Scrollbar
-===================================== */
-
-::-webkit-scrollbar{
-
-    width:10px;
-
-}
-
-::-webkit-scrollbar-track{
-
-    background:#0F172A;
-
-}
-
-::-webkit-scrollbar-thumb{
-
-    background:linear-gradient(
-        180deg,
-        #3B82F6,
-        #8B5CF6
-    );
-
-    border-radius:20px;
-
-}
-
-::-webkit-scrollbar-thumb:hover{
-
-    background:#60A5FA;
-
-}
-
-
-/* =====================================
-   Glass Glow
-===================================== */
-
-div[data-testid="stVerticalBlock"]{
-
-    position:relative;
-    overflow:hidden;
-
-}
-
-div[data-testid="stVerticalBlock"]::before{
-
-    content:"";
-
-    position:absolute;
-
-    top:-120px;
-    right:-120px;
-
-    width:240px;
-    height:240px;
-
-    background:rgba(255,255,255,.08);
-
-    border-radius:50%;
-
-    filter:blur(30px);
-
-}
-
-div[data-testid="stVerticalBlock"]::after{
-
-    content:"";
-
-    position:absolute;
-
-    bottom:-130px;
-    left:-130px;
-
-    width:240px;
-    height:240px;
-
-    background:rgba(59,130,246,.10);
-
-    border-radius:50%;
-
-    filter:blur(35px);
-
-}
-
-
-/* =====================================
-   Inputs Animation
-===================================== */
-
-.stTextInput{
-
-    animation:slideUp .5s ease;
-
-}
-
-@keyframes slideUp{
-
-    from{
-
-        opacity:0;
-        transform:translateY(12px);
-
-    }
-
-    to{
-
-        opacity:1;
-        transform:translateY(0);
-
-    }
-
-}
-
-
-/* =====================================
-   Buttons Animation
-===================================== */
-
-.stButton{
-
-    animation:buttonFade .6s ease;
-
-}
-
-@keyframes buttonFade{
-
-    from{
-
-        opacity:0;
-        transform:scale(.95);
-
-    }
-
-    to{
-
-        opacity:1;
-        transform:scale(1);
-
-    }
-
-}
-
-
-/* =====================================
-   Tabs Hover
-===================================== */
-
-.stTabs [data-baseweb="tab"]:hover{
-
-    background:rgba(255,255,255,.08);
     color:#FFFFFF !important;
-
 }
 
-
-/* =====================================
-   Responsive
-===================================== */
-
-@media screen and (max-width:992px){
-
-.main .block-container{
-
-    padding-left:25px;
-    padding-right:25px;
-
+/* Spinner */
+.stSpinner, [data-testid="stSpinner"]{
+    color:#60A5FA!important;
 }
 
-h1{
-
-    font-size:34px;
-
+/* Divider Space */
+hr{
+    border:none;
+    height:1px;
+    background:rgba(255,255,255,.08);
+    margin:25px 0;
 }
 
-h3{
-
-    font-size:22px;
-
+/* Scrollbar */
+::-webkit-scrollbar{
+    width:10px;
+}
+::-webkit-scrollbar-track{
+    background:#0F172A;
+}
+::-webkit-scrollbar-thumb{
+    background:linear-gradient(180deg,#3B82F6,#8B5CF6);
+    border-radius:20px;
+}
+::-webkit-scrollbar-thumb:hover{
+    background:#60A5FA;
 }
 
-}
-
-
-@media screen and (max-width:768px){
-
-.main .block-container{
-
-    max-width:100%;
-    padding-top:20px;
-
-}
-
-div[data-testid="stVerticalBlock"]{
-
-    padding:22px;
-
-}
-
-.stTabs [data-baseweb="tab"]{
-
-    padding:12px;
-    font-size:14px;
-
-}
-
-.stButton>button{
-
-    padding:13px;
-
-}
-
-h1{
-
-    font-size:28px;
-
-}
-
-}
-
-
-@media screen and (max-width:480px){
-
-.main .block-container{
-
-    padding-left:12px;
-    padding-right:12px;
-
-}
-
-div[data-testid="stVerticalBlock"]{
-
-    border-radius:18px;
-
-}
-
-h1{
-
-    font-size:24px;
-
-}
-
-h3{
-
-    font-size:20px;
-
-}
-
-.stTextInput input{
-
-    padding:13px;
-
-}
-
-}
-
-
-/* =====================================
-   Footer Space
-===================================== */
-
-.block-container{
-
-    padding-bottom:80px;
-
-}
-
-
-/* =====================================
-   Selection Color
-===================================== */
-
+/* Selection Color */
 ::selection{
-
     background:#3B82F6;
     color:#ffffff;
-
 }
 
-
-/* =====================================
-   Smooth Transition
-===================================== */
-
-*{
-
-    transition:
-    background .30s ease,
-    color .30s ease,
-    border-color .30s ease,
-    box-shadow .30s ease,
-    transform .30s ease;
-
+/* Responsive Rules */
+@media screen and (max-width:992px){
+    .main .block-container{padding-left:25px;padding-right:25px;}
+    h1{font-size:34px;}
+    h3{font-size:22px;}
 }
 
-
-/* =====================================
-   Final Premium Glow
-===================================== */
-
-div[data-testid="stVerticalBlock"]:hover{
-
-    border-color:rgba(96,165,250,.35);
-
-    box-shadow:
-        0 30px 70px rgba(0,0,0,.45),
-        0 0 35px rgba(59,130,246,.15);
-
+@media screen and (max-width:768px){
+    .main .block-container{max-width:100%;padding-top:20px;}
+    div[data-testid="stVerticalBlock"]{padding:22px;}
+    .stTabs [data-baseweb="tab"]{padding:12px;font-size:14px;}
+    .stButton>button{padding:13px;}
+    h1{font-size:28px;}
 }
 
-
-/* =====================================
-   THE END
-===================================== */
+@media screen and (max-width:480px){
+    .main .block-container{padding-left:12px;padding-right:12px;}
+    div[data-testid="stVerticalBlock"]{border-radius:18px;}
+    h1{font-size:24px;}
+    h3{font-size:20px;}
+    .stTextInput input{padding:13px;}
+}
