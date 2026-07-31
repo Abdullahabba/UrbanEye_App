@@ -27,7 +27,13 @@ for mod in [
         break
     except (ModuleNotFoundError, AttributeError):
         continue
-
+def load_css():
+    with open("style.css", "r", encoding="utf-8") as f:
+        st.markdown(
+            f"<style>{f.read()}</style>",
+            unsafe_allow_html=True
+        )
+        
 def render_dashboard_page():
     initialize_mock_history()
     user_details = get_user_metadata()
