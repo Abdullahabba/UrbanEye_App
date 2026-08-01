@@ -1182,21 +1182,34 @@ div[data-baseweb="select"] span {
 }
 
 /* ==========================================
-   DROPDOWN MENU TEXT COLOR FIX (BASEWEB)
+   FINAL FIX: STREAMLIT SELECTBOX DROPDOWN MENU
    ========================================== */
 
-/* Dropdown popover container list items */
+/* Dropdown popover list container */
+div[data-baseweb="popover"],
+div[data-baseweb="menu"],
+ul[role="listbox"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid #D1D5DB !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Dropdown items text and background */
 div[data-baseweb="popover"] div[role="option"],
-div[data-baseweb="popover"] div[role="option"] span,
-div[data-baseweb="popover"] div[role="option"] div,
-ul[data-testid="stSelectboxVirtualDropdown"] div,
-ul[data-testid="stSelectboxVirtualDropdown"] span {
+div[data-baseweb="popover"] div[role="option"] *,
+ul[role="listbox"] li,
+ul[role="listbox"] li span,
+ul[role="listbox"] li div {
+    background-color: #FFFFFF !important;
     color: #111827 !important;
 }
 
-/* Dropdown option hover effect readability */
+/* Dropdown item hover state */
 div[data-baseweb="popover"] div[role="option"]:hover,
-div[data-baseweb="popover"] div[role="option"]:hover * {
+div[data-baseweb="popover"] div[role="option"]:hover *,
+ul[role="listbox"] li:hover,
+ul[role="listbox"] li:hover * {
     background-color: #F3F4F6 !important;
     color: #111827 !important;
 }
