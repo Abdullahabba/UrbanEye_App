@@ -1181,9 +1181,27 @@ div[data-baseweb="select"] span {
     color: #111827 !important;
 }
 
-/* Dropdown menu options text color fix */
-div[data-baseweb="popover"] div[role="option"] *,
-div[data-baseweb="menu"] div,
-ul[role="listbox"] li div {
-    color: #2563EB !important;
+/* Checkbox Text Color */
+div[data-labelledby] {
+    color: #374151 !important;
+}
+
+/* Dropdown Menu Items (Selectbox Options Popup) */
+div[data-baseweb="popover"] div {
+    background-color: #FFFFFF !important;
+    color: #111827 !important;
+}
+
+div[data-baseweb="option"] {
+    color: #111827 !important;
+    background-color: #FFFFFF !important;
+}
+
+div[data-baseweb="option"]:hover {
+    background-color: #F3F4F6 !important;
+}
+
+/* Alerts / Info / Success Boxes Text Fix */
+.stAlert p {
+    color: #1E293B !important;
 }
