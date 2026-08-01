@@ -14,6 +14,20 @@ PAK_LOCATIONS = {
 }
 
 def render_login_page():
+    import streamlit.components.v1 as components
+
+# Dropdown Menu Text Fix Component (JavaScript Injection)
+components.html("""
+<script>
+const observer = new MutationObserver((mutations) => {
+    document.querySelectorAll('[data-baseweb="popover"] div[role="option"], [data-baseweb="menu"] div, ul[role="listbox"] li').forEach(el => {
+        el.style.color = '#111827';
+        el.style.backgroundColor = '#FFFFFF';
+    });
+});
+observer.observe(document.body, { childList: true, subtree: true });
+</script>
+""", height=0)
     # --- CSS Styling Import (Same Folder) ---
     css_path = os.path.join(os.path.dirname(__file__), "style.css") # Agar file ka naam style.css hai
     if os.path.exists(css_path):
