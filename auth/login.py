@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from database.supabase_client import supabase, supabase_admin
+import streamlit.components.v1 as components
 
 # Pakistan Locations Dictionary (Province -> Cities)
 PAK_LOCATIONS = {
@@ -14,29 +15,27 @@ PAK_LOCATIONS = {
 }
 
 def render_login_page():
-    import streamlit.components.v1 as components
-
-# Dropdown Menu Text Fix Component (JavaScript Injection)
-components.html("""
-<script>
-const observer = new MutationObserver((mutations) => {
-    document.querySelectorAll('[data-baseweb="popover"] div[role="option"], [data-baseweb="menu"] div, ul[role="listbox"] li').forEach(el => {
-        el.style.color = '#111827';
-        el.style.backgroundColor = '#FFFFFF';
+    # Dropdown Menu Text Fix Component (JavaScript Injection)
+    components.html("""
+    <script>
+    const observer = new MutationObserver((mutations) => {
+        document.querySelectorAll('[data-baseweb="popover"] div[role="option"], [data-baseweb="menu"] div, ul[role="listbox"] li').forEach(el => {
+            el.style.color = '#111827';
+            el.style.backgroundColor = '#FFFFFF';
+        });
     });
-});
-observer.observe(document.body, { childList: true, subtree: true });
-</script>
-""", height=0)
+    observer.observe(document.body, { childList: true, subtree: true });
+    </script>
+    """, height=0)
+
     # --- CSS Styling Import (Same Folder) ---
-    css_path = os.path.join(os.path.dirname(__file__), "style.css") # Agar file ka naam style.css hai
+    css_path = os.path.join(os.path.dirname(__file__), "style.css")
     if os.path.exists(css_path):
         with open(css_path, "r", encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
     st.title("👁️ Urban Eye AI - Security Portal")
     
-
     # 1. Password Reset State Initialization
     if "reset_verified" not in st.session_state:
         st.session_state["reset_verified"] = False
@@ -91,7 +90,6 @@ observer.observe(document.body, { childList: true, subtree: true });
                         if "logged_in_email" in st.query_params:
                             del st.query_params["logged_in_email"]
 
-                    # Database se profile fetch karke session cache mein save karein
                     res = supabase.table("profiles").select("*").eq("email", email.strip().lower()).execute()
                     if res.data and len(res.data) > 0:
                         profile = res.data[0]
@@ -116,7 +114,6 @@ observer.observe(document.body, { childList: true, subtree: true });
         new_email = st.text_input("Email Address", key="signup_email")
         phone = st.text_input("Phone Number", key="signup_phone", placeholder="+923001234567")
         
-        # --- Cascading Pakistan Location Dropdowns ---
         st.markdown("**Location / Address**")
         col_prov, col_city = st.columns(2)
         with col_prov:
@@ -158,10 +155,7 @@ observer.observe(document.body, { childList: true, subtree: true });
                             "phone": phone.strip(),
                             "address": address.strip()
                         }
-                        # Admin client ke zariye profiles table mein save karein
                         supabase_admin.table("profiles").upsert(profile_data).execute()
-                        
-                        # Foran session cache mein bhi save karein
                         st.session_state["user_profile"] = profile_data
 
                     st.success("✅ Account created successfully! Please switch to the Login tab to sign in.")
@@ -174,7 +168,6 @@ observer.observe(document.body, { childList: true, subtree: true });
     with tab_forgot:
         st.subheader("🔑 Reset Password")
 
-        # Agar account abhi tak verify nahi hua, toh email aur phone mangay ga
         if not st.session_state["reset_verified"]:
             st.info("💡 Enter your registered **Email Address** and **Phone Number** to verify your account.")
 
@@ -187,7 +180,6 @@ observer.observe(document.body, { childList: true, subtree: true });
                 else:
                     with st.spinner("Checking database for matching account..."):
                         try:
-                            # Direct check from profiles table (Extremely fast & accurate)
                             res = supabase_admin.table("profiles").select("id, email, phone").eq("email", reset_email.strip().lower()).eq("phone", reset_phone.strip()).execute()
 
                             if res.data and len(res.data) > 0:
@@ -202,7 +194,6 @@ observer.observe(document.body, { childList: true, subtree: true });
                         except Exception as e:
                             st.error(f"❌ Verification failed: {e}")
         else:
-            # Jab account verify ho jaye, tab naya password set karne ka form aaye ga
             st.success(f"✅ Verified Account: **{st.session_state['reset_matched_email']}**")
             
             st.subheader("Set Your New Password")
@@ -228,7 +219,6 @@ observer.observe(document.body, { childList: true, subtree: true });
                                     {"password": pass_1},
                                 )
 
-                                # Reset states
                                 st.session_state["reset_verified"] = False
                                 st.session_state["reset_target_user_id"] = None
                                 st.session_state["reset_matched_email"] = ""
