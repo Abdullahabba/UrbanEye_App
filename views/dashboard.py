@@ -11,6 +11,14 @@ from components.video_stream import render_video_stream_mode
 from components.live_camera import render_live_camera_mode
 from components.dispatch_panel import render_dispatch_panel
 
+# 1. Page Configuration (Wide Layout for Premium CSS Dashboard)
+st.set_page_config(
+    page_title="UrbanEye AI - Dashboard",
+    page_icon="👁️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Report Module Import Fallback
 create_pdf_report = None
 for mod in [
@@ -27,14 +35,21 @@ for mod in [
         break
     except (ModuleNotFoundError, AttributeError):
         continue
+
 def load_css():
-    with open("style.css", "r", encoding="utf-8") as f:
-        st.markdown(
-            f"<style>{f.read()}</style>",
-            unsafe_allow_html=True
-        )
-        
+    try:
+        with open("style.css", "r", encoding="utf-8") as f:
+            st.markdown(
+                f"<style>{f.read()}</style>",
+                unsafe_allow_html=True
+            )
+    except FileNotFoundError:
+        st.error("⚠️ 'style.css' file missing hai! Target directory verify karein.")
+
 def render_dashboard_page():
+    # 2. LOAD CSS CALL (FIX: Pehle ye missing tha)
+    load_css()
+    
     initialize_mock_history()
     user_details = get_user_metadata()
 
@@ -47,7 +62,7 @@ def render_dashboard_page():
         st.title("👁️ UrbanEye AI")
         st.caption("Smart City Detection & Tracking")
         st.divider()
-        st.markdown(f"**👤 Officer:** {user_details['username']}")
+        st.markdown(f"**👤 Officer:** {user_details.get('username', 'Officer')}")
         st.caption("🟢 System Status: **Online & Synced**")
         st.divider()
 
