@@ -1180,4 +1180,28 @@ div[data-baseweb="option"]:hover {
 div[data-baseweb="select"] span {
     color: #111827 !important;
 }
+/* ==========================================
+   FINAL SELECTBOX DROPDOWN TEXT & BG FIX
+   ========================================== */
 
+div[data-baseweb="popover"], 
+div[data-baseweb="menu"],
+ul[role="listbox"],
+div[role="listbox"] {
+    background-color: #ffffff !important;
+}
+
+div[data-baseweb="popover"] *, 
+div[data-baseweb="menu"] *,
+ul[role="listbox"] *,
+div[role="listbox"] * {
+    color: #111827 !important;
+    background-color: transparent !important;
+}
+
+div[data-baseweb="popover"] [role="option"]:hover,
+ul[role="listbox"] li:hover,
+div[role="listbox"] div:hover {
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+}
