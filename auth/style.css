@@ -1180,3 +1180,10 @@ div[data-baseweb="option"]:hover {
 div[data-baseweb="select"] span {
     color: #111827 !important;
 }
+
+/* Dropdown menu options text color fix */
+div[data-baseweb="popover"] div[role="option"] *,
+div[data-baseweb="menu"] div,
+ul[role="listbox"] li div {
+    color: #111827 !important;
+}
