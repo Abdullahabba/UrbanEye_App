@@ -36,16 +36,22 @@ for mod in [
     except (ModuleNotFoundError, AttributeError):
         continue
 
+import os
+
 def load_css():
+    # Python script ki apni location se path nikalna
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    css_path = os.path.join(BASE_DIR, "style.css")
+    
     try:
-        with open("style.css", "r", encoding="utf-8") as f:
+        with open(css_path, "r", encoding="utf-8") as f:
             st.markdown(
                 f"<style>{f.read()}</style>",
                 unsafe_allow_html=True
             )
     except FileNotFoundError:
-        st.error("⚠️ 'style.css' file missing hai! Target directory verify karein.")
-
+        st.error(f"⚠️ 'style.css' nahi mili! Expected path: {css_path}")
+        
 def render_dashboard_page():
     # 2. LOAD CSS CALL (FIX: Pehle ye missing tha)
     load_css()
