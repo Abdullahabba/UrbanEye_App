@@ -1185,5 +1185,5 @@ div[data-baseweb="select"] span {
 div[data-baseweb="popover"] div[role="option"] *,
 div[data-baseweb="menu"] div,
 ul[role="listbox"] li div {
-    color: #111827 !important;
+    color: #2563EB !important;
 }
