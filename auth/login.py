@@ -2,6 +2,17 @@ import os
 import streamlit as st
 from database.supabase_client import supabase, supabase_admin
 
+# Pakistan Locations Dictionary (Province -> Cities)
+PAK_LOCATIONS = {
+    "Punjab": ["Lahore", "Rawalpindi", "Faisalabad", "Multan", "Gujranwala", "Sialkot", "Bahawalpur", "Sargodha", "Gujrat", "Sheikhupura"],
+    "Sindh": ["Karachi", "Hyderabad", "Sukkur", "Larkana", "Nawabshah", "Mirpur Khas"],
+    "Khyber Pakhtunkhwa (KP)": ["Peshawar", "Abbottabad", "Mardan", "Swat", "Kohat", "Dera Ismail Khan"],
+    "Balochistan": ["Quetta", "Gwadar", "Turbat", "Khuzdar", "Sibi"],
+    "Islamabad Capital Territory": ["Islamabad"],
+    "Gilgit-Baltistan": ["Gilgit", "Skardu", "Hunza"],
+    "Azad Kashmir": ["Muzaffarabad", "Mirpur", "Rawalakot"]
+}
+
 def render_login_page():
     # --- CSS Styling Import (Same Folder) ---
     css_path = os.path.join(os.path.dirname(__file__), "style.css") # Agar file ka naam style.css hai
@@ -32,7 +43,7 @@ def render_login_page():
                         "email": profile.get("email", saved_email),
                         "username": profile.get("username", "Inspector Ahmed"),
                         "phone": profile.get("phone", "+92 300 1234567"),
-                        "address": profile.get("address", "Lahore Urban Sector 4"),
+                        "address": profile.get("address", "Lahore, Punjab, Pakistan"),
                     }
             except Exception:
                 pass
@@ -74,7 +85,7 @@ def render_login_page():
                             "email": profile.get("email", email),
                             "username": profile.get("username", "Inspector Ahmed"),
                             "phone": profile.get("phone", "+92 300 1234567"),
-                            "address": profile.get("address", "Lahore Urban Sector 4"),
+                            "address": profile.get("address", "Lahore, Punjab, Pakistan"),
                         }
 
                     st.success("✅ Login successful!")
@@ -90,7 +101,17 @@ def render_login_page():
         username = st.text_input("Full Name / Username", key="signup_username")
         new_email = st.text_input("Email Address", key="signup_email")
         phone = st.text_input("Phone Number", key="signup_phone", placeholder="+923001234567")
-        address = st.text_input("Address", key="signup_address", placeholder="City, Country")
+        
+        # --- Cascading Pakistan Location Dropdowns ---
+        st.markdown("**Location / Address**")
+        col_prov, col_city = st.columns(2)
+        with col_prov:
+            selected_province = st.selectbox("Province / Territory", options=list(PAK_LOCATIONS.keys()), key="signup_province")
+        with col_city:
+            selected_city = st.selectbox("City", options=PAK_LOCATIONS[selected_province], key="signup_city")
+        
+        address = f"{selected_city}, {selected_province}, Pakistan"
+        
         new_password = st.text_input("Password", type="password", key="signup_pass")
 
         if st.button("Register", key="btn_signup", use_container_width=True):
