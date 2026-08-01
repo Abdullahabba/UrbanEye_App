@@ -433,28 +433,18 @@ transform:translateX(5px);
  Glass Cards
 =========================*/
 
-div[data-testid="stVerticalBlock"]{
+/* BAD: Overwrites internal layout structural divs */
+/* div[data-testid="stVerticalBlock"] { ... } */
 
-background:rgba(255,255,255,.06);
-
-border:1px solid rgba(255,255,255,.10);
-
-border-radius:24px;
-
-padding:24px;
-
-backdrop-filter:blur(24px);
-
--webkit-backdrop-filter:blur(24px);
-
-box-shadow:var(--shadow);
-
-transition:.35s;
-
-position:relative;
-
-overflow:hidden;
-
+/* GOOD: Targets custom cards without breaking Streamlit spacing */
+.main [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 24px;
+    padding: 24px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: var(--shadow);
 }
 
 
