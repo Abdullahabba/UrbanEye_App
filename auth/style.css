@@ -1139,3 +1139,91 @@ textarea:focus {
     color: #000000 !important;
     -webkit-text-fill-color: #000000 !important;
 }
+
+/* ==========================================
+   URBAN EYE AI - STREAMLIT FIXES (style.css)
+   ========================================== */
+
+/* Main Container Text Color */
+.stApp {
+    color: #1F2937 !important;
+}
+
+/* Headings & Labels Visibility */
+h1, h2, h3, h4, h5, h6, label, p, div, span {
+    color: #111827 !important;
+}
+
+/* Input Fields (Text Inputs, Password Inputs, Selectboxes) */
+div[data-baseweb="input"] > div,
+div[data-baseweb="select"] > div {
+    background-color: #FFFFFF !important;
+    border: 1px solid #D1D5DB !important;
+    border-radius: 8px !important;
+    color: #111827 !important;
+}
+
+/* Text Input Inside Box */
+input {
+    color: #111827 !important;
+    background-color: transparent !important;
+}
+
+/* Input Field Focus / Active Border */
+div[data-baseweb="input"]:focus-within {
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Tabs Header Customization */
+button[data-baseweb="tab"] {
+    color: #4B5563 !important;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #2563EB !important;
+    border-bottom-color: #2563EB !important;
+}
+
+/* Primary Buttons Styling */
+div.stButton > button {
+    background-color: #2563EB !important;
+    color: #FFFFFF !important;
+    border-radius: 8px !important;
+    border: none !important;
+    padding: 0.5rem 1rem !important;
+    font-weight: 600 !important;
+    transition: background-color 0.2s ease-in-out;
+}
+
+div.stButton > button:hover {
+    background-color: #1D4ED8 !important;
+    color: #FFFFFF !important;
+}
+
+/* Checkbox Text Color */
+div[data-labelledby] {
+    color: #374151 !important;
+}
+
+/* Dropdown Menu Items (Selectbox Options Popup) */
+div[data-baseweb="popover"] div {
+    background-color: #FFFFFF !important;
+    color: #111827 !important;
+}
+
+div[data-baseweb="option"] {
+    color: #111827 !important;
+    background-color: #FFFFFF !important;
+}
+
+div[data-baseweb="option"]:hover {
+    background-color: #F3F4F6 !important;
+}
+
+/* Alerts / Info / Success Boxes Text Fix */
+.stAlert p {
+    color: #1E293B !important;
+}
