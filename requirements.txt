@@ -1,11 +1,9 @@
 streamlit
-torch
-torchvision
 ultralytics
-opencv-python-headless>=4.10.0.84
-numpy<2.0.0
-pillow
+opencv-python-headless>=4.8.0.76
 supabase
-fpdf2
-streamlit-cookies-controller
+pandas
+numpy
+pillow
 streamlit-geolocation
+reportlab
