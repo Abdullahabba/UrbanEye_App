@@ -145,7 +145,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     lat = st.session_state["selected_lat"]
     lon = st.session_state["selected_lon"]
 
-    # Helper function to save report to Session State and Push to Supabase Database with Error Reporting
+    # Helper function to save report to Session State and Upsert to Supabase Database
     def record_report_to_history(rep_id, rep_hazard, rep_loc, rep_score, rep_sev, rep_status):
         user_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
         timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -176,8 +176,24 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         if rep_id not in existing_ids:
             st.session_state["hazard_history"].insert(0, new_entry)
 
-        # 2. Push directly to Supabase Database with Explicit Error Logging
+        # 2. Push / Upsert to Supabase Database with detailed feedback
+        payload = {
+            "tracking_id": rep_id,
+            "hazard": rep_hazard,
+            "severity": f"{rep_sev} ({rep_score}/100)",
+            "status": rep_status,
+            "location_name": rep_loc,
+            "email": user_email,
+            "timestamp": timestamp_str,
+            "latitude": lat if lat is not None else 31.5204,
+            "longitude": lon if lon is not None else 74.3587,
+            "assigned_dept": assigned_department,
+            "sla_target": sla_target
+        }
+
         supabase_success = False
+        error_logs = []
+
         try:
             from supabase import create_client
             supabase_url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase", {}).get("url")
@@ -185,43 +201,27 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             
             if supabase_url and supabase_key:
                 supabase = create_client(supabase_url, supabase_key)
-                response = supabase.table("reports").insert({
-                    "tracking_id": rep_id,
-                    "hazard": rep_hazard,
-                    "severity": f"{rep_sev} ({rep_score}/100)",
-                    "status": rep_status,
-                    "location_name": rep_loc,
-                    "email": user_email,
-                    "timestamp": timestamp_str,
-                    "latitude": lat if lat is not None else 31.5204,
-                    "longitude": lon if lon is not None else 74.3587,
-                    "assigned_dept": assigned_department,
-                    "sla_target": sla_target
-                }).execute()
+                # Using upsert to handle duplicate tracking IDs safely
+                response = supabase.table("reports").upsert(payload, on_conflict="tracking_id").execute()
                 supabase_success = True
+            else:
+                error_logs.append("Supabase URL/Key missing in secrets.")
         except Exception as e1:
+            error_logs.append(f"Method 1 Error: {str(e1)}")
             try:
                 from database.supabase_client import supabase as sb_client
                 if sb_client:
-                    sb_client.table("reports").insert({
-                        "tracking_id": rep_id,
-                        "hazard": rep_hazard,
-                        "severity": f"{rep_sev} ({rep_score}/100)",
-                        "status": rep_status,
-                        "location_name": rep_loc,
-                        "email": user_email,
-                        "timestamp": timestamp_str,
-                        "latitude": lat if lat is not None else 31.5204,
-                        "longitude": lon if lon is not None else 74.3587,
-                        "assigned_dept": assigned_department,
-                        "sla_target": sla_target
-                    }).execute()
+                    sb_client.table("reports").upsert(payload, on_conflict="tracking_id").execute()
                     supabase_success = True
+                else:
+                    error_logs.append("database.supabase_client is None.")
             except Exception as e2:
-                st.error(f"❌ Supabase Push Failed! Error 1: {e1} | Error 2: {e2}")
+                error_logs.append(f"Method 2 Error: {str(e2)}")
 
         if supabase_success:
             st.success("✅ Report successfully pushed & synchronized with Supabase cloud database!")
+        else:
+            st.error(f"❌ Supabase Push Failed! Reasons: {' | '.join(error_logs)}")
 
     # Step 3: Reports & Actions
     st.markdown("##### 🚀 Step 2: Reports & Actions")
