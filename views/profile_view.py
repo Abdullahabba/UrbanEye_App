@@ -32,10 +32,41 @@ def render_profile_page(user_details: dict):
 
             submitted = st.form_submit_button("💾 Save Profile Changes")
             if submitted:
-                # Update session state or user details dictionary
+                # 1. Update local dictionary / session state
                 if isinstance(user_details, dict):
                     user_details['username'] = new_name
                     user_details['phone'] = new_phone
                     user_details['address'] = new_address
-                st.success("✅ Profile credentials updated successfully!")
+
+                # 2. Push/Upsert changes to Supabase Database
+                payload = {
+                    "email": user_email,
+                    "username": new_name,
+                    "phone": new_phone,
+                    "address": new_address
+                }
+
+                db_success = False
+                error_logs = []
+
+                try:
+                    from supabase import create_client
+                    supabase_url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase", {}).get("url")
+                    supabase_key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase", {}).get("key")
+                    
+                    if supabase_url and supabase_key:
+                        supabase = create_client(supabase_url, supabase_key)
+                        # Assuming 'profiles' is your table name in Supabase
+                        supabase.table("profiles").upsert(payload, on_conflict="email").execute()
+                        db_success = True
+                    else:
+                        error_logs.append("Supabase URL or Key missing in secrets.")
+                except Exception as e1:
+                    error_logs.append(f"Error: {str(e1)}")
+
+                if db_success:
+                    st.success("✅ Profile credentials successfully updated and synced with Supabase database!")
+                else:
+                    st.warning(f"⚠️ Updated locally, but database sync failed: {' | '.join(error_logs)}")
+                
                 st.rerun()
