@@ -10,9 +10,22 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Safely Initialize Session State
-if "user" not in st.session_state:
-    st.session_state["user"] = None
+# Safely Initialize All Core Session State Variables (Prevents KeyError & Mode Pollution)
+default_states = {
+    "user": None,
+    "counts": {},
+    "processed_img": None,
+    "captured_images": [],
+    "current_mode": None,
+    "location_confirmed": False,
+    "selected_lat": None,
+    "selected_lon": None,
+    "selected_loc_name": "",
+}
+
+for key, val in default_states.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 
 # Check Query Parameters for Persistent Login (Instant & Reliable)
 if st.session_state["user"] is None:
@@ -36,8 +49,10 @@ else:
         st.success(f"👤 {user_email}")
 
         if st.button("🚪 Logout", key="btn_logout", use_container_width=True):
-            st.session_state["user"] = None
-            st.query_params.clear() # Clear persistent login parameter
+            # Clear all session state and query parameters on logout
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.query_params.clear()
             st.rerun()
 
         st.markdown("---")
