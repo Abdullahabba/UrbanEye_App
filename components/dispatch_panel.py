@@ -13,6 +13,17 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
     
+    # Check if input source mode changed to clear stale single-image/video state
+    current_mode = st.session_state.get("input_source_mode", "🖼️ Single Image")
+    last_active_mode = st.session_state.get("_last_active_input_mode", current_mode)
+
+    if current_mode != last_active_mode:
+        st.session_state["counts"] = {}
+        st.session_state.pop("processed_img", None)
+        st.session_state["captured_images"] = []
+        st.session_state["_last_active_input_mode"] = current_mode
+        st.rerun()
+
     # 🔍 DEBUG: Session state counts check karne ke liye
     counts = st.session_state.get("counts", {})
     st.write(f"🔍 **Debug Info - Current Counts:** `{counts}`")
@@ -20,7 +31,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     has_valid_detections = counts and any(v > 0 for v in counts.values())
 
     if not has_valid_detections:
-        st.warning("⚠️ **Panel Locked:** AI model ke paas abhi koi valid detections (`counts`) nahi hain. Pehle uper 'Run AI Detection' button click karein taake hazards detect hon.")
+        st.warning("⚠️ **Panel Locked:** AI model ke paas abhi koi valid detections (`counts`) nahi hain. Pehle uper 'Run AI Detection' / Start analysis button click karein taake hazards detect hon.")
         return
 
     st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location $\rightarrow$ Step 3: Automatic Dispatch & Reports.")
@@ -112,8 +123,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 all_images.append(Image.fromarray(img))
             elif isinstance(img, Image.Image):
                 all_images.append(img)
-
-        detected_hazard_name = next(iter(counts)) if counts else "General Hazard"
 
         # Generate PDF Bytes with fallback error display
         pdf_bytes = None
