@@ -10,10 +10,7 @@ except ImportError:
     streamlit_geolocation = None
 
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
-    st.divider()
-    st.subheader("📤 Dispatch & Verification Panel")
-    
-    # Check if input source mode changed to clear stale single-image/video state
+    # 🔄 IMMEDIATE RESET CHECK: Agar input mode change hua hai toh foran session clear karein aur rerun karein
     current_mode = st.session_state.get("input_source_mode", "🖼️ Single Image")
     last_active_mode = st.session_state.get("_last_active_input_mode", current_mode)
 
@@ -23,6 +20,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.session_state["captured_images"] = []
         st.session_state["_last_active_input_mode"] = current_mode
         st.rerun()
+
+    st.divider()
+    st.subheader("📤 Dispatch & Verification Panel")
 
     # 🔍 DEBUG: Session state counts check
     counts = st.session_state.get("counts", {})
