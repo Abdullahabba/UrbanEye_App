@@ -37,7 +37,9 @@ def render_video_stream_mode(conf_threshold):
                 pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 proc_frame, counts = run_detection(pil_img, conf_threshold)
                 last_frame = proc_frame
-                st_frame.image(proc_frame, caption=f"Live Frame (Frame {frame_count})", use_container_width=True)
+                
+                # FIX: use_column_width=True use kiya gaya hai taake TypeError na aaye
+                st_frame.image(proc_frame, caption=f"Live Frame (Frame {frame_count})", use_column_width=True)
                 
                 # Counts tallying
                 if isinstance(counts, dict) and len(counts) > 0:
