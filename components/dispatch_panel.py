@@ -10,7 +10,20 @@ except ImportError:
     streamlit_geolocation = None
 
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
-    # 🔄 IMMEDIATE RESET CHECK: Agar input mode change hua hai toh foran session clear karein aur rerun karein
+    st.divider()
+    
+    # 🔄 Header with Instant Manual Reset Button
+    col_title, col_btn = st.columns([3, 1])
+    with col_title:
+        st.subheader("📤 Dispatch & Verification Panel")
+    with col_btn:
+        if st.button("🔄 Reset Panel", use_container_width=True, help="Click to clear stale counts and detections"):
+            st.session_state["counts"] = {}
+            st.session_state.pop("processed_img", None)
+            st.session_state["captured_images"] = []
+            st.rerun()
+    
+    # Check if input source mode changed to clear stale single-image/video state
     current_mode = st.session_state.get("input_source_mode", "🖼️ Single Image")
     last_active_mode = st.session_state.get("_last_active_input_mode", current_mode)
 
@@ -20,9 +33,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.session_state["captured_images"] = []
         st.session_state["_last_active_input_mode"] = current_mode
         st.rerun()
-
-    st.divider()
-    st.subheader("📤 Dispatch & Verification Panel")
 
     # 🔍 DEBUG: Session state counts check
     counts = st.session_state.get("counts", {})
