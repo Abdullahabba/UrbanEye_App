@@ -26,6 +26,11 @@ except Exception:
     def render_report_tracker(): st.warning("Report tracker component unavailable.")
 
 try:
+    from views.profile_view import render_profile_page
+except Exception:
+    def render_profile_page(ud): st.warning("Profile view component unavailable.")
+
+try:
     from components.single_image import render_single_image_mode
 except Exception:
     def render_single_image_mode(th): st.warning("Single image mode unavailable.")
@@ -256,7 +261,8 @@ def render_dashboard_page():
             [
                 "🔍 AI Visual Detection Engine", 
                 "🔎 Public Hazard Tracker", 
-                "🗺️ Interactive Map"
+                "🗺️ Interactive Map",
+                "👤 My Profile & Reports"
             ], 
             key="main_navigation"
         )
@@ -311,6 +317,9 @@ def render_dashboard_page():
 
     elif current_view == "🗺️ Interactive Map":
         render_map_page()
+
+    elif current_view == "👤 My Profile & Reports":
+        render_profile_page(user_details)
 
 if __name__ == "__main__":
     render_dashboard_page()
