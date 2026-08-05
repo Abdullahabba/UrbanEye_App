@@ -12,10 +12,10 @@ def render_live_camera_mode(model):
     st.subheader("🔴 Live Urban Hazard Stream (Real-Time AI Detection)")
     
     if not WEBRTC_AVAILABLE:
-        st.error("❌ `streamlit-webrtc` ya `av` library install nahi hai. Baraye meharbani `requirements.txt` mein inhein add kar ke push karein.")
+        st.error("❌ `streamlit-webrtc` ya `av` library install nahi hai.")
         return
 
-    st.markdown("Camera open karein, YOLO model khud ba khud real-time frames par hazards detect karta rahega.")
+    st.markdown("High-definition live stream chalu hai. YOLO model real-time mein hazards detect kar raha hai.")
 
     # Define video transformer class for continuous YOLO inference
     class YOLOVideoTransformer:
@@ -26,8 +26,8 @@ def render_live_camera_mode(model):
             # Convert video frame to numpy array (OpenCV format)
             img = frame.to_ndarray(format="bgr24")
             
-            # Run YOLO inference on the live frame
-            results = self.model(img, conf=0.4)
+            # Run YOLO inference on the live frame (optimized for speed & accuracy)
+            results = self.model(img, conf=0.4, verbose=False)
             
             # Get annotated image with bounding boxes
             annotated_img = results[0].plot()
@@ -47,13 +47,19 @@ def render_live_camera_mode(model):
             # Return processed frame back to the WebRTC stream
             return av.VideoFrame.from_ndarray(annotated_img, format="bgr24")
 
-    # Start the WebRTC streamer
+    # Start the WebRTC streamer with HD Resolution Constraints
     webrtc_streamer(
         key="urbaneye-live-stream",
         video_transformer_factory=YOLOVideoTransformer,
         rtc_configuration=RTCConfiguration(
             {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
         ),
-        media_stream_constraints={"video": True, "audio": False},
+        media_stream_constraints={
+            "video": {
+                "width": {"ideal": 1280, "max": 1920},
+                "height": {"ideal": 720, "max": 1080},
+            },
+            "audio": False
+        },
         async_processing=True
     )
