@@ -13,7 +13,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
     
-    # 🛡️ Strict Guard Check: Check if valid detections exist
+    # 🛡️ Strict Guard Check: Check if valid detections exist (counts are not empty and have > 0 values)
     counts = st.session_state.get("counts", {})
     has_valid_detections = counts and any(v > 0 for v in counts.values())
 
@@ -134,9 +134,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             elif isinstance(img, Image.Image):
                 all_images.append(img)
 
-        detected_hazard_name = list(counts.keys()[0]) if counts else "General Hazard"
-        if counts:
-            detected_hazard_name = list(counts.keys())[0]
+        # Fixed dictionary indexing syntax here
+        detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
 
         # 🚀 AUTOMATIC BACKGROUND SYNC LOGIC
         auto_push_key = f"auto_pushed_{tracking_id}"
