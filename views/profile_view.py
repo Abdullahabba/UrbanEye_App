@@ -1,5 +1,24 @@
 import streamlit as st
 
+def fetch_reports_from_supabase():
+    try:
+        from supabase import create_client
+        
+        # Supabase credentials from Streamlit secrets or environment
+        supabase_url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase", {}).get("url")
+        supabase_key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase", {}).get("key")
+        
+        if not supabase_url or not supabase_key:
+            return []
+            
+        supabase = create_client(supabase_url, supabase_key)
+        
+        # Querying the reports table (change 'reports' to your exact table name if different)
+        response = supabase.table("reports").select("*").execute()
+        return response.data if response and response.data else []
+    except Exception as e:
+        return []
+
 def render_profile_page(user_details: dict):
     st.title("👤 Officer Profile & Activity History")
     st.caption("Manage your professional credentials, contact info, and review your submitted hazard inspection reports.")
@@ -17,50 +36,34 @@ def render_profile_page(user_details: dict):
 
     st.divider()
 
-    # Bottom Section: Submitted Reports History
-    st.markdown("### 📂 My Submitted Inspection Reports")
+    # Bottom Section: Submitted Reports History from Supabase
+    st.markdown("### 📂 My Submitted Inspection Reports (Supabase)")
     
-    # Fetching history from session state safely
-    history = st.session_state.get("hazard_history", [])
+    # Fetching live data from Supabase
+    db_history = fetch_reports_from_supabase()
     
-    # Default sample reports if history is empty
-    default_reports = [
-        {
-            "id": "URB-2026-001",
-            "date": "2026-08-05 14:30",
-            "hazard": "Pothole / Road Damage",
-            "location": "Iqbal Sector, Block AA, Lahore",
-            "severity": "High (85/100)",
-            "status": "Dispatched / Pending"
-        },
-        {
-            "id": "URB-2026-002",
-            "date": "2026-08-04 11:15",
-            "hazard": "Garbage Dump Overflow",
-            "location": "Gulberg Zone, Main Market",
-            "severity": "Medium (60/100)",
-            "status": "Resolved"
-        }
-    ]
+    # Fallback to session state if Supabase returns nothing or credentials aren't set
+    fallback_history = st.session_state.get("hazard_history", [])
+    display_list = db_history if db_history else fallback_history
 
-    display_list = history if history else default_reports
+    if not display_list:
+        st.info("No reports found in Supabase database or session history.")
+    else:
+        for item in display_list:
+            rep_id = item.get('id') or item.get('tracking_id') or item.get('report_id') or "N/A"
+            rep_date = item.get('created_at') or item.get('date') or item.get('timestamp') or "2026-08-06"
+            rep_hazard = item.get('hazard') or item.get('hazard_type') or item.get('title') or "Municipal Hazard"
+            rep_loc = item.get('location') or item.get('address') or "Lahore"
+            rep_sev = item.get('severity') or item.get('score') or "Medium"
+            rep_status = item.get('status', 'Dispatched')
 
-    # Render each report card cleanly using native Streamlit containers
-    for item in display_list:
-        rep_id = item.get('id') or item.get('tracking_id') or "URB-2026-XXX"
-        rep_date = item.get('date') or item.get('timestamp') or "2026-08-06"
-        rep_hazard = item.get('hazard') or item.get('title') or item.get('hazard_type') or "Municipal Hazard"
-        rep_loc = item.get('location') or item.get('address') or user_details.get('address', 'Lahore')
-        rep_sev = item.get('severity') or item.get('score') or "Medium"
-        rep_status = item.get('status', 'Dispatched / Pending')
-
-        with st.container(border=True):
-            c1, c2 = st.columns([3, 1])
-            with c1:
-                st.markdown(f"**Tracking ID:** `{rep_id}`")
-                st.markdown(f"**Hazard Type:** {rep_hazard}")
-                st.markdown(f"**Location:** {rep_loc}")
-            with c2:
-                st.markdown(f"**Date:** {rep_date}")
-                st.markdown(f"**Severity:** {rep_sev}")
-                st.markdown(f"**Status:** :blue[{rep_status}]")
+            with st.container(border=True):
+                c1, c2 = st.columns([3, 1])
+                with c1:
+                    st.markdown(f"**Tracking ID:** `{rep_id}`")
+                    st.markdown(f"**Hazard Type:** {rep_hazard}")
+                    st.markdown(f"**Location:** {rep_loc}")
+                with c2:
+                    st.markdown(f"**Date:** {str(rep_date)[:16]}")
+                    st.markdown(f"**Severity:** {rep_sev}")
+                    st.markdown(f"**Status:** :blue[{rep_status}]")
