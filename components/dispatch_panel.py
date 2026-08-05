@@ -49,9 +49,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.rerun()
 
     # ==========================================
-    # STEP 1: AI DETECTION & DISPLAY FIRST
+    # STEP 1: AI DETECTION PREVIEW
     # ==========================================
-    st.markdown("##### 🔍 Step 1: AI Hazard Detection Summary")
+    st.markdown("##### 🔍 Step 1: AI Hazard Detection Preview")
     counts = st.session_state.get("counts", {})
     has_valid_detections = counts and any(v > 0 for v in counts.values())
 
@@ -59,16 +59,21 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.warning("⚠️ **Panel Locked:** Please run AI Detection first to detect hazards before proceeding.")
         return
 
-    # Show Detections Summary
-    summary_text = f"Tracking ID: {tracking_id}\nDetected Hazards Summary:\n"
+    # Build Detections Summary Text
     hazard_types_list = []
+    summary_bullets = ""
     for k, v in counts.items():
         if v > 0:
-            summary_text += f"- {k.capitalize()}: {v}\n"
+            summary_bullets += f"- **{k.capitalize()}**: {v}\n"
             hazard_types_list.append(f"{k.capitalize()} ({v})")
     
     main_hazard_str = ", ".join(hazard_types_list) if hazard_types_list else "Municipal Hazard"
-    st.text_area("📋 AI Detection Results", value=summary_text, height=100, disabled=True)
+
+    # Clean Card Display for AI Detections (Replaces ugly text_area)
+    with st.container(border=True):
+        st.markdown(f"**🏷️ Tracking ID:** `{tracking_id}`")
+        st.markdown("**📋 Detected Hazards:**")
+        st.markdown(summary_bullets if summary_bullets else "- No hazards detected")
 
     st.divider()
 
@@ -122,32 +127,41 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         else:
             st.error("❌ `streamlit-geolocation` library is not installed.")
 
-    # Agar location ready nahi hai, toh yahin ruk jayein ga taake dispatch panel location ke nichy hi show ho
     if not location_ready:
-        st.info("🔒 **Dispatch Panel Waiting:** Please provide or select a location above to unlock the dispatch panel and database sync.")
+        st.info("🔒 **Waiting for Location:** Please provide or select a location above to view full details and sync with the database.")
         return
 
     st.divider()
 
     # =========================================================================
-    # STEP 3: DISPATCH PANEL & SUPABASE PUSH (SHOWN RIGHT BELOW LOCATION)
+    # STEP 3: DISPATCH PANEL & DETAILED SUMMARY (SHOWN AFTER LOCATION)
     # =========================================================================
     st.markdown("##### 🚀 Step 3: Dispatch Panel & Database Sync")
     
     with st.container(border=True):
-        st.markdown(f"### 🏷️ Incident Tracking ID: `{tracking_id}`")
-
+        st.markdown(f"### 📋 Full Incident Details (ID: `{tracking_id}`)")
+        
         assessment = calculate_priority_score(counts)
         score = assessment["priority_score"]
         severity_level = assessment["severity"]
         assigned_department = assessment["assigned_dept"]
         sla_target = assessment["sla_target"]
 
-        st.info(f"ℹ️ **PRIORITY SCORE: {score}/100** | Severity: {severity_level} | Dept: {assigned_department}")
-
         final_location_name = st.session_state["selected_loc_name"]
         lat = st.session_state["selected_lat"]
         lon = st.session_state["selected_lon"]
+
+        # Display detailed metrics
+        col_m1, col_m2, col_m3 = st.columns(3)
+        with col_m1:
+            st.metric(label="Priority Score", value=f"{score}/100")
+        with col_m2:
+            st.metric(label="Severity Level", value=severity_level)
+        with col_m3:
+            st.metric(label="Assigned Dept", value=assigned_department)
+
+        st.markdown(f"**📍 Location:** {final_location_name}")
+        st.markdown(f"**⏱️ SLA Target:** {sla_target}")
 
         user_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
         timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -222,7 +236,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 error_logs.append(f"Method 2 Error: {str(e2)}")
 
         if supabase_success:
-            st.success("✅ Dispatch Panel Active & Successfully synchronized with Supabase cloud database!")
+            st.success("✅ Report successfully synchronized with Supabase cloud database!")
         else:
             st.error(f"❌ Supabase Push Failed! Reasons: {' | '.join(error_logs)}")
 
@@ -233,7 +247,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     # =========================================================================
     st.markdown("##### 🚀 Step 4: Export & Actions (PDF & Email)")
 
-    full_summary_text = summary_text + f"Location: {final_location_name}\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
+    full_summary_text = f"Tracking ID: {tracking_id}\nDetected Hazards:\n{summary_bullets}\nLocation: {final_location_name}\nPriority Score: {score}/100\nSeverity: {severity_level}\nDepartment: {assigned_department}"
 
     raw_images = st.session_state.get("captured_images", [])
     if not raw_images and "processed_img" in st.session_state:
