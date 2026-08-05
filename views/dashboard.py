@@ -244,6 +244,11 @@ def render_dashboard_page():
 
     if "captured_images" not in st.session_state:
         st.session_state["captured_images"] = []
+    
+    # 🛡️ MEMORY OPTIMIZATION: Keep only the latest 3 captured images to prevent RAM overflow
+    if len(st.session_state["captured_images"]) > 3:
+        st.session_state["captured_images"] = st.session_state["captured_images"][-3:]
+
     if "counts" not in st.session_state:
         st.session_state["counts"] = {}
 
