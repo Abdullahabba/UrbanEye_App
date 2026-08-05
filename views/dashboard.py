@@ -1,5 +1,9 @@
 import random
 import os
+import tempfile
+import numpy as np
+from PIL import Image
+from fpdf import FPDF
 import streamlit as st
 from utils.metadata import get_user_metadata
 from utils.helpers import initialize_mock_history, generate_tracking_id
@@ -12,96 +16,163 @@ from components.video_stream import render_video_stream_mode
 from components.live_camera import render_live_camera_mode
 from components.dispatch_panel import render_dispatch_panel
 
-# 🛡️ Report Module Import Fallback with Built-in Safe Generator
-create_pdf_report = None
-for mod in [
-    ("report.pdf_generator", "create_pdf_report"),
-    ("reports.pdf_generator", "create_pdf_report"),
-    ("report.generator", "create_pdf_report"),
-    ("reports.generator", "create_pdf_report"),
-    ("utils.pdf_sender", "create_pdf_report"),
-    ("utils.pdf_generator", "create_pdf_report"),
-]:
+def sanitize_text(text: str) -> str:
+    """Non-Latin1 characters ko replace karta hai taake PDF crash na ho."""
+    if not text:
+        return "N/A"
+    text = str(text).replace("•", "-")
+    return text.encode("latin-1", "replace").decode("latin-1")
+
+class ProfessionalPDF(FPDF):
+    def header(self):
+        self.set_fill_color(24, 43, 73)  # Dark Navy Blue
+        self.rect(0, 0, 210, 22, "F")
+        self.set_fill_color(0, 168, 204)  # Cyan Accent Line
+        self.rect(0, 22, 210, 2, "F")
+
+        self.set_text_color(255, 255, 255)
+        self.set_font("Helvetica", "B", 12)
+        self.set_xy(10, 6)
+        self.cell(0, 10, "URBAN EYE AI - MUNICIPAL HAZARD INSPECTION REPORT", align="C")
+        self.ln(20)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_draw_color(210, 215, 220)
+        self.line(10, self.get_y(), 200, self.get_y())
+        
+        self.set_font("Helvetica", "I", 8)
+        self.set_text_color(128, 128, 128)
+        self.cell(0, 10, f"Page {self.page_no()} | Confidential - UrbanEye AI Automated Verification System", align="C")
+
+    def section_heading(self, title: str):
+        self.ln(4)
+        self.set_fill_color(230, 238, 248)
+        self.set_text_color(24, 43, 73)
+        self.set_font("Helvetica", "B", 10)
+        self.cell(0, 7, f"  {title}", 0, 1, "L", fill=True)
+        self.ln(3)
+
+def create_pdf_report(
+    title: str,
+    user_details: dict = None,  
+    summary_text: str = "",
+    detected_images=None,  
+) -> bytes:
     try:
-        module = __import__(mod[0], fromlist=[mod[1]])
-        create_pdf_report = getattr(module, mod[1])
-        break
-    except (ModuleNotFoundError, AttributeError, ImportError):
-        continue
+        pdf = ProfessionalPDF()
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
 
-# Agar koi bhi external module na mile, toh app ko crash hone se bachane ke liye safe fallback generator
-if create_pdf_report is None:
-    try:
-        from fpdf import FPDF
-        import numpy as np
-        from PIL import Image
-        import tempfile
+        if not user_details or not isinstance(user_details, dict) or not user_details.get("username"):
+            try:
+                user_details = get_user_metadata()
+            except Exception:
+                user_details = {}
 
-        def create_pdf_report(title: str, user_details: dict = None, summary_text: str = "", detected_images=None) -> bytes:
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_auto_page_break(auto=True, margin=15)
-            
-            # Header
-            pdf.set_fill_color(24, 43, 73)
-            pdf.rect(0, 0, 210, 20, "F")
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("Helvetica", "B", 11)
-            pdf.set_xy(10, 6)
-            pdf.cell(0, 8, "URBAN EYE AI - INCIDENT REPORT", align="C")
-            pdf.ln(18)
+        safe_title = sanitize_text(title)
+        safe_summary = sanitize_text(summary_text)
 
-            # Title & Summary
-            pdf.set_text_color(24, 43, 73)
-            pdf.set_font("Helvetica", "B", 12)
-            pdf.cell(0, 8, f"Report: {title}", ln=True)
-            
-            pdf.set_font("Helvetica", "", 10)
-            pdf.set_text_color(50, 50, 50)
-            pdf.multi_cell(0, 6, summary_text)
-            pdf.ln(5)
+        u_name = sanitize_text(user_details.get("username", "Inspector Ahmed"))
+        u_email = sanitize_text(user_details.get("email", "officer@urbaneye.ai"))
+        u_phone = sanitize_text(user_details.get("phone", "+92 300 1234567"))
+        u_address = sanitize_text(user_details.get("address", "Lahore Urban Sector 4"))
 
-            # Images Section
-            if detected_images:
-                if not isinstance(detected_images, list):
-                    detected_images = [detected_images]
-                
-                for idx, img in enumerate(detected_images):
-                    if img is None:
-                        continue
-                    if isinstance(img, np.ndarray):
-                        img_pil = Image.fromarray(img)
-                    elif isinstance(img, Image.Image):
-                        img_pil = img
-                    else:
-                        continue
+        # SECTION 1: METADATA
+        pdf.section_heading("1. INCIDENT & OFFICER METADATA")
+        pdf.set_draw_color(210, 215, 220)
+        pdf.set_fill_color(248, 249, 250)
+        
+        box_y = pdf.get_y()
+        pdf.rect(10, box_y, 190, 32, "DF")
 
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-                        img_pil.convert("RGB").save(tmp.name, format="PNG")
-                        tmp_path = tmp.name
+        pdf.set_xy(14, box_y + 4)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_text_color(24, 43, 73)
+        pdf.cell(0, 6, f"Report Title: {safe_title}")
+        
+        pdf.set_font("Helvetica", "", 9.5)
+        pdf.set_text_color(60, 60, 60)
 
-                    pdf.set_font("Helvetica", "I", 9)
-                    pdf.cell(0, 5, f"Evidence Snapshot #{idx + 1}", ln=True)
+        pdf.set_xy(14, box_y + 12)
+        pdf.cell(95, 5, f"Reported By: {u_name}")
+        pdf.cell(85, 5, f"Phone: {u_phone}")
+
+        pdf.set_xy(14, box_y + 19)
+        pdf.cell(95, 5, f"Email: {u_email}")
+        pdf.cell(85, 5, f"Location / Dept: {u_address}")
+
+        pdf.set_y(box_y + 36)
+
+        # SECTION 2: IMAGES
+        if detected_images:
+            if not isinstance(detected_images, list):
+                detected_images = [detected_images]
+
+            pdf.section_heading(f"2. VISUAL INSPECTION EVIDENCE ({len(detected_images)} AI SNAPSHOTS)")
+
+            for idx, img in enumerate(detected_images):
+                if img is None:
+                    continue
+
+                if isinstance(img, np.ndarray):
+                    img_pil = Image.fromarray(img)
+                elif isinstance(img, Image.Image):
+                    img_pil = img
+                else:
+                    continue
+
+                if img_pil.mode in ("RGBA", "P"):
+                    img_to_save = img_pil.convert("RGB")
+                else:
+                    img_to_save = img_pil
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                    img_to_save.save(tmp.name, format="PNG")
+                    tmp_path = tmp.name
+
+                pdf.ln(2)
+                pdf.set_font("Helvetica", "I", 9)
+                pdf.set_text_color(100, 100, 100)
+                pdf.cell(0, 5, f"Evidence Snapshot #{idx + 1}", ln=True)
+
+                image_x = (210 - 130) / 2
+                pdf.image(tmp_path, x=image_x, w=130)
+                    pdf.ln(6)
+
+                if os.path.exists(tmp_path):
                     try:
-                        pdf.image(tmp_path, x=40, w=130)
-                        pdf.ln(5)
+                        os.remove(tmp_path)
                     except Exception:
                         pass
-                    if os.path.exists(tmp_path):
-                        try:
-                            os.remove(tmp_path)
-                        except Exception:
-                            pass
 
-            pdf_output = pdf.output()
-            if isinstance(pdf_output, str):
-                return pdf_output.encode("latin-1")
-            elif isinstance(pdf_output, bytearray):
-                return bytes(pdf_output)
+        # SECTION 3: SUMMARY
+        pdf.section_heading("3. AI ANALYSIS BREAKDOWN & SUMMARY")
+        pdf.set_font("Helvetica", "", 10)
+        pdf.set_text_color(50, 50, 50)
+        
+        summary_y = pdf.get_y()
+        pdf.set_fill_color(252, 253, 255)
+        pdf.set_draw_color(225, 230, 238)
+        
+        pdf.set_xy(10, summary_y)
+        pdf.ln(2)
+        pdf.set_x(14)
+        pdf.multi_cell(182, 6, safe_summary)
+        pdf.ln(4)
+
+        pdf_output = pdf.output()
+        if isinstance(pdf_output, str):
+            return pdf_output.encode("latin-1")
+        elif isinstance(pdf_output, bytearray):
             return bytes(pdf_output)
-    except Exception:
-        def create_pdf_report(*args, **kwargs):
-            return b"%PDF-1.4 Fallback PDF Buffer"
+        elif isinstance(pdf_output, bytes):
+            return pdf_output
+        else:
+            return bytes(pdf_output)
+    except Exception as e:
+        st.error(f"❌ PDF Generation Error: {e}")
+        return b"%PDF-1.4 Error Buffer"
 
 def load_css():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -125,7 +196,6 @@ def render_dashboard_page():
     if "captured_images" not in st.session_state:
         st.session_state["captured_images"] = []
 
-    # SIDEBAR CONTROL CENTER
     with st.sidebar:
         st.title("👁️ UrbanEye AI")
         st.caption("Smart City Detection & Tracking")
@@ -154,7 +224,6 @@ def render_dashboard_page():
         else:
             conf_threshold, input_mode = 0.45, "🖼️ Single Image"
 
-    # MAIN AREA CONTENT
     if current_view == "🔍 AI Visual Detection Engine":
         st.title("🔍 AI Inspection Engine")
         st.caption(f"Active Mode: **{input_mode}** | YOLO Confidence Threshold: `{conf_threshold}`")
@@ -164,7 +233,6 @@ def render_dashboard_page():
 
         st.divider()
 
-        # ROUTING TO MODULAR COMPONENTS
         if input_mode == "🖼️ Single Image":
             render_single_image_mode(conf_threshold)
         elif input_mode == "📂 Batch Processing":
@@ -174,7 +242,6 @@ def render_dashboard_page():
         elif input_mode == "📸 Live Camera":
             render_live_camera_mode(conf_threshold)
 
-        # DISPATCH & REPORTING PANEL
         all_evidence_images = st.session_state.get("captured_images", [])
         if not all_evidence_images and "processed_img" in st.session_state:
             all_evidence_images = [st.session_state["processed_img"]]
