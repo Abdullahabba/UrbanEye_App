@@ -13,7 +13,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
     
-    # 🛡️ Guard Check: Agar koi detection run nahi hui ya image upload nahi hui, toh panel lock rakhein
+    # 🛡️ Guard Check: Agar koi detection run nahi hui, toh panel lock rakhein
     counts = st.session_state.get("counts", {})
     processed_img = st.session_state.get("processed_img")
     captured_images = st.session_state.get("captured_images", [])
@@ -22,7 +22,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.info("💡 **Awaiting Inspection:** Please upload an image, video, or use the live camera and run AI detection first to generate the dispatch summary.")
         return
 
-    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location (Manual without coordinates or Live GPS) $\rightarrow$ Step 3: Dispatch Reports & Sync.")
+    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location $\rightarrow$ Step 3: Automatic Dispatch & Reports.")
 
     # Initialize session state variables for location
     if "selected_lat" not in st.session_state:
@@ -47,7 +47,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     # ⚡ Calculate Dynamic Priority & SLA Assessment
     assessment = calculate_priority_score(counts)
     
-    # Display Priority Badge
     score = assessment["priority_score"]
     severity_level = assessment["severity"]
     assigned_department = assessment["assigned_dept"]
@@ -62,7 +61,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     st.divider()
 
-    # 2️⃣ Step 2: Location Option (Manual Address without coords or Live GPS)
+    # 2️⃣ Step 2: Location Option (Manual Address or Live GPS)
     st.markdown("##### 📍 Step 2: Select Location Method")
     loc_mode = st.radio(
         "Choose Location Mode",
@@ -80,14 +79,14 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 st.session_state["selected_lat"] = None
                 st.session_state["selected_lon"] = None
                 st.session_state["location_confirmed"] = True
-                st.success(f"✅ Manual Location Confirmed (No GPS coordinates): `{manual_input.strip()}`")
+                st.success(f"✅ Manual Location Confirmed: `{manual_input.strip()}`")
                 st.rerun()
             else:
                 st.warning("⚠️ Please enter a valid location name.")
         
         if st.session_state["location_confirmed"] and loc_mode == "Manual Address":
             location_ready = True
-            st.info(f"📌 Current Active Location: **{st.session_state['selected_loc_name']}** (Manual - No Coordinates)")
+            st.info(f"📌 Current Active Location: **{st.session_state['selected_loc_name']}**")
 
     else:
         st.markdown("🛰️ Click below to fetch your **real browser GPS coordinates**:")
@@ -107,9 +106,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         else:
             st.error("❌ `streamlit-geolocation` library is not installed.")
 
-    # 3️⃣ Step 3: Actions (PDF, Email, Supabase Push) - Unlocked ONLY after location is confirmed
+    # 3️⃣ Step 3: Automatic Push & Reports Generation (Unlocked once location is confirmed)
     if location_ready or st.session_state["location_confirmed"]:
-        st.markdown("##### 🚀 Step 3: Dispatch & Reports")
+        st.markdown("##### 🚀 Step 3: Reports & Automatic Cloud Sync")
         st.divider()
 
         final_location_name = st.session_state["selected_loc_name"]
@@ -119,7 +118,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         if lat is not None and lon is not None:
             full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat:.4f}, {lon:.4f})\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
         else:
-            full_summary_text = summary_text + f"Location: {final_location_name} (Manual Entry - No GPS)\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
+            full_summary_text = summary_text + f"Location: {final_location_name} (Manual Entry)\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
 
         raw_images = st.session_state.get("captured_images", [])
         if not raw_images and "processed_img" in st.session_state:
@@ -134,6 +133,49 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
         detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
 
+        # 🚀 AUTOMATIC SUPABASE SYNC LOGIC (Executes once per tracking ID)
+        auto_push_key = f"auto_pushed_{tracking_id}"
+        if not st.session_state.get(auto_push_key, False):
+            try:
+                from database.supabase_client import supabase
+                
+                payload = {
+                    "tracking_id": str(tracking_id),
+                    "issue_type": str(detected_hazard_name),
+                    "severity": str(severity_level),
+                    "priority_score": int(score),
+                    "sla_target": str(sla_target),
+                    "status": "Pending",
+                    "assigned_dept": str(assigned_department),
+                    "latitude": lat,
+                    "longitude": lon,
+                    "location_name": str(final_location_name),
+                    "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+                }
+                
+                # Cloud sync
+                if supabase is not None:
+                    try:
+                        supabase.table("reports").upsert(payload).execute()
+                    except Exception as sb_err:
+                        pass # Fail silently or fallback to local ledger
+                
+                # Local session ledger sync
+                if "incident_ledger" not in st.session_state or not isinstance(st.session_state["incident_ledger"], pd.DataFrame):
+                    st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
+                
+                existing_ledger = st.session_state["incident_ledger"]
+                if tracking_id not in existing_ledger["tracking_id"].values:
+                    new_row_df = pd.DataFrame([payload])
+                    st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
+
+                st.session_state[auto_push_key] = True
+                st.toast("✅ Incident automatically synced to Supabase & Tracker!", icon="🚀")
+
+            except Exception as e:
+                st.warning(f"⚠️ Auto-sync warning: {e}")
+
+        # Generate PDF Bytes
         pdf_bytes = None
         if create_pdf_report_func:
             try:
@@ -149,12 +191,12 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         officer_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
         target_dept_email = "roads.dept@urbaneye.ai"
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
 
         with col1:
             if pdf_bytes:
                 st.download_button(
-                    label="📥 Download PDF",
+                    label="📥 Download PDF Report",
                     data=pdf_bytes,
                     file_name=f"UrbanEye_Report_{tracking_id}.pdf",
                     mime="application/pdf",
@@ -162,14 +204,10 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 )
 
         with col2:
-            st.markdown(f"**📧 Target Dept:** `{target_dept_email}`")
-            st.markdown(f"**👤 CC (Officer):** `{officer_email}`")
-            
             if st.button("📧 Send via Email", use_container_width=True):
                 with st.spinner("Sending official report via email..."):
                     try:
                         from utils.email_sender import send_email_with_pdf
-                        
                         success, message = send_email_with_pdf(
                             sender_email=officer_email,
                             target_department_email=target_dept_email,
@@ -178,57 +216,11 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                             user_details=user_details,
                             counts=counts
                         )
-                        
                         if success:
                             st.success(f"✅ {message}")
                         else:
                             st.error(f"❌ {message}")
-                            
                     except Exception as mail_err:
                         st.error(f"❌ Email sending failed: {str(mail_err)}")
-
-        with col3:
-            if st.button("🚀 Push to Supabase", use_container_width=True):
-                try:
-                    from database.supabase_client import supabase
-                    
-                    payload = {
-                        "tracking_id": str(tracking_id),
-                        "issue_type": str(detected_hazard_name),
-                        "severity": str(severity_level),
-                        "priority_score": int(score),
-                        "sla_target": str(sla_target),
-                        "status": "Pending",
-                        "assigned_dept": str(assigned_department),
-                        "latitude": lat,
-                        "longitude": lon,
-                        "location_name": str(final_location_name),
-                        "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
-                    }
-                    
-                    success_pushed = False
-                    if supabase is not None:
-                        try:
-                            response = supabase.table("reports").upsert(payload).execute()
-                            success_pushed = True
-                        except Exception as sb_err:
-                            st.warning(f"⚠️ Supabase Cloud upsert warning: {sb_err}")
-
-                    if "incident_ledger" not in st.session_state or not isinstance(st.session_state["incident_ledger"], pd.DataFrame):
-                        st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
-                    
-                    existing_ledger = st.session_state["incident_ledger"]
-                    if tracking_id not in existing_ledger["tracking_id"].values:
-                        new_row_df = pd.DataFrame([payload])
-                        st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
-                    
-                    if success_pushed:
-                        st.success("✅ Synced to Supabase & registered in Tracker!")
-                    else:
-                        st.success("✅ Registered in local tracker ledger successfully!")
-
-                except Exception as e:
-                    st.error("❌ Sync Error Details:")
-                    st.exception(e)
     else:
-        st.info("🔒 Please complete **Step 2 (Confirm Manual Address or Allow Live GPS)** above to unlock PDF download, Email dispatch, and Supabase cloud sync.")
+        st.info("🔒 Please complete **Step 2 (Confirm Location)** above to automatically sync the report and unlock PDF download & Email options.")
