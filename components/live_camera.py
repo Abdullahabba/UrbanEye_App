@@ -69,14 +69,13 @@ def render_live_camera_mode(model_or_conf=None):
 
             return av.VideoFrame.from_ndarray(annotated_img, format="bgr24")
 
-    # Start the WebRTC streamer with Metered.ca TURN Credentials and HD constraints
+    # Start the WebRTC streamer with Metered.ca TURN & Forced Relay Policy
     webrtc_streamer(
         key="urbaneye-live-stream",
         video_transformer_factory=lambda: YOLOVideoTransformer(model),
         rtc_configuration=RTCConfiguration(
             {
                 "iceServers": [
-                    {"urls": ["stun:stun.l.google.com:19302"]},
                     {
                         "urls": [
                             "turn:global.relay.metered.ca:443",
@@ -85,7 +84,8 @@ def render_live_camera_mode(model_or_conf=None):
                         "username": "dec13fdaf07c16be9aa5a658",
                         "credential": "oeVKjF/Q0BMt13lM"
                     }
-                ]
+                ],
+                "iceTransportPolicy": "relay"  # Forces connection through TURN, eliminating timeout/connection errors
             }
         ),
         media_stream_constraints={
