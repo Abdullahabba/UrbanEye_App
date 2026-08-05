@@ -161,7 +161,7 @@ def create_pdf_report(
         pdf.multi_cell(182, 6, safe_summary)
         pdf.ln(4)
 
-        pdf_output = pdf.output()
+        pdf_output = pdf.output(dest='S')
         if isinstance(pdf_output, str):
             return pdf_output.encode("latin-1")
         elif isinstance(pdf_output, bytearray):
@@ -170,96 +170,8 @@ def create_pdf_report(
             return pdf_output
         else:
             return bytes(pdf_output)
+            
     except Exception as e:
-        st.error(f"❌ PDF Generation Error: {e}")
-        return b"%PDF-1.4 Error Buffer"
-
-def load_css():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    css_path = os.path.join(BASE_DIR, "style.css")
-    
-    try:
-        with open(css_path, "r", encoding="utf-8") as f:
-            st.markdown(
-                f"<style>{f.read()}</style>",
-                unsafe_allow_html=True
-            )
-    except FileNotFoundError:
-        pass
-        
-def render_dashboard_page():
-    load_css()
-    
-    initialize_mock_history()
-    user_details = get_user_metadata()
-
-    if "captured_images" not in st.session_state:
-        st.session_state["captured_images"] = []
-
-    with st.sidebar:
-        st.title("👁️ UrbanEye AI")
-        st.caption("Smart City Detection & Tracking")
-        st.divider()
-        st.markdown(f"**👤 Officer:** {user_details.get('username', 'Officer')}")
-        st.caption("🟢 System Status: **Online & Synced**")
-        st.divider()
-
-        st.subheader("🧭 Navigation Menu")
-        current_view = st.radio(
-            "Go To View:", 
-            [
-                "🔍 AI Visual Detection Engine", 
-                "🔎 Public Hazard Tracker", 
-                "🗺️ Interactive Map"
-            ], 
-            key="main_navigation"
-        )
-        st.divider()
-
-        if current_view == "🔍 AI Visual Detection Engine":
-            st.subheader("⚙️ Detector Settings")
-            conf_threshold = st.slider("YOLO Confidence Threshold", 0.1, 1.0, 0.45, step=0.05)
-            st.subheader("📷 Input Media Source")
-            input_mode = st.radio("Select Source Type:", ["🖼️ Single Image", "📂 Batch Processing", "🎥 Video Stream", "📸 Live Camera"], key="input_source_mode")
-        else:
-            conf_threshold, input_mode = 0.45, "🖼️ Single Image"
-
-    if current_view == "🔍 AI Visual Detection Engine":
-        st.title("🔍 AI Inspection Engine")
-        st.caption(f"Active Mode: **{input_mode}** | YOLO Confidence Threshold: `{conf_threshold}`")
-
-        if "current_tracking_id" not in st.session_state:
-            st.session_state["current_tracking_id"] = generate_tracking_id()
-
-        st.divider()
-
-        if input_mode == "🖼️ Single Image":
-            render_single_image_mode(conf_threshold)
-        elif input_mode == "📂 Batch Processing":
-            render_batch_processing_mode(conf_threshold)
-        elif input_mode == "🎥 Video Stream":
-            render_video_stream_mode(conf_threshold)
-        elif input_mode == "📸 Live Camera":
-            render_live_camera_mode(conf_threshold)
-
-        all_evidence_images = st.session_state.get("captured_images", [])
-        if not all_evidence_images and "processed_img" in st.session_state:
-            all_evidence_images = [st.session_state["processed_img"]]
-
-        manual_loc_name = user_details.get("address", "Iqbal Sector, Block AA, Lahore")
-
-        render_dispatch_panel(
-            st.session_state["current_tracking_id"], 
-            manual_loc_name, 
-            user_details, 
-            create_pdf_report
-        )
-
-    elif current_view == "🔎 Public Hazard Tracker":
-        render_report_tracker()
-
-    elif current_view == "🗺️ Interactive Map":
-        render_map_page()
-
-if __name__ == "__main__":
-    render_dashboard_page()
+        import traceback
+        err_msg = traceback.format_exc()
+        st.error(f"❌ Exact PDF Error Traceback:\n```python\n{err_msg}\n
