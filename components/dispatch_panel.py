@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from PIL import Image
+from utils.priority_engine import calculate_priority_score
 
 try:
     from streamlit_geolocation import streamlit_geolocation
@@ -33,6 +34,24 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         summary_text += "- General Municipal Infrastructure Issue\n"
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=100)
+
+    # ⚡ Calculate Dynamic Priority & SLA Assessment
+    assessment = calculate_priority_score(counts)
+    
+    # Display Priority Badge
+    score = assessment["priority_score"]
+    severity_level = assessment["severity"]
+    assigned_department = assessment["assigned_dept"]
+    sla_target = assessment["sla_target"]
+
+    if severity_level == "CRITICAL":
+        st.error(f"🚨 **CRITICAL PRIORITY SCORE: {score}/100** | SLA: {sla_target} | Dept: {assigned_department}")
+    elif severity_level == "HIGH":
+        st.warning(f"⚠️ **HIGH PRIORITY SCORE: {score}/100** | SLA: {sla_target} | Dept: {assigned_department}")
+    else:
+        st.info(f"ℹ️ **STANDARD PRIORITY SCORE: {score}/100** | SLA: {sla_target} | Dept: {assigned_department}")
+
+    st.divider()
 
     # 2️⃣ Step 2: Location Option (Manual Address without coords or Live GPS)
     st.markdown("##### 📍 Step 2: Select Location Method")
@@ -90,9 +109,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
         # Conditionally format summary text based on whether coordinates exist
         if lat is not None and lon is not None:
-            full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat:.4f}, {lon:.4f})\nTracking ID: {tracking_id}"
+            full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat:.4f}, {lon:.4f})\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
         else:
-            full_summary_text = summary_text + f"Location: {final_location_name} (Manual Entry - No GPS)\nTracking ID: {tracking_id}"
+            full_summary_text = summary_text + f"Location: {final_location_name} (Manual Entry - No GPS)\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
 
         # Gather all captured/detected evidence images
         raw_images = st.session_state.get("captured_images", [])
@@ -107,8 +126,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 all_images.append(img)
 
         detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
-        severity_level = "HIGH" if counts and any(v > 2 for v in counts.values()) else "MEDIUM"
-        assigned_department = "Road Maintenance"
 
         # Generate PDF Bytes with converted images
         pdf_bytes = None
@@ -175,7 +192,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                         "tracking_id": str(tracking_id),
                         "issue_type": str(detected_hazard_name),
                         "severity": str(severity_level),
-                        "sla_target": "12 Hours",
+                        "priority_score": int(score),
+                        "sla_target": str(sla_target),
                         "status": "Pending",
                         "assigned_dept": str(assigned_department),
                         "latitude": lat,  # Will be None if manual address
