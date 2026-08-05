@@ -76,7 +76,7 @@ def save_detection_report(user_id, counts, location, description="", latitude=No
         "location": location.strip() if location else "Location not specified",
         "description": description.strip(),
         "status": "Pending",
-        "latitude": latitude,   # Map view ke liye zaroori
+        "latitude": latitude,  # Map view ke liye zaroori
         "longitude": longitude, # Map view ke liye zaroori
     }
 
