@@ -13,15 +13,12 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
     
-    # 🛡️ Strict Guard Check: Check if valid detections exist (counts are not empty and have > 0 values)
+    # 🛡️ Strict Guard Check: Check if valid detections exist
     counts = st.session_state.get("counts", {})
     has_valid_detections = counts and any(v > 0 for v in counts.values())
 
-    processed_img = st.session_state.get("processed_img")
-    captured_images = st.session_state.get("captured_images", [])
-
     if not has_valid_detections:
-        st.warning("⚠️ **No Hazards Detected:** AI model ne is inspection mein koi valid hazard detect nahi kiya hai. Lihaza dispatch panel aur report generation locked hai.")
+        st.warning("⚠️ **No Hazards Detected:** AI model ne is inspection mein koi valid hazard detect nahi kiya hai. Lihaza dispatch panel locked hai.")
         return
 
     st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location $\rightarrow$ Step 3: Automatic Dispatch & Reports.")
@@ -33,8 +30,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.session_state["selected_lon"] = None
     if "selected_loc_name" not in st.session_state:
         st.session_state["selected_loc_name"] = manual_loc_name
-    if "location_confirmed" not in st.session_state:
-        st.session_state["location_confirmed"] = False
 
     # 1️⃣ Step 1: Detection Summary Displayed First
     summary_text = "Detected Hazards Summary:\n"
@@ -73,22 +68,21 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     location_ready = False
 
     if loc_mode == "Manual Address":
-        manual_input = st.text_input("✍️ Enter Location Name / Address:", value=st.session_state.get("selected_loc_name", manual_loc_name))
-        if st.button("✅ Confirm Manual Location", use_container_width=True):
-            if manual_input and manual_input.strip():
-                st.session_state["selected_loc_name"] = manual_input.strip()
-                st.session_state["selected_lat"] = None
-                st.session_state["selected_lon"] = None
-                st.session_state["location_confirmed"] = True
-                st.success(f"✅ Manual Location Confirmed: `{manual_input.strip()}`")
-                st.rerun()
-            else:
-                st.warning("⚠️ Please enter a valid location name.")
+        manual_input = st.text_input(
+            "✍️ Enter Location Name / Address:", 
+            value=st.session_state.get("selected_loc_name", manual_loc_name),
+            key="manual_address_input_box"
+        )
         
-        # Check if manual mode is active and confirmed
-        if loc_mode == "Manual Address" and st.session_state.get("location_confirmed") and st.session_state.get("selected_lat") is None:
+        # Jaise hi user address likhega, location foran ready ho jaye gi
+        if manual_input and manual_input.strip():
+            st.session_state["selected_loc_name"] = manual_input.strip()
+            st.session_state["selected_lat"] = None
+            st.session_state["selected_lon"] = None
             location_ready = True
-            st.info(f"📌 Current Active Location: **{st.session_state['selected_loc_name']}**")
+            st.success(f"✅ Active Location Set: `{manual_input.strip()}`")
+        else:
+            st.warning("⚠️ Please enter a valid location name to unlock Step 3.")
 
     else:
         st.markdown("🛰️ Click below to fetch your **real browser GPS coordinates**:")
@@ -100,7 +94,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 st.session_state["selected_lat"] = lat
                 st.session_state["selected_lon"] = lon
                 st.session_state["selected_loc_name"] = f"Live GPS (Lat: {lat:.4f}, Lon: {lon:.4f})"
-                st.session_state["location_confirmed"] = True
             
             # Check if GPS coordinates are successfully locked
             if st.session_state.get("selected_lat") is not None and st.session_state.get("selected_lon") is not None:
@@ -109,7 +102,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         else:
             st.error("❌ `streamlit-geolocation` library is not installed.")
 
-    # 3️⃣ Step 3: Automatic Push & Reports Generation (Unlocked strictly when location_ready is True)
+    # 3️⃣ Step 3: Automatic Push & Reports Generation (Unlocked instantly when location is provided)
     if location_ready:
         st.markdown("##### 🚀 Step 3: Reports & Automatic Cloud Sync")
         st.divider()
@@ -134,8 +127,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             elif isinstance(img, Image.Image):
                 all_images.append(img)
 
-        # Fixed dictionary indexing syntax here
-        detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
+        detected_hazard_name = next(iter(counts)) if counts else "General Hazard"
 
         # 🚀 AUTOMATIC BACKGROUND SYNC LOGIC
         auto_push_key = f"auto_pushed_{tracking_id}"
@@ -157,14 +149,12 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                 }
                 
-                # Cloud sync safely
                 if supabase is not None:
                     try:
                         supabase.table("reports").upsert(payload).execute()
                     except Exception:
                         pass
                 
-                # Local session ledger sync safely
                 if "incident_ledger" not in st.session_state or not isinstance(st.session_state["incident_ledger"], pd.DataFrame):
                     st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
                 
@@ -230,4 +220,4 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     except Exception as mail_err:
                         st.error(f"❌ Email sending failed: {str(mail_err)}")
     else:
-        st.info("🔒 Please complete **Step 2 (Confirm Location)** above to automatically sync the report and unlock PDF download & Email options.")
+        st.info("🔒 Please enter a location name or lock your GPS above to unlock **Step 3 (Download PDF & Email)**.")
