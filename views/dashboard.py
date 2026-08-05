@@ -138,7 +138,7 @@ def create_pdf_report(
 
                 image_x = (210 - 130) / 2
                 pdf.image(tmp_path, x=image_x, w=130)
-                    pdf.ln(6)
+                pdf.ln(6)
 
                 if os.path.exists(tmp_path):
                     try:
