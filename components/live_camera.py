@@ -13,7 +13,7 @@ def render_live_camera_mode(model_or_conf=None):
     st.subheader("🔴 Live Auto-Detection & Instant Dispatch Stream")
     
     if not WEBRTC_AVAILABLE:
-        st.error("❌ `streamlit-webrtc` ya `av` library install nahi hai.")
+        st.error("❌ `streamlit-webrtc` ya `av` library install nahi hai. Baraye meharbani `requirements.txt` check karein.")
         return
 
     # Safely fetch model from arguments or session state
@@ -69,17 +69,23 @@ def render_live_camera_mode(model_or_conf=None):
 
             return av.VideoFrame.from_ndarray(annotated_img, format="bgr24")
 
-    # Start the WebRTC streamer
+    # Start the WebRTC streamer with Multiple Public STUN Servers and HD constraints
     webrtc_streamer(
         key="urbaneye-live-stream",
         video_transformer_factory=lambda: YOLOVideoTransformer(model),
         rtc_configuration=RTCConfiguration(
-            {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+            {
+                "iceServers": [
+                    {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]},
+                    {"urls": ["stun:stun.stunprotocol.org:3478"]},
+                    {"urls": ["stun:stun.services.mozilla.com"]}
+                ]
+            }
         ),
         media_stream_constraints={
             "video": {
-                "width": {"ideal": 1280},
-                "height": {"ideal": 720},
+                "width": {"ideal": 1280, "max": 1920},
+                "height": {"ideal": 720, "max": 1080},
             },
             "audio": False
         },
