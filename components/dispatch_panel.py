@@ -12,6 +12,16 @@ except ImportError:
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
+    
+    # 🛡️ Guard Check: Agar koi detection run nahi hui ya image upload nahi hui, toh panel lock rakhein
+    counts = st.session_state.get("counts", {})
+    processed_img = st.session_state.get("processed_img")
+    captured_images = st.session_state.get("captured_images", [])
+
+    if not counts and processed_img is None and not captured_images:
+        st.info("💡 **Awaiting Inspection:** Please upload an image, video, or use the live camera and run AI detection first to generate the dispatch summary.")
+        return
+
     st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location (Manual without coordinates or Live GPS) $\rightarrow$ Step 3: Dispatch Reports & Sync.")
 
     # Initialize session state variables for location
@@ -25,7 +35,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.session_state["location_confirmed"] = False
 
     # 1️⃣ Step 1: Detection Summary Displayed First
-    counts = st.session_state.get("counts", {})
     summary_text = "Detected Hazards Summary:\n"
     if counts:
         for k, v in counts.items():
@@ -96,7 +105,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 location_ready = True
                 st.success(f"✅ Live GPS Locked! Lat: `{st.session_state['selected_lat']:.4f}`, Lon: `{st.session_state['selected_lon']:.4f}`")
         else:
-            st.error("❌ `streamlit-geolocation` library is not installed. Run `pip install streamlit-geolocation` in your terminal.")
+            st.error("❌ `streamlit-geolocation` library is not installed.")
 
     # 3️⃣ Step 3: Actions (PDF, Email, Supabase Push) - Unlocked ONLY after location is confirmed
     if location_ready or st.session_state["location_confirmed"]:
@@ -107,13 +116,11 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         lat = st.session_state["selected_lat"]
         lon = st.session_state["selected_lon"]
 
-        # Conditionally format summary text based on whether coordinates exist
         if lat is not None and lon is not None:
             full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat:.4f}, {lon:.4f})\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
         else:
             full_summary_text = summary_text + f"Location: {final_location_name} (Manual Entry - No GPS)\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
 
-        # Gather all captured/detected evidence images
         raw_images = st.session_state.get("captured_images", [])
         if not raw_images and "processed_img" in st.session_state:
             raw_images = [st.session_state["processed_img"]]
@@ -127,7 +134,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
         detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
 
-        # Generate PDF Bytes with converted images
         pdf_bytes = None
         if create_pdf_report_func:
             try:
@@ -178,8 +184,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                         else:
                             st.error(f"❌ {message}")
                             
-                    except ImportError:
-                        st.error("❌ `utils.email_sender` module not found. Please ensure the file exists.")
                     except Exception as mail_err:
                         st.error(f"❌ Email sending failed: {str(mail_err)}")
 
@@ -196,8 +200,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                         "sla_target": str(sla_target),
                         "status": "Pending",
                         "assigned_dept": str(assigned_department),
-                        "latitude": lat,  # Will be None if manual address
-                        "longitude": lon, # Will be None if manual address
+                        "latitude": lat,
+                        "longitude": lon,
                         "location_name": str(final_location_name),
                         "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                     }
@@ -209,18 +213,11 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                             success_pushed = True
                         except Exception as sb_err:
                             st.warning(f"⚠️ Supabase Cloud upsert warning: {sb_err}")
-                    else:
-                        st.info("ℹ️ Supabase client is not initialized. Saving to local session ledger.")
 
                     if "incident_ledger" not in st.session_state or not isinstance(st.session_state["incident_ledger"], pd.DataFrame):
                         st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
                     
                     existing_ledger = st.session_state["incident_ledger"]
-                    
-                    if "tracking_id" not in existing_ledger.columns:
-                        st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
-                        existing_ledger = st.session_state["incident_ledger"]
-
                     if tracking_id not in existing_ledger["tracking_id"].values:
                         new_row_df = pd.DataFrame([payload])
                         st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
