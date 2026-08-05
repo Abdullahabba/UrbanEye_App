@@ -1,3 +1,4 @@
+import datetime
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -70,9 +71,13 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     # Step 1: Detection Summary
     summary_text = f"Tracking ID: {tracking_id}\nDetected Hazards Summary:\n"
+    hazard_types_list = []
     for k, v in counts.items():
         if v > 0:
             summary_text += f"- {k.capitalize()}: {v}\n"
+            hazard_types_list.append(f"{k.capitalize()} ({v})")
+    
+    main_hazard_str = ", ".join(hazard_types_list) if hazard_types_list else "Municipal Hazard"
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=110)
 
@@ -126,6 +131,24 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         else:
             st.error("❌ `streamlit-geolocation` library is not installed.")
 
+    # Helper function to auto-save report to user history
+    def record_report_to_history(rep_id, rep_hazard, rep_loc, rep_score, rep_sev, rep_status):
+        if "hazard_history" not in st.session_state:
+            st.session_state["hazard_history"] = []
+        
+        # Check if this tracking ID already exists to avoid duplicates
+        existing_ids = [item.get("id") for item in st.session_state["hazard_history"]]
+        if rep_id not in existing_ids:
+            new_entry = {
+                "id": rep_id,
+                "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "hazard": rep_hazard,
+                "location": rep_loc,
+                "severity": f"{rep_sev} ({rep_score}/100)",
+                "status": rep_status
+            }
+            st.session_state["hazard_history"].insert(0, new_entry)
+
     # Step 3: Reports & Actions
     if location_ready:
         st.markdown("##### 🚀 Step 3: Reports & Actions Unlocked")
@@ -165,13 +188,23 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
         with col1:
             if pdf_bytes:
-                st.download_button(
+                # When PDF is downloaded, we save it as a submitted report in history
+                download_clicked = st.download_button(
                     label="📥 Download PDF Report",
                     data=pdf_bytes,
                     file_name=f"UrbanEye_Report_{tracking_id}.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
+                if download_clicked:
+                    record_report_to_history(
+                        rep_id=tracking_id,
+                        rep_hazard=main_hazard_str,
+                        rep_loc=final_location_name,
+                        rep_score=score,
+                        rep_sev=severity_level,
+                        rep_status="Downloaded / Saved"
+                    )
             else:
                 st.warning("⚠️ PDF bytes are empty/None.")
 
@@ -189,6 +222,15 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                             counts=counts
                         )
                         if success:
+                            # Save to history when successfully emailed/dispatched
+                            record_report_to_history(
+                                rep_id=tracking_id,
+                                rep_hazard=main_hazard_str,
+                                rep_loc=final_location_name,
+                                rep_score=score,
+                                rep_sev=severity_level,
+                                rep_status="Dispatched / Emailed"
+                            )
                             st.success(f"✅ {message}")
                         else:
                             st.error(f"❌ {message}")
