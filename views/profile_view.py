@@ -43,13 +43,9 @@ def render_profile_page(user_details: dict):
         }
     ]
 
-    # Combine live session history with defaults if session history is empty
-    if not history:
-        display_list = default_reports
-    else:
-        display_list = history
+    display_list = history if history else default_reports
 
-    # Render each report card cleanly
+    # Render each report card cleanly using native Streamlit containers
     for item in display_list:
         rep_id = item.get('id') or item.get('tracking_id') or "URB-2026-XXX"
         rep_date = item.get('date') or item.get('timestamp') or "2026-08-06"
@@ -58,13 +54,13 @@ def render_profile_page(user_details: dict):
         rep_sev = item.get('severity') or item.get('score') or "Medium"
         rep_status = item.get('status', 'Dispatched / Pending')
 
-        st.markdown(f"""
-        <div style="padding: 15px; border-radius: 8px; border: 1px solid #d0d7de; margin-bottom: 12px; background-color: #f8f9fa;">
-            <b>Tracking ID:</b> {rep_id} &nbsp;|&nbsp; 
-            <b>Date:</b> {rep_date}<br>
-            <b>Hazard Type:</b> {rep_hazard} &nbsp;|&nbsp; 
-            <b>Severity Score:</b> {rep_sev}<br>
-            <b>Location:</b> {rep_loc}<br>
-            <b>Status:</b> <span style="color: #0077b6; font-weight: bold;">{rep_status}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container(border=True):
+            c1, c2 = st.columns([3, 1])
+            with c1:
+                st.markdown(f"**Tracking ID:** `{rep_id}`")
+                st.markdown(f"**Hazard Type:** {rep_hazard}")
+                st.markdown(f"**Location:** {rep_loc}")
+            with c2:
+                st.markdown(f"**Date:** {rep_date}")
+                st.markdown(f"**Severity:** {rep_sev}")
+                st.markdown(f"**Status:** :blue[{rep_status}]")
