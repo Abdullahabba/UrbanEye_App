@@ -13,7 +13,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
     
-    # 🛡️ Strict Guard Check: Check if valid detections exist (counts are not empty and have > 0 values)
+    # 🛡️ Strict Guard Check: Check if valid detections exist
     counts = st.session_state.get("counts", {})
     has_valid_detections = counts and any(v > 0 for v in counts.values())
 
@@ -66,7 +66,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     loc_mode = st.radio(
         "Choose Location Mode",
         ["Manual Address", "Automatic Live GPS"],
-        horizontal=True
+        horizontal=True,
+        key="dispatch_loc_mode"
     )
 
     location_ready = False
@@ -84,7 +85,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             else:
                 st.warning("⚠️ Please enter a valid location name.")
         
-        if st.session_state["location_confirmed"] and loc_mode == "Manual Address":
+        # Check if manual mode is active and confirmed
+        if loc_mode == "Manual Address" and st.session_state.get("location_confirmed") and st.session_state.get("selected_lat") is None:
             location_ready = True
             st.info(f"📌 Current Active Location: **{st.session_state['selected_loc_name']}**")
 
@@ -100,14 +102,15 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 st.session_state["selected_loc_name"] = f"Live GPS (Lat: {lat:.4f}, Lon: {lon:.4f})"
                 st.session_state["location_confirmed"] = True
             
-            if st.session_state["location_confirmed"] and st.session_state["selected_lat"] is not None:
+            # Check if GPS coordinates are successfully locked
+            if st.session_state.get("selected_lat") is not None and st.session_state.get("selected_lon") is not None:
                 location_ready = True
                 st.success(f"✅ Live GPS Locked! Lat: `{st.session_state['selected_lat']:.4f}`, Lon: `{st.session_state['selected_lon']:.4f}`")
         else:
             st.error("❌ `streamlit-geolocation` library is not installed.")
 
-    # 3️⃣ Step 3: Automatic Push & Reports Generation (Unlocked once location is confirmed)
-    if location_ready or st.session_state["location_confirmed"]:
+    # 3️⃣ Step 3: Automatic Push & Reports Generation (Unlocked strictly when location_ready is True)
+    if location_ready:
         st.markdown("##### 🚀 Step 3: Reports & Automatic Cloud Sync")
         st.divider()
 
@@ -131,7 +134,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             elif isinstance(img, Image.Image):
                 all_images.append(img)
 
-        detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
+        detected_hazard_name = list(counts.keys()[0]) if counts else "General Hazard"
+        if counts:
+            detected_hazard_name = list(counts.keys())[0]
 
         # 🚀 AUTOMATIC BACKGROUND SYNC LOGIC
         auto_push_key = f"auto_pushed_{tracking_id}"
