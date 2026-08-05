@@ -24,7 +24,7 @@ except ImportError:
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     
-    # Header with Instant Manual Reset Button
+    # Header with Reset Button
     col_title, col_btn = st.columns([3, 1])
     with col_title:
         st.subheader("📤 Dispatch & Verification Panel")
@@ -37,7 +37,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             st.session_state.pop("selected_lon", None)
             st.rerun()
     
-    # Check if input source mode changed to clear stale single-image/video state
+    # Check if input source mode changed
     current_mode = st.session_state.get("input_source_mode", "🖼️ Single Image")
     last_active_mode = st.session_state.get("_last_active_input_mode", current_mode)
 
@@ -51,12 +51,12 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     # ==========================================
     # STEP 1: AI DETECTION & DISPLAY FIRST
     # ==========================================
-    st.markdown("##### 🔍 Step 1: AI Hazard Detection")
+    st.markdown("##### 🔍 Step 1: AI Hazard Detection Summary")
     counts = st.session_state.get("counts", {})
     has_valid_detections = counts and any(v > 0 for v in counts.values())
 
     if not has_valid_detections:
-        st.warning("⚠️ **Panel Locked:** Please run AI Detection first to detect hazards before proceeding to location and dispatch.")
+        st.warning("⚠️ **Panel Locked:** Please run AI Detection first to detect hazards before proceeding.")
         return
 
     # Show Detections Summary
@@ -68,7 +68,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             hazard_types_list.append(f"{k.capitalize()} ({v})")
     
     main_hazard_str = ", ".join(hazard_types_list) if hazard_types_list else "Municipal Hazard"
-    st.text_area("📋 Generated Hazard Detection Summary", value=summary_text, height=100, disabled=True)
+    st.text_area("📋 AI Detection Results", value=summary_text, height=100, disabled=True)
 
     st.divider()
 
@@ -106,7 +106,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             location_ready = True
             st.success(f"✅ Location Locked: `{manual_input.strip()}`")
         else:
-            st.warning("⚠️ Please enter a valid location name to proceed.")
+            st.warning("⚠️ Please enter a valid location name to unlock the dispatch panel.")
     else:
         st.markdown("🛰️ Click below to fetch your **real browser GPS coordinates**:")
         if streamlit_geolocation is not None:
@@ -122,105 +122,109 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         else:
             st.error("❌ `streamlit-geolocation` library is not installed.")
 
+    # Agar location ready nahi hai, toh yahin ruk jayein ga taake dispatch panel location ke nichy hi show ho
     if not location_ready:
-        st.info("🔒 **Waiting for Location:** Please provide or select a location above to generate the report and push to database.")
+        st.info("🔒 **Dispatch Panel Waiting:** Please provide or select a location above to unlock the dispatch panel and database sync.")
         return
 
     st.divider()
 
     # =========================================================================
-    # STEP 3: REPORT GENERATION, SUPABASE PUSH & DISPATCH PANEL SHOW
+    # STEP 3: DISPATCH PANEL & SUPABASE PUSH (SHOWN RIGHT BELOW LOCATION)
     # =========================================================================
-    st.markdown(f"### 🏷️ Incident Tracking ID: `{tracking_id}`")
-
-    assessment = calculate_priority_score(counts)
-    score = assessment["priority_score"]
-    severity_level = assessment["severity"]
-    assigned_department = assessment["assigned_dept"]
-    sla_target = assessment["sla_target"]
-
-    st.info(f"ℹ️ **PRIORITY SCORE: {score}/100** | Severity: {severity_level} | Dept: {assigned_department}")
-
-    final_location_name = st.session_state["selected_loc_name"]
-    lat = st.session_state["selected_lat"]
-    lon = st.session_state["selected_lon"]
-
-    user_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
-    timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    # 1. Save locally in Session State
-    if "hazard_history" not in st.session_state:
-        st.session_state["hazard_history"] = []
+    st.markdown("##### 🚀 Step 3: Dispatch Panel & Database Sync")
     
-    new_entry = {
-        "tracking_id": tracking_id,
-        "id": tracking_id,
-        "hazard": main_hazard_str,
-        "hazard_type": main_hazard_str,
-        "issue_type": main_hazard_str,
-        "location_name": final_location_name,
-        "location": final_location_name,
-        "severity": f"{severity_level} ({score}/100)",
-        "status": "Dispatched / Active",
-        "email": user_email,
-        "timestamp": timestamp_str,
-        "created_at": timestamp_str,
-        "latitude": lat if lat is not None else 31.5204,
-        "longitude": lon if lon is not None else 74.3587,
-        "assigned_dept": assigned_department,
-        "sla_target": sla_target
-    }
-    
-    existing_ids = [item.get("tracking_id") or item.get("id") for item in st.session_state["hazard_history"]]
-    if tracking_id not in existing_ids:
-        st.session_state["hazard_history"].insert(0, new_entry)
+    with st.container(border=True):
+        st.markdown(f"### 🏷️ Incident Tracking ID: `{tracking_id}`")
 
-    # 2. Automatically Push / Upsert to Supabase Database
-    payload = {
-        "tracking_id": tracking_id,
-        "hazard": main_hazard_str,
-        "issue_type": main_hazard_str,
-        "severity": f"{severity_level} ({score}/100)",
-        "status": "Dispatched / Active",
-        "location_name": final_location_name,
-        "email": user_email,
-        "timestamp": timestamp_str,
-        "latitude": lat if lat is not None else 31.5204,
-        "longitude": lon if lon is not None else 74.3587,
-        "assigned_dept": assigned_department,
-        "sla_target": sla_target
-    }
+        assessment = calculate_priority_score(counts)
+        score = assessment["priority_score"]
+        severity_level = assessment["severity"]
+        assigned_department = assessment["assigned_dept"]
+        sla_target = assessment["sla_target"]
 
-    supabase_success = False
-    error_logs = []
+        st.info(f"ℹ️ **PRIORITY SCORE: {score}/100** | Severity: {severity_level} | Dept: {assigned_department}")
 
-    try:
-        from supabase import create_client
-        supabase_url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase", {}).get("url")
-        supabase_key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase", {}).get("key")
+        final_location_name = st.session_state["selected_loc_name"]
+        lat = st.session_state["selected_lat"]
+        lon = st.session_state["selected_lon"]
+
+        user_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
+        timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        # 1. Save locally in Session State
+        if "hazard_history" not in st.session_state:
+            st.session_state["hazard_history"] = []
         
-        if supabase_url and supabase_key:
-            supabase = create_client(supabase_url, supabase_key)
-            supabase.table("reports").upsert(payload, on_conflict="tracking_id").execute()
-            supabase_success = True
-        else:
-            error_logs.append("Supabase URL or Key missing in secrets.")
-    except Exception as e1:
-        error_logs.append(f"Method 1 Error: {str(e1)}")
+        new_entry = {
+            "tracking_id": tracking_id,
+            "id": tracking_id,
+            "hazard": main_hazard_str,
+            "hazard_type": main_hazard_str,
+            "issue_type": main_hazard_str,
+            "location_name": final_location_name,
+            "location": final_location_name,
+            "severity": f"{severity_level} ({score}/100)",
+            "status": "Dispatched / Active",
+            "email": user_email,
+            "timestamp": timestamp_str,
+            "created_at": timestamp_str,
+            "latitude": lat if lat is not None else 31.5204,
+            "longitude": lon if lon is not None else 74.3587,
+            "assigned_dept": assigned_department,
+            "sla_target": sla_target
+        }
+        
+        existing_ids = [item.get("tracking_id") or item.get("id") for item in st.session_state["hazard_history"]]
+        if tracking_id not in existing_ids:
+            st.session_state["hazard_history"].insert(0, new_entry)
+
+        # 2. Automatically Push / Upsert to Supabase Database
+        payload = {
+            "tracking_id": tracking_id,
+            "hazard": main_hazard_str,
+            "issue_type": main_hazard_str,
+            "severity": f"{severity_level} ({score}/100)",
+            "status": "Dispatched / Active",
+            "location_name": final_location_name,
+            "email": user_email,
+            "timestamp": timestamp_str,
+            "latitude": lat if lat is not None else 31.5204,
+            "longitude": lon if lon is not None else 74.3587,
+            "assigned_dept": assigned_department,
+            "sla_target": sla_target
+        }
+
+        supabase_success = False
+        error_logs = []
+
         try:
-            from database.supabase_client import supabase as sb_client
-            if sb_client:
-                sb_client.table("reports").upsert(payload, on_conflict="tracking_id").execute()
+            from supabase import create_client
+            supabase_url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase", {}).get("url")
+            supabase_key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase", {}).get("key")
+            
+            if supabase_url and supabase_key:
+                supabase = create_client(supabase_url, supabase_key)
+                supabase.table("reports").upsert(payload, on_conflict="tracking_id").execute()
                 supabase_success = True
             else:
-                error_logs.append("database.supabase_client is None.")
-        except Exception as e2:
-            error_logs.append(f"Method 2 Error: {str(e2)}")
+                error_logs.append("Supabase URL or Key missing in secrets.")
+        except Exception as e1:
+            error_logs.append(f"Method 1 Error: {str(e1)}")
+            try:
+                from database.supabase_client import supabase as sb_client
+                if sb_client:
+                    sb_client.table("reports").upsert(payload, on_conflict="tracking_id").execute()
+                    supabase_success = True
+                else:
+                    error_logs.append("database.supabase_client is None.")
+            except Exception as e2:
+                error_logs.append(f"Method 2 Error: {str(e2)}")
 
-    if supabase_success:
-        st.success("✅ Report generated, displayed, & successfully synchronized with Supabase cloud database!")
-    else:
-        st.error(f"❌ Supabase Push Failed! Reasons: {' | '.join(error_logs)}")
+        if supabase_success:
+            st.success("✅ Dispatch Panel Active & Successfully synchronized with Supabase cloud database!")
+        else:
+            st.error(f"❌ Supabase Push Failed! Reasons: {' | '.join(error_logs)}")
 
     st.divider()
 
