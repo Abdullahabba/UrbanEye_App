@@ -67,14 +67,16 @@ def render_video_stream_mode(conf_threshold):
             cv2.putText(proc_frame, f"CONF THRESHOLD: {conf_threshold}", (20, 40), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-            # Safe rendering using use_container_width instead of deprecated use_column_width
+            # Safe rendering using use_container_width
             st_frame.image(proc_frame, caption=f"Live Frame (Frame {frame_count})", use_container_width=True)
 
-            # Capture snapshot option for reports
+            # Capture snapshot option for reports (Safe NumPy Array Check)
             if frame_count % 30 == 0:
                 if "captured_images" not in st.session_state:
                     st.session_state["captured_images"] = []
-                if proc_frame not in st.session_state["captured_images"]:
+                
+                is_duplicate = any(np.array_equal(proc_frame, img) for img in st.session_state["captured_images"])
+                if not is_duplicate and len(st.session_state["captured_images"]) < 10:
                     st.session_state["captured_images"].append(proc_frame)
 
             if total_frames > 0 and isinstance(video_source, str):
