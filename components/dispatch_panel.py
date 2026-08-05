@@ -24,14 +24,14 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.session_state["_last_active_input_mode"] = current_mode
         st.rerun()
 
-    # 🔍 DEBUG: Session state counts check karne ke liye
+    # 🔍 DEBUG: Session state counts check
     counts = st.session_state.get("counts", {})
     st.write(f"🔍 **Debug Info - Current Counts:** `{counts}`")
 
     has_valid_detections = counts and any(v > 0 for v in counts.values())
 
     if not has_valid_detections:
-        st.warning("⚠️ **Panel Locked:** AI model ke paas abhi koi valid detections (`counts`) nahi hain. Pehle uper 'Run AI Detection' / Start analysis button click karein taake hazards detect hon.")
+        st.warning("⚠️ **Panel Locked:** The AI model currently has no valid detections (`counts`). Please click 'Run AI Detection' or the start analysis button above first to detect hazards.")
         return
 
     st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location $\rightarrow$ Step 3: Automatic Dispatch & Reports.")
@@ -47,7 +47,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     # 🏷️ Display Tracking ID prominently on the panel
     st.markdown(f"### 🏷️ Incident Tracking ID: `{tracking_id}`")
 
-    # 1️⃣ Step 1: Detection Summary (Tracking ID ke sath)
+    # 1️⃣ Step 1: Detection Summary
     summary_text = f"Tracking ID: {tracking_id}\nDetected Hazards Summary:\n"
     for k, v in counts.items():
         if v > 0:
