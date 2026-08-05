@@ -222,7 +222,15 @@ def load_css():
             )
     except FileNotFoundError:
         pass
-        
+
+# 🔄 Callback to reset panel when input mode switches
+def handle_input_mode_change():
+    st.session_state["counts"] = {}
+    st.session_state.pop("processed_img", None)
+    st.session_state["captured_images"] = []
+    st.session_state.pop("current_tracking_id", None)
+    st.session_state["stream_active"] = False
+
 def render_dashboard_page():
     load_css()
     
@@ -231,6 +239,8 @@ def render_dashboard_page():
 
     if "captured_images" not in st.session_state:
         st.session_state["captured_images"] = []
+    if "counts" not in st.session_state:
+        st.session_state["counts"] = {}
 
     with st.sidebar:
         st.title("👁️ UrbanEye AI")
@@ -256,7 +266,12 @@ def render_dashboard_page():
             st.subheader("⚙️ Detector Settings")
             conf_threshold = st.slider("YOLO Confidence Threshold", 0.1, 1.0, 0.45, step=0.05)
             st.subheader("📷 Input Media Source")
-            input_mode = st.radio("Select Source Type:", ["🖼️ Single Image", "📂 Batch Processing", "🎥 Video Stream", "📸 Live Camera"], key="input_source_mode")
+            input_mode = st.radio(
+                "Select Source Type:", 
+                ["🖼️ Single Image", "📂 Batch Processing", "🎥 Video Stream", "📸 Live Camera"], 
+                key="input_source_mode",
+                on_change=handle_input_mode_change
+            )
         else:
             conf_threshold, input_mode = 0.45, "🖼️ Single Image"
 
@@ -264,7 +279,7 @@ def render_dashboard_page():
         st.title("🔍 AI Inspection Engine")
         st.caption(f"Active Mode: **{input_mode}** | YOLO Confidence Threshold: `{conf_threshold}`")
 
-        if "current_tracking_id" not in st.session_state:
+        if "current_tracking_id" not in st.session_state or not st.session_state["current_tracking_id"]:
             st.session_state["current_tracking_id"] = generate_tracking_id()
 
         st.divider()
