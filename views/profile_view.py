@@ -38,7 +38,7 @@ def render_profile_page(user_details: dict):
                     user_details['phone'] = new_phone
                     user_details['address'] = new_address
 
-                # 2. Push/Upsert changes to Supabase Database with full error tracking
+                # 2. Directly call and verify secrets inside the profile view
                 payload = {
                     "email": user_email,
                     "username": new_name,
@@ -48,16 +48,17 @@ def render_profile_page(user_details: dict):
 
                 try:
                     from supabase import create_client
+                    
+                    # Calling st.secrets directly here
                     supabase_url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase", {}).get("url")
                     supabase_key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase", {}).get("key")
                     
-                    if supabase_url and supabase_key:
+                    if not supabase_url or not supabase_key:
+                        st.error("❌ Supabase credentials (`SUPABASE_URL` or `SUPABASE_KEY`) are missing from secrets!")
+                    else:
                         supabase = create_client(supabase_url, supabase_key)
-                        # Agar table ka naam 'profiles' nahi hai, toh yahan error aayega
                         response = supabase.table("profiles").upsert(payload, on_conflict="email").execute()
                         st.success("✅ Profile successfully updated and synced with Supabase database!")
                         st.rerun()
-                    else:
-                        st.error("❌ Supabase URL or Key missing in Streamlit secrets.")
                 except Exception as e:
-                    st.error(f"❌ Supabase Sync Failed. Exact Error: {str(e)}")
+                    st.error(f"❌ Supabase Sync Failed. Error: {str(e)}")
