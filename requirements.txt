@@ -9,4 +9,5 @@ pillow
 streamlit-geolocation
 reportlab
 fpdf2
-pip install streamlit-webrtc av
+streamlit-webrtc
+av
