@@ -1,4 +1,5 @@
 import random
+import os
 import streamlit as st
 from utils.metadata import get_user_metadata
 from utils.helpers import initialize_mock_history, generate_tracking_id
@@ -10,14 +11,6 @@ from components.batch_processing import render_batch_processing_mode
 from components.video_stream import render_video_stream_mode
 from components.live_camera import render_live_camera_mode
 from components.dispatch_panel import render_dispatch_panel
-
-# 1. Page Configuration (Wide Layout for Premium CSS Dashboard)
-st.set_page_config(
-    page_title="UrbanEye AI - Dashboard",
-    page_icon="👁️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Report Module Import Fallback
 create_pdf_report = None
@@ -36,8 +29,6 @@ for mod in [
     except (ModuleNotFoundError, AttributeError):
         continue
 
-import os
-
 def load_css():
     # Python script ki apni location se path nikalna
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -53,7 +44,7 @@ def load_css():
         st.error(f"⚠️ 'style.css' nahi mili! Expected path: {css_path}")
         
 def render_dashboard_page():
-    # 2. LOAD CSS CALL (FIX: Pehle ye missing tha)
+    # Load CSS Call
     load_css()
     
     initialize_mock_history()
