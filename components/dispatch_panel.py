@@ -133,7 +133,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
         detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
 
-        # 🚀 AUTOMATIC SUPABASE SYNC LOGIC (Executes once per tracking ID)
+        # 🚀 AUTOMATIC SUPABASE SYNC LOGIC (Background Auto-Push)
         auto_push_key = f"auto_pushed_{tracking_id}"
         if not st.session_state.get(auto_push_key, False):
             try:
@@ -158,7 +158,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     try:
                         supabase.table("reports").upsert(payload).execute()
                     except Exception as sb_err:
-                        pass # Fail silently or fallback to local ledger
+                        pass
                 
                 # Local session ledger sync
                 if "incident_ledger" not in st.session_state or not isinstance(st.session_state["incident_ledger"], pd.DataFrame):
@@ -173,7 +173,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 st.toast("✅ Incident automatically synced to Supabase & Tracker!", icon="🚀")
 
             except Exception as e:
-                st.warning(f"⚠️ Auto-sync warning: {e}")
+                pass
 
         # Generate PDF Bytes
         pdf_bytes = None
