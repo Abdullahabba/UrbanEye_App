@@ -56,8 +56,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.warning("⚠️ **Panel Locked:** The AI model currently has no valid detections (`counts`). Please click 'Run AI Detection' or the start analysis button above first to detect hazards.")
         return
 
-    st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location $\rightarrow$ Step 3: Automatic Dispatch & Reports.")
-
     # Initialize session state variables for location
     if "selected_lat" not in st.session_state:
         st.session_state["selected_lat"] = None
@@ -66,33 +64,12 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     if "selected_loc_name" not in st.session_state:
         st.session_state["selected_loc_name"] = manual_loc_name
 
-    # Display Tracking ID prominently on the panel
     st.markdown(f"### 🏷️ Incident Tracking ID: `{tracking_id}`")
 
-    # Step 1: Detection Summary
-    summary_text = f"Tracking ID: {tracking_id}\nDetected Hazards Summary:\n"
-    hazard_types_list = []
-    for k, v in counts.items():
-        if v > 0:
-            summary_text += f"- {k.capitalize()}: {v}\n"
-            hazard_types_list.append(f"{k.capitalize()} ({v})")
-    
-    main_hazard_str = ", ".join(hazard_types_list) if hazard_types_list else "Municipal Hazard"
-
-    st.text_area("📋 Generated Incident Summary", value=summary_text, height=110)
-
-    # Priority Assessment
-    assessment = calculate_priority_score(counts)
-    score = assessment["priority_score"]
-    severity_level = assessment["severity"]
-    assigned_department = assessment["assigned_dept"]
-    sla_target = assessment["sla_target"]
-
-    st.info(f"ℹ️ **PRIORITY SCORE: {score}/100** | Severity: {severity_level} | Dept: {assigned_department}")
-    st.divider()
-
-    # Step 2: Location Option
-    st.markdown("##### 📍 Step 2: Select Location Method")
+    # ==========================================
+    # STEP 1: LOCATION SELECTION (Pehle Location)
+    # ==========================================
+    st.markdown("##### 📍 Step 1: Set Incident Location First")
     loc_mode = st.radio(
         "Choose Location Mode",
         ["Manual Address", "Automatic Live GPS"],
@@ -115,7 +92,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             location_ready = True
             st.success(f"✅ Active Location Set: `{manual_input.strip()}`")
         else:
-            st.warning("⚠️ Please enter a valid location name.")
+            st.warning("⚠️ Please enter a valid location name to unlock the panel.")
     else:
         st.markdown("🛰️ Click below to fetch your **real browser GPS coordinates**:")
         if streamlit_geolocation is not None:
@@ -131,11 +108,46 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         else:
             st.error("❌ `streamlit-geolocation` library is not installed.")
 
+    st.divider()
+
+    # =========================================================================
+    # STEP 2: REST OF THE PANEL (UNLOCKED ONLY AFTER LOCATION IS PROVIDED)
+    # =========================================================================
+    if not location_ready:
+        st.info("🔒 **Dispatch Panel Locked:** Please provide or select a valid location above to unlock the detection summary, priority score, and dispatch actions.")
+        return
+
+    st.success("🔓 **Dispatch Panel Unlocked!** Review details below.")
+
+    # Detection Summary
+    summary_text = f"Tracking ID: {tracking_id}\nDetected Hazards Summary:\n"
+    hazard_types_list = []
+    for k, v in counts.items():
+        if v > 0:
+            summary_text += f"- {k.capitalize()}: {v}\n"
+            hazard_types_list.append(f"{k.capitalize()} ({v})")
+    
+    main_hazard_str = ", ".join(hazard_types_list) if hazard_types_list else "Municipal Hazard"
+
+    st.text_area("📋 Generated Incident Summary", value=summary_text, height=110)
+
+    # Priority Assessment
+    assessment = calculate_priority_score(counts)
+    score = assessment["priority_score"]
+    severity_level = assessment["severity"]
+    assigned_department = assessment["assigned_dept"]
+    sla_target = assessment["sla_target"]
+
+    st.info(f"ℹ️ **PRIORITY SCORE: {score}/100** | Severity: {severity_level} | Dept: {assigned_department}")
+    st.divider()
+
+    final_location_name = st.session_state["selected_loc_name"]
+    lat = st.session_state["selected_lat"]
+    lon = st.session_state["selected_lon"]
+
     # Helper function to save report to Session State and Push to Supabase Database
     def record_report_to_history(rep_id, rep_hazard, rep_loc, rep_score, rep_sev, rep_status):
         user_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
-        lat = st.session_state.get("selected_lat")
-        lon = st.session_state.get("selected_lon")
         timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
         # 1. Save to Session State (Instant Fallback)
@@ -206,88 +218,83 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 pass
 
     # Step 3: Reports & Actions
-    if location_ready:
-        st.markdown("##### 🚀 Step 3: Reports & Actions Unlocked")
-        st.divider()
+    st.markdown("##### 🚀 Step 2: Reports & Actions")
+    st.divider()
 
-        final_location_name = st.session_state["selected_loc_name"]
+    full_summary_text = summary_text + f"Location: {final_location_name}\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
 
-        full_summary_text = summary_text + f"Location: {final_location_name}\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
+    raw_images = st.session_state.get("captured_images", [])
+    if not raw_images and "processed_img" in st.session_state:
+        raw_images = [st.session_state["processed_img"]]
 
-        raw_images = st.session_state.get("captured_images", [])
-        if not raw_images and "processed_img" in st.session_state:
-            raw_images = [st.session_state["processed_img"]]
+    all_images = []
+    for img in raw_images:
+        if isinstance(img, np.ndarray):
+            all_images.append(Image.fromarray(img))
+        elif isinstance(img, Image.Image):
+            all_images.append(img)
 
-        all_images = []
-        for img in raw_images:
-            if isinstance(img, np.ndarray):
-                all_images.append(Image.fromarray(img))
-            elif isinstance(img, Image.Image):
-                all_images.append(img)
+    # Generate PDF Bytes
+    pdf_bytes = None
+    if create_pdf_report_func:
+        try:
+            pdf_bytes = create_pdf_report_func(
+                title=f"Incident Report (ID: {tracking_id})",
+                user_details=user_details,
+                summary_text=full_summary_text,
+                detected_images=all_images
+            )
+        except Exception as e:
+            st.error(f"❌ PDF Generation Crashed: {e}")
 
-        # Generate PDF Bytes
-        pdf_bytes = None
-        if create_pdf_report_func:
-            try:
-                pdf_bytes = create_pdf_report_func(
-                    title=f"Incident Report (ID: {tracking_id})",
-                    user_details=user_details,
-                    summary_text=full_summary_text,
-                    detected_images=all_images
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if pdf_bytes:
+            download_clicked = st.download_button(
+                label="📥 Download PDF Report",
+                data=pdf_bytes,
+                file_name=f"UrbanEye_Report_{tracking_id}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+            if download_clicked:
+                record_report_to_history(
+                    rep_id=tracking_id,
+                    rep_hazard=main_hazard_str,
+                    rep_loc=final_location_name,
+                    rep_score=score,
+                    rep_sev=severity_level,
+                    rep_status="Dispatched / Saved"
                 )
-            except Exception as e:
-                st.error(f"❌ PDF Generation Crashed: {e}")
+                st.success("✅ Report successfully saved and pushed to Supabase database!")
+        else:
+            st.warning("⚠️ PDF bytes are empty/None.")
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            if pdf_bytes:
-                download_clicked = st.download_button(
-                    label="📥 Download PDF Report",
-                    data=pdf_bytes,
-                    file_name=f"UrbanEye_Report_{tracking_id}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-                if download_clicked:
-                    record_report_to_history(
-                        rep_id=tracking_id,
-                        rep_hazard=main_hazard_str,
-                        rep_loc=final_location_name,
-                        rep_score=score,
-                        rep_sev=severity_level,
-                        rep_status="Dispatched / Saved"
+    with col2:
+        if st.button("📧 Send via Email", use_container_width=True):
+            with st.spinner("Sending official report via email..."):
+                try:
+                    from utils.email_sender import send_email_with_pdf
+                    success, message = send_email_with_pdf(
+                        sender_email=user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai",
+                        target_department_email="roads.dept@urbaneye.ai",
+                        pdf_bytes=pdf_bytes,
+                        title=f"Incident Report - ID: {tracking_id}",
+                        user_details=user_details,
+                        counts=counts
                     )
-                    st.success("✅ Report successfully saved and pushed to Supabase database!")
-            else:
-                st.warning("⚠️ PDF bytes are empty/None.")
-
-        with col2:
-            if st.button("📧 Send via Email", use_container_width=True):
-                with st.spinner("Sending official report via email..."):
-                    try:
-                        from utils.email_sender import send_email_with_pdf
-                        success, message = send_email_with_pdf(
-                            sender_email=user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai",
-                            target_department_email="roads.dept@urbaneye.ai",
-                            pdf_bytes=pdf_bytes,
-                            title=f"Incident Report - ID: {tracking_id}",
-                            user_details=user_details,
-                            counts=counts
+                    if success:
+                        record_report_to_history(
+                            rep_id=tracking_id,
+                            rep_hazard=main_hazard_str,
+                            rep_loc=final_location_name,
+                            rep_score=score,
+                            rep_sev=severity_level,
+                            rep_status="Dispatched / Emailed"
                         )
-                        if success:
-                            record_report_to_history(
-                                rep_id=tracking_id,
-                                rep_hazard=main_hazard_str,
-                                rep_loc=final_location_name,
-                                rep_score=score,
-                                rep_sev=severity_level,
-                                rep_status="Dispatched / Emailed"
-                            )
-                            st.success(f"✅ {message} and pushed to Supabase database!")
-                        else:
-                            st.error(f"❌ {message}")
-                    except Exception as mail_err:
-                        st.error(f"❌ Email sending failed: {str(mail_err)}")
-    else:
-        st.info("🔒 Enter a location name above to unlock Step 3.")
+                        st.success(f"✅ {message} and pushed to Supabase database!")
+                    else:
+                        st.error(f"❌ {message}")
+                except Exception as mail_err:
+                    st.error(f"❌ Email sending failed: {str(mail_err)}")
