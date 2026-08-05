@@ -1,18 +1,18 @@
 /*==========================================================
- UrbanEye AI - Premium Dashboard UI
- Part 1 / 3
- Modern Glassmorphism Theme
+ UrbanEye AI - Premium Dashboard UI
+ Part 1 / 3
+ Modern Glassmorphism Theme
 ==========================================================*/
 
 /*=========================
- Google Font
+ Google Font
 =========================*/
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
 
 /*=========================
- Root Variables
+ Root Variables
 =========================*/
 
 :root{
@@ -41,7 +41,7 @@
 
 
 /*=========================
- Global
+ Global
 =========================*/
 
 *{
@@ -67,7 +67,7 @@ color:#FFFFFF;
 
 
 /*=========================
- Main Background
+ Main Background
 =========================*/
 
 .stApp{
@@ -90,7 +90,7 @@ overflow-x:hidden;
 
 
 /*=========================
- Animated Glow
+ Animated Glow
 =========================*/
 
 .stApp::before{
@@ -176,7 +176,7 @@ transform:translate(-120px,-140px);
 
 
 /*=========================
- Hide Streamlit Branding
+ Hide Streamlit Branding
 =========================*/
 
 #MainMenu{
@@ -199,7 +199,7 @@ display:none;
 
 
 /*=========================
- Main Container
+ Main Container
 =========================*/
 
 .main .block-container{
@@ -241,7 +241,7 @@ transform:translateY(0);
 
 
 /*=========================
- Typography
+ Typography
 =========================*/
 
 h1{
@@ -312,7 +312,7 @@ color:white;
 
 
 /*=========================
- Divider
+ Divider
 =========================*/
 
 hr{
@@ -329,7 +329,7 @@ margin:22px 0;
 
 
 /*=========================
- Sidebar
+ Sidebar
 =========================*/
 
 [data-testid="stSidebar"]{
@@ -397,7 +397,7 @@ background:rgba(255,255,255,.04);
 
 
 /*=========================
- Sidebar Radio Buttons
+ Sidebar Radio Buttons
 =========================*/
 
 .stRadio label{
@@ -430,17 +430,21 @@ transform:translateX(5px);
 
 
 /*=========================
- Glass Cards
+ Glass Cards
 =========================*/
 
+/* BAD: Overwrites internal layout structural divs */
+/* div[data-testid="stVerticalBlock"] { ... } */
+
+/* GOOD: Targets custom cards without breaking Streamlit spacing */
 .main [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 24px;
-    padding: 24px;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    box-shadow: var(--shadow);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 24px;
+    padding: 24px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: var(--shadow);
 }
 
 
@@ -481,7 +485,7 @@ box-shadow:
 
 
 /*=========================
- Columns
+ Columns
 =========================*/
 
 [data-testid="column"]{
@@ -492,7 +496,7 @@ padding:10px;
 
 
 /*=========================
- Caption
+ Caption
 =========================*/
 
 [data-testid="stCaptionContainer"]{
@@ -503,7 +507,7 @@ color:#CBD5E1!important;
 
 
 /*=========================
- Markdown
+ Markdown
 =========================*/
 
 .stMarkdown{
@@ -514,7 +518,7 @@ color:white!important;
 
 
 /*=========================
- Links
+ Links
 =========================*/
 
 a{
@@ -535,7 +539,7 @@ color:#93C5FD;
 
 
 /*=========================
- Scrollbar
+ Scrollbar
 =========================*/
 
 ::-webkit-scrollbar{
@@ -576,7 +580,7 @@ background:#60A5FA;
 
 
 /*=========================
- Selection
+ Selection
 =========================*/
 
 ::selection{
@@ -589,7 +593,7 @@ color:white;
 
 
 /*=========================
- Smooth Transition
+ Smooth Transition
 =========================*/
 
 *{
@@ -607,13 +611,16 @@ box-shadow .3s,
 transform .3s;
 
 }
-
-
 /*==========================================================
- UrbanEye AI - Premium Dashboard UI
- Part 2 / 3
- Forms • Uploaders • Buttons • Images • Dispatch Panel
+ UrbanEye AI - Premium Dashboard UI
+ Part 2 / 3
+ Forms • Uploaders • Buttons • Images • Dispatch Panel
 ==========================================================*/
+
+
+/*=========================
+ Text Inputs
+=========================*/
 
 .stTextInput{
 
@@ -671,6 +678,10 @@ opacity:1;
 }
 
 
+/*=========================
+ Text Area
+=========================*/
+
 textarea{
 
 background:rgba(255,255,255,.95)!important;
@@ -694,6 +705,10 @@ box-shadow:0 0 0 4px rgba(59,130,246,.15)!important;
 }
 
 
+/*=========================
+ Number Inputs
+=========================*/
+
 input[type="number"]{
 
 background:#FFFFFF!important;
@@ -702,6 +717,10 @@ color:#111827!important;
 
 }
 
+
+/*=========================
+ Password Inputs
+=========================*/
 
 input[type="password"]{
 
@@ -715,6 +734,10 @@ letter-spacing:2px;
 
 }
 
+
+/*=========================
+ Slider
+=========================*/
 
 .stSlider{
 
@@ -730,6 +753,10 @@ color:white!important;
 
 }
 
+
+/*=========================
+ File Uploader
+=========================*/
 
 [data-testid="stFileUploader"]{
 
@@ -756,6 +783,10 @@ transform:translateY(-2px);
 }
 
 
+/*=========================
+ Uploaded File Box
+=========================*/
+
 [data-testid="stFileUploaderFile"]{
 
 background:rgba(255,255,255,.10)!important;
@@ -768,6 +799,10 @@ color:white!important;
 
 }
 
+
+/*=========================
+ Buttons
+=========================*/
 
 .stButton{
 
@@ -848,6 +883,8 @@ transform:scale(.98);
 }
 
 
+/* Ripple */
+
 .stButton>button::after{
 
 content:"";
@@ -882,6 +919,10 @@ opacity:0;
 
 }
 
+
+/*=========================
+ Download Button
+=========================*/
 
 .stDownloadButton>button{
 
@@ -922,6 +963,10 @@ transform:translateY(-3px);
 }
 
 
+/*=========================
+ Checkbox
+=========================*/
+
 .stCheckbox{
 
 margin-top:10px;
@@ -937,6 +982,10 @@ color:white!important;
 }
 
 
+/*=========================
+ Radio Buttons
+=========================*/
+
 .stRadio{
 
 padding:8px;
@@ -949,6 +998,10 @@ color:white!important;
 
 }
 
+
+/*=========================
+ Images
+=========================*/
 
 img{
 
@@ -979,6 +1032,10 @@ transform:scale(1.02);
 }
 
 
+/*=========================
+ Camera
+=========================*/
+
 [data-testid="stCameraInput"]{
 
 border-radius:18px;
@@ -992,6 +1049,10 @@ background:rgba(255,255,255,.04);
 }
 
 
+/*=========================
+ Video
+=========================*/
+
 video{
 
 border-radius:18px;
@@ -1003,12 +1064,20 @@ box-shadow:
 }
 
 
+/*=========================
+ Spinner
+=========================*/
+
 [data-testid="stSpinner"]{
 
 color:#60A5FA!important;
 
 }
 
+
+/*=========================
+ Success
+=========================*/
 
 .stSuccess{
 
@@ -1023,6 +1092,10 @@ color:white!important;
 }
 
 
+/*=========================
+ Error
+=========================*/
+
 .stError{
 
 background:rgba(239,68,68,.16)!important;
@@ -1035,6 +1108,10 @@ color:white!important;
 
 }
 
+
+/*=========================
+ Warning
+=========================*/
 
 .stWarning{
 
@@ -1049,6 +1126,10 @@ color:white!important;
 }
 
 
+/*=========================
+ Info
+=========================*/
+
 .stInfo{
 
 background:rgba(59,130,246,.16)!important;
@@ -1062,6 +1143,10 @@ color:white!important;
 }
 
 
+/*=========================
+ Alert Container
+=========================*/
+
 [data-testid="stAlert"]{
 
 border-radius:16px!important;
@@ -1072,6 +1157,10 @@ box-shadow:0 12px 28px rgba(0,0,0,.25);
 
 }
 
+
+/*=========================
+ Dispatch Panel
+=========================*/
 
 .stTextArea{
 
@@ -1107,12 +1196,20 @@ color:#93C5FD;
 }
 
 
+/*=========================
+ Horizontal Blocks
+=========================*/
+
 div[data-testid="stHorizontalBlock"]{
 
 gap:20px;
 
 }
 
+
+/*=========================
+ Expanders
+=========================*/
 
 details{
 
@@ -1136,6 +1233,10 @@ color:white;
 
 }
 
+
+/*=========================
+ Hover Animation
+=========================*/
 
 .stButton,
 .stDownloadButton,
@@ -1167,13 +1268,16 @@ transform:translateY(0);
 }
 
 }
-
-
 /*==========================================================
- UrbanEye AI - Premium Dashboard UI
- Part 3 / 3
- Tables • Map • Tracker • Metrics • Responsive • Final Polish
+ UrbanEye AI - Premium Dashboard UI
+ Part 3 / 3
+ Tables • Map • Tracker • Metrics • Responsive • Final Polish
 ==========================================================*/
+
+
+/*=========================
+ DataFrame
+=========================*/
 
 [data-testid="stDataFrame"]{
 
@@ -1216,6 +1320,10 @@ background:rgba(255,255,255,.08)!important;
 }
 
 
+/*=========================
+ Tables
+=========================*/
+
 table{
 
 border-collapse:collapse!important;
@@ -1251,6 +1359,10 @@ background:rgba(255,255,255,.06)!important;
 }
 
 
+/*=========================
+ Metric Cards
+=========================*/
+
 [data-testid="metric-container"]{
 
 background:rgba(255,255,255,.08);
@@ -1282,6 +1394,10 @@ color:white!important;
 }
 
 
+/*=========================
+ Map
+=========================*/
+
 [data-testid="stMap"]{
 
 border-radius:22px;
@@ -1298,6 +1414,10 @@ margin-bottom:20px;
 
 }
 
+
+/*=========================
+ Tabs
+=========================*/
 
 .stTabs{
 
@@ -1350,6 +1470,10 @@ box-shadow:0 10px 25px rgba(59,130,246,.35);
 }
 
 
+/*=========================
+ Progress
+=========================*/
+
 .stProgress > div > div{
 
 background:linear-gradient(90deg,#2563EB,#8B5CF6)!important;
@@ -1358,6 +1482,10 @@ border-radius:20px;
 
 }
 
+
+/*=========================
+ Code Blocks
+=========================*/
 
 pre{
 
@@ -1374,12 +1502,20 @@ color:#93C5FD!important;
 }
 
 
+/*=========================
+ Notifications
+=========================*/
+
 [data-testid="stNotification"]{
 
 border-radius:18px!important;
 
 }
 
+
+/*=========================
+ Block Quotes
+=========================*/
 
 blockquote{
 
@@ -1392,12 +1528,20 @@ color:#CBD5E1;
 }
 
 
+/*=========================
+ Footer Padding
+=========================*/
+
 .block-container{
 
 padding-bottom:100px;
 
 }
 
+
+/*=========================
+ Hover Glow
+=========================*/
 
 div[data-testid="stVerticalBlock"]:hover{
 
@@ -1411,6 +1555,10 @@ box-shadow:
 
 }
 
+
+/*=========================
+ Glass Glow
+=========================*/
 
 div[data-testid="stVerticalBlock"]::after{
 
@@ -1434,6 +1582,10 @@ filter:blur(40px);
 
 }
 
+
+/*=========================
+ Fade Animation
+=========================*/
 
 @keyframes fadeIn{
 
@@ -1461,6 +1613,10 @@ animation:fadeIn .7s ease;
 
 }
 
+
+/*=========================
+ Floating Animation
+=========================*/
 
 @keyframes floating{
 
@@ -1491,6 +1647,10 @@ animation:floating 1.2s infinite;
 
 }
 
+
+/*=========================
+ Responsive
+=========================*/
 
 @media(max-width:1200px){
 
@@ -1614,6 +1774,10 @@ padding:13px!important;
 }
 
 
+/*=========================
+ Smooth Transition
+=========================*/
+
 *{
 
 transition:
@@ -1631,6 +1795,10 @@ transform .30s ease;
 }
 
 
+/*=========================
+ Selection
+=========================*/
+
 ::selection{
 
 background:#3B82F6;
@@ -1639,6 +1807,10 @@ color:white;
 
 }
 
+
+/*=========================
+ Scrollbar
+=========================*/
 
 ::-webkit-scrollbar{
 
@@ -1669,6 +1841,10 @@ background:#60A5FA;
 }
 
 
+/*=========================
+ Final Premium Finish
+=========================*/
+
 .stButton>button,
 .stDownloadButton>button,
 .stTextInput input,
@@ -1685,11 +1861,21 @@ backdrop-filter:blur(18px);
 }
 
 
-/*==========================================================
- UrbanEye AI Dashboard
- Dashboard.py New UI Components
- Final Add-on
+/*=========================
+ UrbanEye AI
+ Premium Dashboard UI
+ End of File
 ==========================================================*/
+/*==========================================================
+ UrbanEye AI Dashboard
+ Dashboard.py New UI Components
+ Final Add-on
+==========================================================*/
+
+
+/*=========================
+ Hero Card
+=========================*/
 
 .hero-card{
 
@@ -1761,6 +1947,11 @@ transform:translateY(0);
 }
 
 
+
+/*=========================
+ Status Badge
+=========================*/
+
 .status-badge{
 
 display:inline-block;
@@ -1787,6 +1978,11 @@ font-size:14px;
 
 }
 
+
+
+/*=========================
+ Sidebar Logo
+=========================*/
 
 .sidebar-logo{
 
@@ -1835,6 +2031,11 @@ font-size:14px;
 }
 
 
+
+/*=========================
+ User Panel
+=========================*/
+
 .user-panel{
 
 padding:18px;
@@ -1855,6 +2056,10 @@ color:white;
 
 }
 
+
+/*=========================
+ Section Title
+=========================*/
 
 .section-title{
 
@@ -1904,6 +2109,11 @@ font-size:15px;
 
 }
 
+
+
+/*=========================
+ Feature Card
+=========================*/
 
 .feature-card{
 
@@ -1967,6 +2177,11 @@ color:#CBD5E1;
 }
 
 
+
+/*=========================
+ Dispatch Header
+=========================*/
+
 .dispatch-title{
 
 background:
@@ -1983,6 +2198,11 @@ rgba(59,130,246,.12)
 
 }
 
+
+
+/*=========================
+ Info Banner
+=========================*/
 
 .info-banner{
 
@@ -2021,7 +2241,14 @@ box-shadow:
 }
 
 
+
+/*=========================
+ Responsive
+=========================*/
+
+
 @media(max-width:768px){
+
 
 .hero-card{
 
@@ -2029,11 +2256,13 @@ padding:22px;
 
 }
 
+
 .hero-card h1{
 
 font-size:28px;
 
 }
+
 
 .section-title h2{
 
@@ -2041,22 +2270,27 @@ font-size:24px;
 
 }
 
+
 .feature-card{
 
 padding:18px;
 
 }
 
+
 }
 
 
+
 @media(max-width:480px){
+
 
 .hero-card h1{
 
 font-size:22px;
 
 }
+
 
 .status-badge{
 
@@ -2066,10 +2300,12 @@ padding:8px 14px;
 
 }
 
+
 .feature-card h3{
 
 font-size:20px;
 
 }
+
 
 }
