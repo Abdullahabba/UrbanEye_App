@@ -39,7 +39,7 @@ def render_live_camera_mode(model_or_conf=None):
     except ImportError:
         create_pdf_report_func = None
 
-    # Built-in Streamlit Camera Input (No WebRTC / STUN / TURN required)
+    # Built-in Streamlit Camera Input
     img_file_buffer = st.camera_input("Apne device ka camera use kar ke tasweer capture karein")
 
     if img_file_buffer is not None:
@@ -61,8 +61,8 @@ def render_live_camera_mode(model_or_conf=None):
             st.session_state["counts"] = current_counts
             st.session_state["processed_img"] = annotated_img
 
-        # Display the processed image with bounding boxes
-        st.image(annotated_img, channels="BGR", caption="Processed Hazard Detection", use_container_width=True)
+        # Display the processed image using compatible use_column_width parameter
+        st.image(annotated_img, channels="BGR", caption="Processed Hazard Detection", use_column_width=True)
 
         if current_counts:
             st.success("🚨 **Hazard Detected Successfully!** Instant dispatch summary and report panel generated below.")
