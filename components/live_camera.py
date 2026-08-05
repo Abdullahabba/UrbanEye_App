@@ -16,18 +16,21 @@ def render_live_camera_mode(model_or_conf=None):
         st.error("❌ `streamlit-webrtc` ya `av` library install nahi hai. Baraye meharbani `requirements.txt` check karein.")
         return
 
-    # Robust Model Fetching (Session state ya arguments se model dhoondna)
+    # Smart Model Finder: Automatically scan session state for any YOLO model object
     model = None
     if hasattr(model_or_conf, "predict"):
         model = model_or_conf
     
     if model is None:
-        model = st.session_state.get("yolo_model", None)
-    if model is None:
-        model = st.session_state.get("model", None)
+        # Scan all session state keys for an object with a 'predict' method
+        for key, value in st.session_state.items():
+            if hasattr(value, "predict"):
+                model = value
+                break
 
     if model is None:
-        st.warning("⚠️ YOLO model load nahi hua hai. Baraye meharbani check karein ke model session state mein mojood ho.")
+        st.error("⚠️ YOLO model load nahi mila! Baraye meharbani check karein ke aapne dashboard ya main app mein model ko load kiya hai ya nahi.")
+        return
 
     tracking_id = st.session_state.get("current_tracking_id", "TRK-9999")
     user_details = st.session_state.get("user", {"email": "officer@urbaneye.ai"})
@@ -52,12 +55,11 @@ def render_live_camera_mode(model_or_conf=None):
         def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
             img = frame.to_ndarray(format="bgr24")
             
-            # Agar model nahi hai toh raw frame return kar dein
             if self.model is None:
                 return frame
             
             try:
-                # Run YOLO inference on the live frame (conf=0.25 for better sensitivity)
+                # Run YOLO inference on the live frame
                 results = self.model(img, conf=0.25, verbose=False)
                 annotated_img = results[0].plot()
                 
@@ -78,7 +80,6 @@ def render_live_camera_mode(model_or_conf=None):
                 
                 return av.VideoFrame.from_ndarray(annotated_img, format="bgr24")
             except Exception:
-                # Agar kisi frame par error aaye toh raw frame return karein taake stream crash na ho
                 return frame
 
     # Start the WebRTC streamer with Metered.ca TURN & Forced Relay Policy
