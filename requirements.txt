@@ -8,3 +8,4 @@ numpy
 pillow
 streamlit-geolocation
 reportlab
+fpdf2
