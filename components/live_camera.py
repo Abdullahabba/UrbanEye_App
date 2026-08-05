@@ -9,6 +9,21 @@ try:
 except ImportError:
     WEBRTC_AVAILABLE = False
 
+# Safe cached loader for YOLO model if not found in session state
+@st.cache_resource
+def load_fallback_yolo_model():
+    try:
+        from ultralytics import YOLO
+        # Pehle custom trained 'best.pt' try karega, agar na mila toh 'yolov8n.pt' utha lega
+        for weight in ["best.pt", "yolov8n.pt", "model.pt"]:
+            try:
+                return YOLO(weight)
+            except Exception:
+                continue
+    except ImportError:
+        pass
+    return None
+
 def render_live_camera_mode(model_or_conf=None):
     st.subheader("🔴 Live Auto-Detection & Instant Dispatch Stream")
     
@@ -16,20 +31,24 @@ def render_live_camera_mode(model_or_conf=None):
         st.error("❌ `streamlit-webrtc` ya `av` library install nahi hai. Baraye meharbani `requirements.txt` check karein.")
         return
 
-    # Smart Model Finder: Automatically scan session state for any YOLO model object
+    # 1. Check passed argument
     model = None
     if hasattr(model_or_conf, "predict"):
         model = model_or_conf
     
+    # 2. Check session state keys
     if model is None:
-        # Scan all session state keys for an object with a 'predict' method
         for key, value in st.session_state.items():
             if hasattr(value, "predict"):
                 model = value
                 break
+                
+    # 3. Auto-load fallback model if still not found anywhere
+    if model is None:
+        model = load_fallback_yolo_model()
 
     if model is None:
-        st.error("⚠️ YOLO model load nahi mila! Baraye meharbani check karein ke aapne dashboard ya main app mein model ko load kiya hai ya nahi.")
+        st.error("⚠️ YOLO model load nahi ho saka. Baraye meharbani check karein ke `ultralytics` library installed ho aur model weights file mojood ho.")
         return
 
     tracking_id = st.session_state.get("current_tracking_id", "TRK-9999")
