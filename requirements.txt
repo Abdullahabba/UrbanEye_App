@@ -1,5 +1,4 @@
-streamlit==1.39.0
-starlette==0.40.0
+streamlit
 ultralytics
 opencv-python-headless==4.10.0.84
 supabase
@@ -8,6 +7,3 @@ numpy
 pillow
 streamlit-geolocation
 reportlab
-fpdf2
-streamlit-webrtc
-av
