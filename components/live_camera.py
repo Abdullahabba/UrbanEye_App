@@ -69,16 +69,22 @@ def render_live_camera_mode(model_or_conf=None):
 
             return av.VideoFrame.from_ndarray(annotated_img, format="bgr24")
 
-    # Start the WebRTC streamer with Multiple Public STUN Servers and HD constraints
+    # Start the WebRTC streamer with Metered.ca TURN Credentials and HD constraints
     webrtc_streamer(
         key="urbaneye-live-stream",
         video_transformer_factory=lambda: YOLOVideoTransformer(model),
         rtc_configuration=RTCConfiguration(
             {
                 "iceServers": [
-                    {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]},
-                    {"urls": ["stun:stun.stunprotocol.org:3478"]},
-                    {"urls": ["stun:stun.services.mozilla.com"]}
+                    {"urls": ["stun:stun.l.google.com:19302"]},
+                    {
+                        "urls": [
+                            "turn:global.relay.metered.ca:443",
+                            "turn:global.relay.metered.ca:443?transport=tcp"
+                        ],
+                        "username": "dec13fdaf07c16be9aa5a658",
+                        "credential": "oeVKjF/Q0BMt13lM"
+                    }
                 ]
             }
         ),
