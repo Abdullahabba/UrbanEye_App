@@ -44,13 +44,16 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     if "selected_loc_name" not in st.session_state:
         st.session_state["selected_loc_name"] = manual_loc_name
 
-    # 1️⃣ Step 1: Detection Summary
-    summary_text = "Detected Hazards Summary:\n"
+    # 🏷️ Display Tracking ID prominently on the panel
+    st.markdown(f"### 🏷️ Incident Tracking ID: `{tracking_id}`")
+
+    # 1️⃣ Step 1: Detection Summary (Tracking ID ke sath)
+    summary_text = f"Tracking ID: {tracking_id}\nDetected Hazards Summary:\n"
     for k, v in counts.items():
         if v > 0:
             summary_text += f"- {k.capitalize()}: {v}\n"
 
-    st.text_area("📋 Generated Incident Summary", value=summary_text, height=100)
+    st.text_area("📋 Generated Incident Summary", value=summary_text, height=110)
 
     # ⚡ Priority Assessment
     assessment = calculate_priority_score(counts)
