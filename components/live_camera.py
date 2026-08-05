@@ -6,7 +6,6 @@ from utils.helpers import generate_tracking_id
 def render_live_camera_mode(conf_threshold):
     st.markdown("### 📸 Field Camera Live Capture")
     cam_photo = st.camera_input("Take Live Photo from Camera", key="camera_input")
-    
     if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_cam"):
         img = Image.open(cam_photo)
         with st.spinner("Analyzing Camera Capture..."):
@@ -16,7 +15,5 @@ def render_live_camera_mode(conf_threshold):
                 "counts": counts, 
                 "current_tracking_id": generate_tracking_id()
             })
-            
     if "processed_img" in st.session_state:
-        # use_column_width=True use kiya hai taake version mismatch error na aaye
-        st.image(st.session_state["processed_img"], caption="Live Camera AI Result", use_column_width=True)
+        st.image(st.session_state["processed_img"], caption="Live Camera AI Result", use_container_width=True)
