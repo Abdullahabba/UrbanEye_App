@@ -13,12 +13,14 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
     
-    # 🛡️ Strict Guard Check: Check if valid detections exist
+    # 🔍 DEBUG: Session state counts check karne ke liye
     counts = st.session_state.get("counts", {})
+    st.write(f"🔍 **Debug Info - Current Counts:** `{counts}`")
+
     has_valid_detections = counts and any(v > 0 for v in counts.values())
 
     if not has_valid_detections:
-        st.warning("⚠️ **No Hazards Detected:** AI model ne is inspection mein koi valid hazard detect nahi kiya hai. Lihaza dispatch panel locked hai.")
+        st.warning("⚠️ **Panel Locked:** AI model ke paas abhi koi valid detections (`counts`) nahi hain. Pehle uper 'Run AI Detection' button click karein taake hazards detect hon.")
         return
 
     st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location $\rightarrow$ Step 3: Automatic Dispatch & Reports.")
@@ -31,7 +33,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     if "selected_loc_name" not in st.session_state:
         st.session_state["selected_loc_name"] = manual_loc_name
 
-    # 1️⃣ Step 1: Detection Summary Displayed First
+    # 1️⃣ Step 1: Detection Summary
     summary_text = "Detected Hazards Summary:\n"
     for k, v in counts.items():
         if v > 0:
@@ -39,24 +41,17 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=100)
 
-    # ⚡ Calculate Dynamic Priority & SLA Assessment
+    # ⚡ Priority Assessment
     assessment = calculate_priority_score(counts)
-    
     score = assessment["priority_score"]
     severity_level = assessment["severity"]
     assigned_department = assessment["assigned_dept"]
     sla_target = assessment["sla_target"]
 
-    if severity_level == "CRITICAL":
-        st.error(f"🚨 **CRITICAL PRIORITY SCORE: {score}/100** | SLA: {sla_target} | Dept: {assigned_department}")
-    elif severity_level == "HIGH":
-        st.warning(f"⚠️ **HIGH PRIORITY SCORE: {score}/100** | SLA: {sla_target} | Dept: {assigned_department}")
-    else:
-        st.info(f"ℹ️ **STANDARD PRIORITY SCORE: {score}/100** | SLA: {sla_target} | Dept: {assigned_department}")
-
+    st.info(f"ℹ️ **PRIORITY SCORE: {score}/100** | Severity: {severity_level} | Dept: {assigned_department}")
     st.divider()
 
-    # 2️⃣ Step 2: Location Option (Manual Address or Live GPS)
+    # 2️⃣ Step 2: Location Option
     st.markdown("##### 📍 Step 2: Select Location Method")
     loc_mode = st.radio(
         "Choose Location Mode",
@@ -73,8 +68,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             value=st.session_state.get("selected_loc_name", manual_loc_name),
             key="manual_address_input_box"
         )
-        
-        # Jaise hi user address likhega, location foran ready ho jaye gi
         if manual_input and manual_input.strip():
             st.session_state["selected_loc_name"] = manual_input.strip()
             st.session_state["selected_lat"] = None
@@ -82,39 +75,32 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             location_ready = True
             st.success(f"✅ Active Location Set: `{manual_input.strip()}`")
         else:
-            st.warning("⚠️ Please enter a valid location name to unlock Step 3.")
-
+            st.warning("⚠️ Please enter a valid location name.")
     else:
         st.markdown("🛰️ Click below to fetch your **real browser GPS coordinates**:")
         if streamlit_geolocation is not None:
             loc = streamlit_geolocation()
             if loc and loc.get("latitude") and loc.get("longitude"):
-                lat = loc["latitude"]
-                lon = loc["longitude"]
-                st.session_state["selected_lat"] = lat
-                st.session_state["selected_lon"] = lon
-                st.session_state["selected_loc_name"] = f"Live GPS (Lat: {lat:.4f}, Lon: {lon:.4f})"
+                st.session_state["selected_lat"] = loc["latitude"]
+                st.session_state["selected_lon"] = loc["longitude"]
+                st.session_state["selected_loc_name"] = f"Live GPS (Lat: {loc['latitude']:.4f}, Lon: {loc['longitude']:.4f})"
             
-            # Check if GPS coordinates are successfully locked
-            if st.session_state.get("selected_lat") is not None and st.session_state.get("selected_lon") is not None:
+            if st.session_state.get("selected_lat") is not None:
                 location_ready = True
-                st.success(f"✅ Live GPS Locked! Lat: `{st.session_state['selected_lat']:.4f}`, Lon: `{st.session_state['selected_lon']:.4f}`")
+                st.success(f"✅ Live GPS Locked!")
         else:
             st.error("❌ `streamlit-geolocation` library is not installed.")
 
-    # 3️⃣ Step 3: Automatic Push & Reports Generation (Unlocked instantly when location is provided)
+    # 3️⃣ Step 3: Reports & Actions (Unlocked instantly when location is ready)
     if location_ready:
-        st.markdown("##### 🚀 Step 3: Reports & Automatic Cloud Sync")
+        st.markdown("##### 🚀 Step 3: Reports & Actions Unlocked")
         st.divider()
 
         final_location_name = st.session_state["selected_loc_name"]
         lat = st.session_state["selected_lat"]
         lon = st.session_state["selected_lon"]
 
-        if lat is not None and lon is not None:
-            full_summary_text = summary_text + f"Location: {final_location_name} (GPS: {lat:.4f}, {lon:.4f})\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
-        else:
-            full_summary_text = summary_text + f"Location: {final_location_name} (Manual Entry)\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
+        full_summary_text = summary_text + f"Location: {final_location_name}\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
 
         raw_images = st.session_state.get("captured_images", [])
         if not raw_images and "processed_img" in st.session_state:
@@ -129,50 +115,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
         detected_hazard_name = next(iter(counts)) if counts else "General Hazard"
 
-        # 🚀 AUTOMATIC BACKGROUND SYNC LOGIC
-        auto_push_key = f"auto_pushed_{tracking_id}"
-        if not st.session_state.get(auto_push_key, False):
-            try:
-                from database.supabase_client import supabase
-                
-                payload = {
-                    "tracking_id": str(tracking_id),
-                    "issue_type": str(detected_hazard_name),
-                    "severity": str(severity_level),
-                    "priority_score": int(score),
-                    "sla_target": str(sla_target),
-                    "status": "Pending",
-                    "assigned_dept": str(assigned_department),
-                    "latitude": lat,
-                    "longitude": lon,
-                    "location_name": str(final_location_name),
-                    "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
-                }
-                
-                if supabase is not None:
-                    try:
-                        supabase.table("reports").upsert(payload).execute()
-                    except Exception:
-                        pass
-                
-                if "incident_ledger" not in st.session_state or not isinstance(st.session_state["incident_ledger"], pd.DataFrame):
-                    st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
-                
-                existing_ledger = st.session_state["incident_ledger"]
-                if "tracking_id" in existing_ledger.columns:
-                    if tracking_id not in existing_ledger["tracking_id"].values:
-                        new_row_df = pd.DataFrame([payload])
-                        st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
-                else:
-                    st.session_state["incident_ledger"] = pd.DataFrame([payload])
-
-                st.session_state[auto_push_key] = True
-                st.toast("✅ Incident automatically synced to Supabase & Tracker!", icon="🚀")
-
-            except Exception:
-                pass
-
-        # Generate PDF Bytes
+        # Generate PDF Bytes with fallback error display
         pdf_bytes = None
         if create_pdf_report_func:
             try:
@@ -183,10 +126,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     detected_images=all_images
                 )
             except Exception as e:
-                st.error(f"❌ PDF Generation Error: {e}")
-
-        officer_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
-        target_dept_email = "roads.dept@urbaneye.ai"
+                st.error(f"❌ PDF Generation Crashed: {e}")
 
         col1, col2 = st.columns(2)
 
@@ -199,6 +139,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     mime="application/pdf",
                     use_container_width=True
                 )
+            else:
+                st.warning("⚠️ PDF bytes are empty/None.")
 
         with col2:
             if st.button("📧 Send via Email", use_container_width=True):
@@ -206,8 +148,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     try:
                         from utils.email_sender import send_email_with_pdf
                         success, message = send_email_with_pdf(
-                            sender_email=officer_email,
-                            target_department_email=target_dept_email,
+                            sender_email=user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai",
+                            target_department_email="roads.dept@urbaneye.ai",
                             pdf_bytes=pdf_bytes,
                             title=f"Incident Report - ID: {tracking_id}",
                             user_details=user_details,
@@ -220,4 +162,4 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     except Exception as mail_err:
                         st.error(f"❌ Email sending failed: {str(mail_err)}")
     else:
-        st.info("🔒 Please enter a location name or lock your GPS above to unlock **Step 3 (Download PDF & Email)**.")
+        st.info("🔒 Enter a location name above to unlock Step 3.")
