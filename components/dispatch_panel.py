@@ -145,7 +145,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     lat = st.session_state["selected_lat"]
     lon = st.session_state["selected_lon"]
 
-    # Helper function to save report to Session State and Push to Supabase Database
+    # Helper function to save report to Session State and Push to Supabase Database with Error Reporting
     def record_report_to_history(rep_id, rep_hazard, rep_loc, rep_score, rep_sev, rep_status):
         user_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
         timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -176,7 +176,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         if rep_id not in existing_ids:
             st.session_state["hazard_history"].insert(0, new_entry)
 
-        # 2. Push directly to Supabase Database
+        # 2. Push directly to Supabase Database with Explicit Error Logging
+        supabase_success = False
         try:
             from supabase import create_client
             supabase_url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase", {}).get("url")
@@ -184,7 +185,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
             
             if supabase_url and supabase_key:
                 supabase = create_client(supabase_url, supabase_key)
-                supabase.table("reports").insert({
+                response = supabase.table("reports").insert({
                     "tracking_id": rep_id,
                     "hazard": rep_hazard,
                     "severity": f"{rep_sev} ({rep_score}/100)",
@@ -197,7 +198,8 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     "assigned_dept": assigned_department,
                     "sla_target": sla_target
                 }).execute()
-        except Exception:
+                supabase_success = True
+        except Exception as e1:
             try:
                 from database.supabase_client import supabase as sb_client
                 if sb_client:
@@ -214,8 +216,12 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                         "assigned_dept": assigned_department,
                         "sla_target": sla_target
                     }).execute()
-            except Exception:
-                pass
+                    supabase_success = True
+            except Exception as e2:
+                st.error(f"❌ Supabase Push Failed! Error 1: {e1} | Error 2: {e2}")
+
+        if supabase_success:
+            st.success("✅ Report successfully pushed & synchronized with Supabase cloud database!")
 
     # Step 3: Reports & Actions
     st.markdown("##### 🚀 Step 2: Reports & Actions")
@@ -267,7 +273,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     rep_sev=severity_level,
                     rep_status="Dispatched / Saved"
                 )
-                st.success("✅ Report successfully saved and pushed to Supabase database!")
         else:
             st.warning("⚠️ PDF bytes are empty/None.")
 
@@ -293,7 +298,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                             rep_sev=severity_level,
                             rep_status="Dispatched / Emailed"
                         )
-                        st.success(f"✅ {message} and pushed to Supabase database!")
+                        st.success(f"✅ {message}")
                     else:
                         st.error(f"❌ {message}")
                 except Exception as mail_err:
