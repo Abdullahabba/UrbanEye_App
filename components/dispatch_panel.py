@@ -13,13 +13,15 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.divider()
     st.subheader("📤 Dispatch & Verification Panel")
     
-    # 🛡️ Guard Check: Agar koi detection run nahi hui, toh panel lock rakhein
+    # 🛡️ Strict Guard Check: Check if valid detections exist (counts are not empty and have > 0 values)
     counts = st.session_state.get("counts", {})
+    has_valid_detections = counts and any(v > 0 for v in counts.values())
+
     processed_img = st.session_state.get("processed_img")
     captured_images = st.session_state.get("captured_images", [])
 
-    if not counts and processed_img is None and not captured_images:
-        st.info("💡 **Awaiting Inspection:** Please upload an image, video, or use the live camera and run AI detection first to generate the dispatch summary.")
+    if not has_valid_detections:
+        st.warning("⚠️ **No Hazards Detected:** AI model ne is inspection mein koi valid hazard detect nahi kiya hai. Lihaza dispatch panel aur report generation locked hai.")
         return
 
     st.caption("Step 1: Review Detection Summary $\rightarrow$ Step 2: Set Location $\rightarrow$ Step 3: Automatic Dispatch & Reports.")
@@ -36,11 +38,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
     # 1️⃣ Step 1: Detection Summary Displayed First
     summary_text = "Detected Hazards Summary:\n"
-    if counts:
-        for k, v in counts.items():
+    for k, v in counts.items():
+        if v > 0:
             summary_text += f"- {k.capitalize()}: {v}\n"
-    else:
-        summary_text += "- General Municipal Infrastructure Issue\n"
 
     st.text_area("📋 Generated Incident Summary", value=summary_text, height=100)
 
