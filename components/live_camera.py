@@ -1,10 +1,20 @@
 import streamlit as st
-import av
-from streamlit_webrtc import webrtc_streamer, RTCConfiguration
-from ultralytics import YOLO
+import numpy as np
 
-def render_live_camera_page(model):
+try:
+    import av
+    from streamlit_webrtc import webrtc_streamer, RTCConfiguration
+    WEBRTC_AVAILABLE = True
+except ImportError:
+    WEBRTC_AVAILABLE = False
+
+def render_live_camera_mode(model):
     st.subheader("🔴 Live Urban Hazard Stream (Real-Time AI Detection)")
+    
+    if not WEBRTC_AVAILABLE:
+        st.error("❌ `streamlit-webrtc` ya `av` library install nahi hai. Baraye meharbani `requirements.txt` mein inhein add kar ke push karein.")
+        return
+
     st.markdown("Camera open karein, YOLO model khud ba khud real-time frames par hazards detect karta rahega.")
 
     # Define video transformer class for continuous YOLO inference
@@ -22,7 +32,7 @@ def render_live_camera_page(model):
             # Get annotated image with bounding boxes
             annotated_img = results[0].plot()
             
-            # Extract counts for live analytics if needed
+            # Extract counts for live analytics
             boxes = results[0].boxes
             current_counts = {}
             for box in boxes:
