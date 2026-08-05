@@ -133,7 +133,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
         detected_hazard_name = list(counts.keys())[0] if counts else "General Hazard"
 
-        # 🚀 AUTOMATIC SUPABASE SYNC LOGIC (Background Auto-Push)
+        # 🚀 AUTOMATIC BACKGROUND SYNC LOGIC
         auto_push_key = f"auto_pushed_{tracking_id}"
         if not st.session_state.get(auto_push_key, False):
             try:
@@ -153,26 +153,29 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                     "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
                 }
                 
-                # Cloud sync
+                # Cloud sync safely
                 if supabase is not None:
                     try:
                         supabase.table("reports").upsert(payload).execute()
-                    except Exception as sb_err:
+                    except Exception:
                         pass
                 
-                # Local session ledger sync
+                # Local session ledger sync safely
                 if "incident_ledger" not in st.session_state or not isinstance(st.session_state["incident_ledger"], pd.DataFrame):
                     st.session_state["incident_ledger"] = pd.DataFrame(columns=payload.keys())
                 
                 existing_ledger = st.session_state["incident_ledger"]
-                if tracking_id not in existing_ledger["tracking_id"].values:
-                    new_row_df = pd.DataFrame([payload])
-                    st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
+                if "tracking_id" in existing_ledger.columns:
+                    if tracking_id not in existing_ledger["tracking_id"].values:
+                        new_row_df = pd.DataFrame([payload])
+                        st.session_state["incident_ledger"] = pd.concat([existing_ledger, new_row_df], ignore_index=True)
+                else:
+                    st.session_state["incident_ledger"] = pd.DataFrame([payload])
 
                 st.session_state[auto_push_key] = True
                 st.toast("✅ Incident automatically synced to Supabase & Tracker!", icon="🚀")
 
-            except Exception as e:
+            except Exception:
                 pass
 
         # Generate PDF Bytes
