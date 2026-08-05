@@ -23,7 +23,7 @@ def render_profile_page(user_details: dict):
 
     st.divider()
 
-    # Optional: Profile Edit Section
+    # Profile Edit Section
     with st.expander("✏️ Update Profile Details"):
         with st.form(key="edit_profile_form"):
             new_name = st.text_input("Full Name", value=user_name)
@@ -32,22 +32,19 @@ def render_profile_page(user_details: dict):
 
             submitted = st.form_submit_button("💾 Save Profile Changes")
             if submitted:
-                # 1. Update local dictionary / session state
+                # 1. Update local session dictionary
                 if isinstance(user_details, dict):
                     user_details['username'] = new_name
                     user_details['phone'] = new_phone
                     user_details['address'] = new_address
 
-                # 2. Push/Upsert changes to Supabase Database
+                # 2. Push/Upsert changes to Supabase Database with full error tracking
                 payload = {
                     "email": user_email,
                     "username": new_name,
                     "phone": new_phone,
                     "address": new_address
                 }
-
-                db_success = False
-                error_logs = []
 
                 try:
                     from supabase import create_client
@@ -56,17 +53,11 @@ def render_profile_page(user_details: dict):
                     
                     if supabase_url and supabase_key:
                         supabase = create_client(supabase_url, supabase_key)
-                        # Assuming 'profiles' is your table name in Supabase
-                        supabase.table("profiles").upsert(payload, on_conflict="email").execute()
-                        db_success = True
+                        # Agar table ka naam 'profiles' nahi hai, toh yahan error aayega
+                        response = supabase.table("profiles").upsert(payload, on_conflict="email").execute()
+                        st.success("✅ Profile successfully updated and synced with Supabase database!")
+                        st.rerun()
                     else:
-                        error_logs.append("Supabase URL or Key missing in secrets.")
-                except Exception as e1:
-                    error_logs.append(f"Error: {str(e1)}")
-
-                if db_success:
-                    st.success("✅ Profile credentials successfully updated and synced with Supabase database!")
-                else:
-                    st.warning(f"⚠️ Updated locally, but database sync failed: {' | '.join(error_logs)}")
-                
-                st.rerun()
+                        st.error("❌ Supabase URL or Key missing in Streamlit secrets.")
+                except Exception as e:
+                    st.error(f"❌ Supabase Sync Failed. Exact Error: {str(e)}")
