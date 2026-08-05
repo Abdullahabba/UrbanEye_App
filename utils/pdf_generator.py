@@ -3,7 +3,7 @@ import tempfile
 import numpy as np
 from PIL import Image
 from fpdf import FPDF
-from utils.metadata import get_user_metadata  # <-- Metadata function import kiya gaya hai
+from utils.metadata import get_user_metadata  # Metadata function import
 
 def sanitize_text(text: str) -> str:
     """Non-Latin1 characters ko replace karta hai taake PDF crash na ho."""
@@ -61,13 +61,13 @@ def create_pdf_report(
     title: str,
     user_details: dict = None,  
     summary_text: str = "",
-    detected_images=None,  # 🔄 Updated parameter to support lists, numpy arrays, or single images
+    detected_images=None,  # Support lists, numpy arrays, or single images
 ) -> bytes:
     pdf = ProfessionalPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    # 🔄 Agar user_details na milein ya adhoori hon, toh metadata function se fresh fetch karein
+    # Agar user_details na milein ya adhoori hon, toh metadata function se fresh fetch karein
     if not user_details or not isinstance(user_details, dict) or not user_details.get("username"):
         user_details = get_user_metadata()
 
@@ -174,4 +174,8 @@ def create_pdf_report(
     pdf.multi_cell(182, 6, safe_summary)
     pdf.ln(4)
 
-    return bytes(pdf.output())
+    # Fixed output conversion to bytes safely
+    pdf_output = pdf.output()
+    if isinstance(pdf_output, str):
+        return pdf_output.encode("latin-1")
+    return bytes(pdf_output)
