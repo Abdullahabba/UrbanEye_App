@@ -1,16 +1,19 @@
+import streamlit as st
 from PIL import Image
-import numpy as np
-import cv2
+from models.detector import run_detection
+from utils.helpers import generate_tracking_id
 
-# Check if processed image exists in session state
-if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
-    img = st.session_state["processed_img"]
-    
-    # Agar numpy array hai (YOLO/OpenCV output), to usay RGB aur PIL Image mein convert karein
-    if isinstance(img, np.ndarray):
-        # Agar image BGR format mein hai to RGB karein (YOLO .plot() default BGR deta hai)
-        if len(img.shape) == 3 and img.shape[2] == 3:
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(img)
-        
-    st.image(img, caption="Live Camera AI Result", use_container_width=True)
+def render_live_camera_mode(conf_threshold):
+    st.markdown("### 📸 Field Camera Live Capture")
+    cam_photo = st.camera_input("Take Live Photo from Camera", key="camera_input")
+    if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_cam"):
+        img = Image.open(cam_photo)
+        with st.spinner("Analyzing Camera Capture..."):
+            proc_img, counts = run_detection(img, conf_threshold)
+            st.session_state.update({
+                "processed_img": proc_img, 
+                "counts": counts, 
+                "current_tracking_id": generate_tracking_id()
+            })
+    if "processed_img" in st.session_state:
+        st.image(st.session_state["processed_img"], caption="Live Camera AI Result", use_container_width=True)
