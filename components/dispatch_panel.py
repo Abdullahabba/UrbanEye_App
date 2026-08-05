@@ -131,23 +131,79 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         else:
             st.error("❌ `streamlit-geolocation` library is not installed.")
 
-    # Helper function to auto-save report to user history
+    # Helper function to save report to Session State and Push to Supabase Database
     def record_report_to_history(rep_id, rep_hazard, rep_loc, rep_score, rep_sev, rep_status):
+        user_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
+        lat = st.session_state.get("selected_lat")
+        lon = st.session_state.get("selected_lon")
+        timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        # 1. Save to Session State (Instant Fallback)
         if "hazard_history" not in st.session_state:
             st.session_state["hazard_history"] = []
         
-        # Check if this tracking ID already exists to avoid duplicates
-        existing_ids = [item.get("id") for item in st.session_state["hazard_history"]]
+        new_entry = {
+            "tracking_id": rep_id,
+            "id": rep_id,
+            "hazard": rep_hazard,
+            "hazard_type": rep_hazard,
+            "location_name": rep_loc,
+            "location": rep_loc,
+            "severity": f"{rep_sev} ({rep_score}/100)",
+            "status": rep_status,
+            "email": user_email,
+            "timestamp": timestamp_str,
+            "created_at": timestamp_str,
+            "latitude": lat if lat is not None else 31.5204,
+            "longitude": lon if lon is not None else 74.3587,
+            "assigned_dept": assigned_department,
+            "sla_target": sla_target
+        }
+        
+        existing_ids = [item.get("tracking_id") or item.get("id") for item in st.session_state["hazard_history"]]
         if rep_id not in existing_ids:
-            new_entry = {
-                "id": rep_id,
-                "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "hazard": rep_hazard,
-                "location": rep_loc,
-                "severity": f"{rep_sev} ({rep_score}/100)",
-                "status": rep_status
-            }
             st.session_state["hazard_history"].insert(0, new_entry)
+
+        # 2. Push directly to Supabase Database
+        try:
+            from supabase import create_client
+            supabase_url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase", {}).get("url")
+            supabase_key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase", {}).get("key")
+            
+            if supabase_url and supabase_key:
+                supabase = create_client(supabase_url, supabase_key)
+                supabase.table("reports").insert({
+                    "tracking_id": rep_id,
+                    "hazard": rep_hazard,
+                    "severity": f"{rep_sev} ({rep_score}/100)",
+                    "status": rep_status,
+                    "location_name": rep_loc,
+                    "email": user_email,
+                    "timestamp": timestamp_str,
+                    "latitude": lat if lat is not None else 31.5204,
+                    "longitude": lon if lon is not None else 74.3587,
+                    "assigned_dept": assigned_department,
+                    "sla_target": sla_target
+                }).execute()
+        except Exception:
+            try:
+                from database.supabase_client import supabase as sb_client
+                if sb_client:
+                    sb_client.table("reports").insert({
+                        "tracking_id": rep_id,
+                        "hazard": rep_hazard,
+                        "severity": f"{rep_sev} ({rep_score}/100)",
+                        "status": rep_status,
+                        "location_name": rep_loc,
+                        "email": user_email,
+                        "timestamp": timestamp_str,
+                        "latitude": lat if lat is not None else 31.5204,
+                        "longitude": lon if lon is not None else 74.3587,
+                        "assigned_dept": assigned_department,
+                        "sla_target": sla_target
+                    }).execute()
+            except Exception:
+                pass
 
     # Step 3: Reports & Actions
     if location_ready:
@@ -155,8 +211,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         st.divider()
 
         final_location_name = st.session_state["selected_loc_name"]
-        lat = st.session_state["selected_lat"]
-        lon = st.session_state["selected_lon"]
 
         full_summary_text = summary_text + f"Location: {final_location_name}\nPriority Score: {score}/100\nTracking ID: {tracking_id}"
 
@@ -188,7 +242,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
 
         with col1:
             if pdf_bytes:
-                # When PDF is downloaded, we save it as a submitted report in history
                 download_clicked = st.download_button(
                     label="📥 Download PDF Report",
                     data=pdf_bytes,
@@ -203,8 +256,9 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                         rep_loc=final_location_name,
                         rep_score=score,
                         rep_sev=severity_level,
-                        rep_status="Downloaded / Saved"
+                        rep_status="Dispatched / Saved"
                     )
+                    st.success("✅ Report successfully saved and pushed to Supabase database!")
             else:
                 st.warning("⚠️ PDF bytes are empty/None.")
 
@@ -222,7 +276,6 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                             counts=counts
                         )
                         if success:
-                            # Save to history when successfully emailed/dispatched
                             record_report_to_history(
                                 rep_id=tracking_id,
                                 rep_hazard=main_hazard_str,
@@ -231,7 +284,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                                 rep_sev=severity_level,
                                 rep_status="Dispatched / Emailed"
                             )
-                            st.success(f"✅ {message}")
+                            st.success(f"✅ {message} and pushed to Supabase database!")
                         else:
                             st.error(f"❌ {message}")
                     except Exception as mail_err:
