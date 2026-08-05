@@ -1,0 +1,4 @@
+Tracking ID,Hazard,Severity,SLA Target,Status,Assigned Dept,Latitude,Longitude,Location Name,Timestamp
+UE-2026-1001,Pothole,CRITICAL,4 Hours,In Progress,Road Maintenance Dept,31.5204,74.3587,"Iqbal Sector, Block AA",2026-07-23 08:15
+UE-2026-1002,Garbage Dump,MEDIUM,12 Hours,Pending,Waste Management Dept,31.51,74.34,Gulberg III Main Blvd,2026-07-23 11:30
+UE-2026-1003,Fallen Tree,CRITICAL,4 Hours,Resolved,Parks & Horticulture Authority,31.53,74.36,Model Town Link Road,2026-07-22 09:00
