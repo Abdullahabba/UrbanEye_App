@@ -8,7 +8,7 @@ def render_single_image_mode(conf_threshold):
     
     uploaded_file = st.file_uploader("Upload Hazard Snapshot", type=["jpg", "jpeg", "png"], key="single_image_upload")
     
-    # Agar user nayi file upload kare ya hata dein, to purana result clear kar dein
+    # Clear previous results if a new file is uploaded or removed
     if uploaded_file is None:
         if "processed_img" in st.session_state:
             del st.session_state["processed_img"]
@@ -27,7 +27,7 @@ def render_single_image_mode(conf_threshold):
     
     with c1:
         if img is not None:
-            st.image(img, caption="Original Input", use_column_width=True)
+            st.image(img, caption="Original Input", use_container_width=True)
 
     if st.button("🔍 Run AI Detection", key="btn_single"):
         with st.spinner("Analyzing with YOLO Model..."):
@@ -38,7 +38,7 @@ def render_single_image_mode(conf_threshold):
                 "current_tracking_id": generate_tracking_id()
             })
 
-    # Safe check: Sirf tabhi render karein jab processed image ki valid value maujood ho
+    # Safe check: Render only when the processed image is valid
     if st.session_state.get("processed_img") is not None:
         with c2:
-            st.image(st.session_state["processed_img"], caption="YOLO AI Detection Result", use_column_width=True)
+            st.image(st.session_state["processed_img"], caption="YOLO AI Detection Result", use_container_width=True)
