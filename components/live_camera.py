@@ -16,12 +16,18 @@ def render_live_camera_mode(model_or_conf=None):
         st.error("❌ `streamlit-webrtc` ya `av` library install nahi hai. Baraye meharbani `requirements.txt` check karein.")
         return
 
-    # Safely fetch model from arguments or session state
-    model = st.session_state.get("yolo_model", None)
-    if model is None and hasattr(model_or_conf, "predict"):
+    # Robust Model Fetching (Session state ya arguments se model dhoondna)
+    model = None
+    if hasattr(model_or_conf, "predict"):
         model = model_or_conf
-    elif model is None:
+    
+    if model is None:
+        model = st.session_state.get("yolo_model", None)
+    if model is None:
         model = st.session_state.get("model", None)
+
+    if model is None:
+        st.warning("⚠️ YOLO model load nahi hua hai. Baraye meharbani check karein ke model session state mein mojood ho.")
 
     tracking_id = st.session_state.get("current_tracking_id", "TRK-9999")
     user_details = st.session_state.get("user", {"email": "officer@urbaneye.ai"})
@@ -32,7 +38,7 @@ def render_live_camera_mode(model_or_conf=None):
     except ImportError:
         create_pdf_report_func = None
 
-    st.markdown("Live camera start karein. Jaise hi model ko koi hazard nazar ayega, woh fouri taur par capture kar ke niche report aur dispatch panel unlock kar dega!")
+    st.markdown("Live camera start karein. Model real-time mein hazards detect kar raha hai!")
 
     # Initialize live detection flag
     if "live_hazard_detected" not in st.session_state:
@@ -45,29 +51,35 @@ def render_live_camera_mode(model_or_conf=None):
 
         def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
             img = frame.to_ndarray(format="bgr24")
+            
+            # Agar model nahi hai toh raw frame return kar dein
             if self.model is None:
                 return frame
             
-            # Run YOLO inference on the live frame
-            results = self.model(img, conf=0.4, verbose=False)
-            annotated_img = results[0].plot()
-            
-            # Extract counts for live detection check
-            boxes = results[0].boxes
-            current_counts = {}
-            for box in boxes:
-                cls_id = int(box.cls[0])
-                cls_name = self.model.names[cls_id]
-                current_counts[cls_name] = current_counts.get(cls_name, 0) + 1
-            
-            has_hazard = any(v > 0 for v in current_counts.values())
-            
-            if has_hazard:
-                st.session_state["counts"] = current_counts
-                st.session_state["processed_img"] = annotated_img
-                st.session_state["live_hazard_detected"] = True
-
-            return av.VideoFrame.from_ndarray(annotated_img, format="bgr24")
+            try:
+                # Run YOLO inference on the live frame (conf=0.25 for better sensitivity)
+                results = self.model(img, conf=0.25, verbose=False)
+                annotated_img = results[0].plot()
+                
+                # Extract counts for live detection check
+                boxes = results[0].boxes
+                current_counts = {}
+                for box in boxes:
+                    cls_id = int(box.cls[0])
+                    cls_name = self.model.names[cls_id]
+                    current_counts[cls_name] = current_counts.get(cls_name, 0) + 1
+                
+                has_hazard = any(v > 0 for v in current_counts.values())
+                
+                if has_hazard:
+                    st.session_state["counts"] = current_counts
+                    st.session_state["processed_img"] = annotated_img
+                    st.session_state["live_hazard_detected"] = True
+                
+                return av.VideoFrame.from_ndarray(annotated_img, format="bgr24")
+            except Exception:
+                # Agar kisi frame par error aaye toh raw frame return karein taake stream crash na ho
+                return frame
 
     # Start the WebRTC streamer with Metered.ca TURN & Forced Relay Policy
     webrtc_streamer(
@@ -85,7 +97,7 @@ def render_live_camera_mode(model_or_conf=None):
                         "credential": "oeVKjF/Q0BMt13lM"
                     }
                 ],
-                "iceTransportPolicy": "relay"  # Forces connection through TURN, eliminating timeout/connection errors
+                "iceTransportPolicy": "relay"
             }
         ),
         media_stream_constraints={
