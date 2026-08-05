@@ -1,45 +1,49 @@
 import streamlit as st
-from PIL import Image
-from models.detector import run_detection
-from utils.helpers import generate_tracking_id
+import av
+from streamlit_webrtc import webrtc_streamer, RTCConfiguration
+from ultralytics import YOLO
 
-def render_live_camera_mode(conf_threshold):
-    st.markdown("### 📸 Live Camera Capture Mode")
-    st.caption("Capture a snapshot from your device camera for real-time hazard inspection.")
+def render_live_camera_page(model):
+    st.subheader("🔴 Live Urban Hazard Stream (Real-Time AI Detection)")
+    st.markdown("Camera open karein, YOLO model khud ba khud real-time frames par hazards detect karta rahega.")
 
-    camera_image = st.camera_input("Take a snapshot", key="live_camera_input")
+    # Define video transformer class for continuous YOLO inference
+    class YOLOVideoTransformer:
+        def __init__(self):
+            self.model = model
 
-    if camera_image is not None:
-        try:
-            img = Image.open(camera_image)
-        except Exception as e:
-            st.error(f"❌ Error loading camera image: {e}")
-            return
+        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+            # Convert video frame to numpy array (OpenCV format)
+            img = frame.to_ndarray(format="bgr24")
+            
+            # Run YOLO inference on the live frame
+            results = self.model(img, conf=0.4)
+            
+            # Get annotated image with bounding boxes
+            annotated_img = results[0].plot()
+            
+            # Extract counts for live analytics if needed
+            boxes = results[0].boxes
+            current_counts = {}
+            for box in boxes:
+                cls_id = int(box.cls[0])
+                cls_name = self.model.names[cls_id]
+                current_counts[cls_name] = current_counts.get(cls_name, 0) + 1
+            
+            # Save latest counts to session state safely
+            st.session_state["counts"] = current_counts
+            st.session_state["processed_img"] = annotated_img
 
-        c1, c2 = st.columns(2)
-        
-        with c1:
-            # FIX: use_column_width=True use kiya gaya hai
-            st.image(img, caption="Captured Snapshot", use_column_width=True)
+            # Return processed frame back to the WebRTC stream
+            return av.VideoFrame.from_ndarray(annotated_img, format="bgr24")
 
-        if st.button("🔍 Run Live AI Detection", key="btn_live_cam"):
-            with st.spinner("Analyzing camera frame with YOLO..."):
-                processed_img, counts = run_detection(img, conf_threshold)
-                tracking_id = generate_tracking_id()
-                
-                st.session_state.update({
-                    "processed_img": processed_img,
-                    "counts": counts,
-                    "current_tracking_id": tracking_id
-                })
-                
-                if isinstance(processed_img, Image.Image):
-                    st.session_state["captured_images"] = [processed_img]
-
-        # Safe check: Sirf tabhi render karein jab processed image maujood ho
-        if st.session_state.get("processed_img") is not None:
-            with c2:
-                # FIX: use_column_width=True use kiya gaya hai
-                st.image(st.session_state["processed_img"], caption="Live Camera AI Result", use_column_width=True)
-    else:
-        st.info("💡 Please click a picture using your camera widget above to start inspection.")
+    # Start the WebRTC streamer
+    webrtc_streamer(
+        key="urbaneye-live-stream",
+        video_transformer_factory=YOLOVideoTransformer,
+        rtc_configuration=RTCConfiguration(
+            {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+        ),
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True
+    )
