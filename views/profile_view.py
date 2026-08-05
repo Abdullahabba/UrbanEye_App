@@ -3,9 +3,11 @@ import pandas as pd
 
 def normalize_records(raw_data, user_email):
     normalized = []
+    inactive_statuses = ['resolved', 'closed', 'completed', 'archived', 'cancelled', 'done']
+
     for row in raw_data:
         if isinstance(row, dict):
-            # Check email match (supporting various column name variations in DB/Session)
+            # 1. Check email match
             row_email = (
                 row.get('email') or 
                 row.get('sender_email') or 
@@ -13,8 +15,18 @@ def normalize_records(raw_data, user_email):
                 row.get('user_email')
             )
             
-            # Agar email match nahi hoti (aur row mein email maujood hai), toh skip kar dein
             if row_email and user_email and str(row_email).strip().lower() != str(user_email).strip().lower():
+                continue
+
+            # 2. Check Status (Only Active)
+            stat = (
+                row.get('status') or 
+                row.get('Status') or 
+                'Dispatched'
+            )
+            
+            # Agar report resolve ya close ho chuki hai, toh skip kar dein
+            if str(stat).strip().lower() in inactive_statuses:
                 continue
 
             t_id = (
@@ -40,12 +52,6 @@ def normalize_records(raw_data, user_email):
                 row.get('severity') or 
                 row.get('Severity') or 
                 'Medium'
-            )
-            
-            stat = (
-                row.get('status') or 
-                row.get('Status') or 
-                'Dispatched'
             )
             
             loc = (
@@ -112,7 +118,7 @@ def fetch_user_reports(user_email):
 
 def render_profile_page(user_details: dict):
     st.title("👤 Officer Profile & Activity History")
-    st.caption("Manage your professional credentials, contact info, and review your submitted hazard inspection reports.")
+    st.caption("Manage your professional credentials, contact info, and review your active hazard inspection reports.")
 
     # Top Section: Officer Credentials
     user_email = user_details.get('email', 'officer@urbaneye.ai') if isinstance(user_details, dict) else 'officer@urbaneye.ai'
@@ -132,8 +138,8 @@ def render_profile_page(user_details: dict):
 
     st.divider()
 
-    # Bottom Section: Real Submitted Reports (Strict Email Filter & Zero Mock Data)
-    st.markdown("### 📂 My Submitted Inspection Reports")
+    # Bottom Section: Active Submitted Reports Only
+    st.markdown("### 📂 My Active Inspection Reports")
     
     user_reports = fetch_user_reports(user_email)
     
@@ -141,7 +147,7 @@ def render_profile_page(user_details: dict):
     unique_reports = {r["Tracking ID"]: r for r in user_reports}.values()
 
     if not unique_reports:
-        st.info("📭 No reports submitted by you yet. Once you dispatch an incident report, it will appear here securely.")
+        st.info("📭 No active inspection reports found.")
     else:
         for item in unique_reports:
             with st.container(border=True):
