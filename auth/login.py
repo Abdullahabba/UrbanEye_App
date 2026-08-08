@@ -15,13 +15,6 @@ PAK_LOCATIONS = {
 }
 
 def render_login_page():
-   
-    css_path = os.path.join(os.path.dirname(__file__), "style.css")
-    if os.path.exists(css_path):
-        with open(css_path, "r", encoding="utf-8") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-    
     # Dropdown Menu Text Fix Component (JavaScript Injection)
     components.html("""
     <script>
