@@ -439,17 +439,20 @@ div[role="option"]:hover {
 }
 
 /* =========================================================
-   TABS - CLEAR & VISIBLE
+   TABS - STRONG VISIBLE VERSION
    ========================================================= */
 
+/* Main tabs wrapper */
 .stTabs {
-    margin-top: 20px;
+    margin-top: 25px !important;
 }
 
 
-/* Tab container */
+/* Tab bar */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 8px !important;
+    display: flex !important;
+
+    gap: 10px !important;
 
     background: #FFFFFF !important;
 
@@ -457,65 +460,154 @@ div[role="option"]:hover {
 
     border-radius: 16px !important;
 
-    border: 1px solid #E5E7EB !important;
+    border: 2px solid #D1D5DB !important;
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.20) !important;
 }
 
 
-/* Individual tabs */
+/* =========================================================
+   EVERY TAB - FORCE VISIBILITY
+   ========================================================= */
+
 .stTabs [data-baseweb="tab"] {
-    background: transparent !important;
+    background: #E5E7EB !important;
 
     color: #111827 !important;
 
-    font-size: 15px !important;
+    opacity: 1 !important;
 
-    font-weight: 600 !important;
+    visibility: visible !important;
 
-    padding: 14px 24px !important;
+    display: flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    padding: 14px 22px !important;
 
     border-radius: 12px !important;
 
-    transition: 0.3s ease !important;
+    border: 1px solid #CBD5E1 !important;
+
+    font-size: 15px !important;
+
+    font-weight: 700 !important;
+
+    min-height: 48px !important;
+
+    transition:
+        background 0.25s ease,
+        color 0.25s ease,
+        transform 0.25s ease,
+        box-shadow 0.25s ease !important;
 }
 
 
-/* Hover */
-.stTabs [data-baseweb="tab"]:hover {
-    background: #F3F4F6 !important;
+/* =========================================================
+   FORCE TAB TEXT VISIBILITY
+   ========================================================= */
 
+.stTabs [data-baseweb="tab"] *,
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [data-baseweb="tab"] div {
+    color: #111827 !important;
+
+    opacity: 1 !important;
+
+    visibility: visible !important;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.stTabs [data-baseweb="tab"]:hover {
+    background: #D1D5DB !important;
+
+    color: #111827 !important;
+
+    opacity: 1 !important;
+
+    transform: translateY(-2px) !important;
+
+    box-shadow:
+        0 5px 15px rgba(0, 0, 0, 0.15) !important;
+}
+
+
+.stTabs [data-baseweb="tab"]:hover * {
     color: #111827 !important;
 }
 
 
-/* Active / Selected tab */
+/* =========================================================
+   ACTIVE / SELECTED TAB
+   ========================================================= */
+
 .stTabs [aria-selected="true"] {
     background:
         linear-gradient(
             135deg,
-            #3B82F6,
+            #2563EB,
             #8B5CF6
         ) !important;
 
     color: #FFFFFF !important;
 
+    opacity: 1 !important;
+
+    visibility: visible !important;
+
+    border: 1px solid #2563EB !important;
+
     box-shadow:
-        0 8px 24px rgba(59, 130, 246, 0.4) !important;
+        0 8px 25px rgba(59, 130, 246, 0.45) !important;
+
+    transform: translateY(-1px) !important;
 }
 
 
-/* Force text inside tabs */
-.stTabs [data-baseweb="tab"] p,
-.stTabs [data-baseweb="tab"] span {
-    color: #111827 !important;
-}
+/* =========================================================
+   ACTIVE TAB TEXT
+   ========================================================= */
 
-
-/* Active tab text must remain white */
+.stTabs [aria-selected="true"] *,
 .stTabs [aria-selected="true"] p,
-.stTabs [aria-selected="true"] span {
+.stTabs [aria-selected="true"] span,
+.stTabs [aria-selected="true"] div {
     color: #FFFFFF !important;
+
+    -webkit-text-fill-color: #FFFFFF !important;
+
+    opacity: 1 !important;
+
+    visibility: visible !important;
 }
 
+
+/* =========================================================
+   TAB UNDERLINE - REMOVE
+   ========================================================= */
+
+.stTabs [data-baseweb="tab-highlight"] {
+    background: transparent !important;
+
+    height: 0 !important;
+}
+
+
+/* =========================================================
+   TAB PANEL
+   ========================================================= */
+
+.stTabs [data-baseweb="tab-panel"] {
+    padding-top: 25px !important;
+}
 /* =========================================================
    BUTTONS
    ========================================================= */
