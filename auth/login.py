@@ -27,6 +27,10 @@ PAK_LOCATIONS = {
 }
 
 def render_login_page():
+   
+    # Yeh rahi woh test line:
+    st.markdown("<style>.stApp { background-color: purple !important; }</style>", unsafe_allow_html=True)
+
     # Dropdown Menu Text Fix Component (JavaScript Injection)
     components.html("""
     <script>
