@@ -981,3 +981,114 @@ hr {
 /* =========================================================
    END
    ========================================================= */
+/* =========================================================
+   FINAL FIX - STREAMLIT TABS VISIBILITY
+   ========================================================= */
+
+/* TAB BUTTONS */
+.stTabs button[role="tab"] {
+    background: #FFFFFF !important;
+
+    color: #111827 !important;
+
+    -webkit-text-fill-color: #111827 !important;
+
+    opacity: 1 !important;
+
+    visibility: visible !important;
+
+    border: 2px solid #D1D5DB !important;
+
+    border-radius: 12px !important;
+
+    padding: 12px 22px !important;
+
+    font-weight: 700 !important;
+
+    font-size: 15px !important;
+
+    box-shadow: none !important;
+}
+
+
+/* TAB BUTTON TEXT */
+.stTabs button[role="tab"] *,
+.stTabs button[role="tab"] p,
+.stTabs button[role="tab"] span,
+.stTabs button[role="tab"] div {
+    color: #111827 !important;
+
+    -webkit-text-fill-color: #111827 !important;
+
+    opacity: 1 !important;
+
+    visibility: visible !important;
+}
+
+
+/* HOVER */
+.stTabs button[role="tab"]:hover {
+    background: #F3F4F6 !important;
+
+    color: #111827 !important;
+
+    -webkit-text-fill-color: #111827 !important;
+
+    border-color: #9CA3AF !important;
+}
+
+
+/* ACTIVE TAB */
+.stTabs button[role="tab"][aria-selected="true"] {
+    background: linear-gradient(
+        135deg,
+        #2563EB,
+        #8B5CF6
+    ) !important;
+
+    color: #FFFFFF !important;
+
+    -webkit-text-fill-color: #FFFFFF !important;
+
+    border-color: #2563EB !important;
+
+    box-shadow:
+        0 8px 25px rgba(59, 130, 246, 0.45) !important;
+}
+
+
+/* ACTIVE TAB TEXT */
+.stTabs button[role="tab"][aria-selected="true"] *,
+.stTabs button[role="tab"][aria-selected="true"] p,
+.stTabs button[role="tab"][aria-selected="true"] span,
+.stTabs button[role="tab"][aria-selected="true"] div {
+    color: #FFFFFF !important;
+
+    -webkit-text-fill-color: #FFFFFF !important;
+
+    opacity: 1 !important;
+
+    visibility: visible !important;
+}
+
+
+/* REMOVE BASEWEB UNDERLINE */
+.stTabs [data-baseweb="tab-highlight"] {
+    display: none !important;
+}
+
+
+/* TAB LIST */
+.stTabs [data-baseweb="tab-list"] {
+    background: #FFFFFF !important;
+
+    padding: 8px !important;
+
+    gap: 10px !important;
+
+    border-radius: 16px !important;
+
+    border: 2px solid #D1D5DB !important;
+
+    opacity: 1 !important;
+}
