@@ -8,17 +8,13 @@ from utils.helpers import generate_tracking_id
 def render_live_camera_mode(conf_threshold):
     st.markdown("### 📸 Field Camera Live Capture")
     
-    # Optional auto-trigger toggle or standard snapshot
     cam_photo = st.camera_input("Take Live Photo from Camera", key="camera_input")
     
-    # Automatically analyze as soon as a photo is captured or button is clicked
     if cam_photo:
         img = Image.open(cam_photo)
         with st.spinner("Analyzing Camera Capture with YOLOv8..."):
-            # run_detection ab 3 cheezein return kar raha hai: processed_img, counts, raw_detections
             proc_img, counts, raw_detections = run_detection(img, conf_threshold)
             
-            # YOLO Results object ya list ko safely NumPy array mein badlein
             try:
                 from ultralytics.engine.results import Results
                 if isinstance(proc_img, Results):
@@ -32,14 +28,12 @@ def render_live_camera_mode(conf_threshold):
                 except:
                     pass
             
-            # Agar NumPy array hai toh BGR se RGB karke PIL Image bana lein
             if isinstance(proc_img, np.ndarray):
                 if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
                     proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
                 proc_img = Image.fromarray(proc_img)
             
-            # Check if any detection crossed the confidence threshold
-            high_conf_detections = [d for d in raw_detections if d["confidence"] >= conf_threshold]
+            high_conf_detections = [d for d in raw_detections if d.get("confidence", 0) >= conf_threshold] if raw_detections else []
             
             tracking_id = generate_tracking_id()
             
@@ -58,7 +52,6 @@ def render_live_camera_mode(conf_threshold):
     if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
         img_to_show = st.session_state["processed_img"]
         
-        # Render ke waqt dobara safety check
         if isinstance(img_to_show, np.ndarray):
             if len(img_to_show.shape) == 3 and img_to_show.shape[2] == 3:
                 img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
@@ -66,7 +59,6 @@ def render_live_camera_mode(conf_threshold):
             
         st.image(img_to_show, caption="Live Camera AI Result", use_container_width=True)
         
-        # Agar detections mil gayi hain to user ko report submit karne ka quick option dikhayein
         if st.session_state.get("raw_detections"):
             if st.button("🚀 Proceed to Dispatch Report", type="primary", use_container_width=True):
                 st.session_state["navigate_to_report"] = True
