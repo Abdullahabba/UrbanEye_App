@@ -35,7 +35,7 @@ def render_login_page():
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
     st.title("👁️ Urban Eye AI - Security Portal")
-    
+     
     # 1. Password Reset State Initialization
     if "reset_verified" not in st.session_state:
         st.session_state["reset_verified"] = False
@@ -61,6 +61,9 @@ def render_login_page():
             except Exception:
                 pass
 
+    # Wrapping tabs inside a styled container block for CSS glassmorphism effect
+    st.markdown('<div class="auth-container-wrapper">', unsafe_allow_html=True)
+    
     tab_login, tab_signup, tab_forgot = st.tabs(
         ["🔑 Login", "📝 Sign Up", "❓ Forgot Password"]
     )
@@ -83,7 +86,7 @@ def render_login_page():
                         {"email": email, "password": password}
                     )
                     st.session_state["user"] = response.user
-                    
+                     
                     if remember_me:
                         st.query_params["logged_in_email"] = email
                     else:
@@ -113,16 +116,16 @@ def render_login_page():
         username = st.text_input("Full Name / Username", key="signup_username")
         new_email = st.text_input("Email Address", key="signup_email")
         phone = st.text_input("Phone Number", key="signup_phone", placeholder="+923001234567")
-        
+         
         st.markdown("**Location / Address**")
         col_prov, col_city = st.columns(2)
         with col_prov:
             selected_province = st.selectbox("Province / Territory", options=list(PAK_LOCATIONS.keys()), key="signup_province")
         with col_city:
             selected_city = st.selectbox("City", options=PAK_LOCATIONS[selected_province], key="signup_city")
-        
+         
         address = f"{selected_city}, {selected_province}, Pakistan"
-        
+         
         new_password = st.text_input("Password", type="password", key="signup_pass")
 
         if st.button("Register", key="btn_signup", use_container_width=True):
@@ -145,7 +148,7 @@ def render_login_page():
                             },
                         }
                     )
-                    
+                     
                     user_obj = auth_response.user
                     if user_obj and supabase_admin:
                         profile_data = {
@@ -195,7 +198,7 @@ def render_login_page():
                             st.error(f"❌ Verification failed: {e}")
         else:
             st.success(f"✅ Verified Account: **{st.session_state['reset_matched_email']}**")
-            
+             
             st.subheader("Set Your New Password")
 
             pass_1 = st.text_input("New Password", type="password", key="reset_new_pass")
@@ -233,3 +236,5 @@ def render_login_page():
                     st.session_state["reset_target_user_id"] = None
                     st.session_state["reset_matched_email"] = ""
                     st.rerun()
+                    
+    st.markdown('</div>', unsafe_allow_html=True)
