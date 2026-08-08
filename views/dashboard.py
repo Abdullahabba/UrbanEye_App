@@ -239,11 +239,6 @@ def handle_input_mode_change():
 def render_dashboard_page():
     load_css()
     
-    # --- AUTOMATIC NAVIGATION CHECK FROM LIVE CAMERA ---
-    if st.session_state.get("navigate_to_report"):
-        st.session_state["navigate_to_report"] = False
-        st.toast("🚀 Auto-navigated to Dispatch Panel based on live detection!", icon="⚡")
-    
     initialize_mock_history()
     user_details = get_user_metadata()
 
