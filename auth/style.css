@@ -438,9 +438,8 @@ div[role="option"]:hover {
     transition: 0.25s ease;
 }
 
-
 /* =========================================================
-   TABS
+   TABS - CLEAR & VISIBLE
    ========================================================= */
 
 .stTabs {
@@ -448,21 +447,25 @@ div[role="option"]:hover {
 }
 
 
+/* Tab container */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 10px !important;
+    gap: 8px !important;
 
-    background: rgba(255, 255, 255, 0.06) !important;
+    background: #FFFFFF !important;
 
     padding: 8px !important;
 
     border-radius: 16px !important;
+
+    border: 1px solid #E5E7EB !important;
 }
 
 
+/* Individual tabs */
 .stTabs [data-baseweb="tab"] {
     background: transparent !important;
 
-    color: #000000 !important;
+    color: #111827 !important;
 
     font-size: 15px !important;
 
@@ -476,13 +479,15 @@ div[role="option"]:hover {
 }
 
 
+/* Hover */
 .stTabs [data-baseweb="tab"]:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
+    background: #F3F4F6 !important;
 
-    color: #FFFFFF !important;
+    color: #111827 !important;
 }
 
 
+/* Active / Selected tab */
 .stTabs [aria-selected="true"] {
     background:
         linear-gradient(
@@ -497,6 +502,19 @@ div[role="option"]:hover {
         0 8px 24px rgba(59, 130, 246, 0.4) !important;
 }
 
+
+/* Force text inside tabs */
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span {
+    color: #111827 !important;
+}
+
+
+/* Active tab text must remain white */
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span {
+    color: #FFFFFF !important;
+}
 
 /* =========================================================
    BUTTONS
