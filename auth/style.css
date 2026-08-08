@@ -462,7 +462,7 @@ div[role="option"]:hover {
 .stTabs [data-baseweb="tab"] {
     background: transparent !important;
 
-    color: #FFFFFF !important;
+    color: #000000 !important;
 
     font-size: 15px !important;
 
