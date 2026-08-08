@@ -20,10 +20,10 @@ def load_yolo_model(model_path="models/best.pt"):
 
 
 # -----------------------------------------------------------------------------
-# 2. RUN DETECTION (UPDATED FOR AUTOMATION)
+# 2. RUN DETECTION
 # -----------------------------------------------------------------------------
 def run_detection(image: Image.Image, conf_threshold=0.50):
-    """Image par detection run karta hai aur processed image, counts ke sath raw detections bhi deta hai."""
+    """Image par detection run karta hai higher confidence threshold ke sath."""
     model = load_yolo_model()
 
     # Image ko numpy array mein convert karna
@@ -37,19 +37,14 @@ def run_detection(image: Image.Image, conf_threshold=0.50):
     res_plotted = res.plot()
     processed_img = Image.fromarray(res_plotted)
 
-    # Object Counts calculate karna aur raw detections collect karna
+    # Object Counts calculate karna
     counts = {}
-    raw_detections = [] # Ye live streaming auto-capture ke liye zaroori hai
-    
     for box in res.boxes:
         cls_id = int(box.cls[0])
         class_name = model.names[cls_id]
-        confidence = float(box.conf[0])
-        
         counts[class_name] = counts.get(class_name, 0) + 1
-        raw_detections.append({"class": class_name, "confidence": confidence})
 
-    return processed_img, counts, raw_detections
+    return processed_img, counts
 
 
 # -----------------------------------------------------------------------------
