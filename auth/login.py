@@ -21,8 +21,6 @@ def render_login_page():
         with open(css_path, "r", encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-    # Baaki ka code iske baad shuru hoga...
-    st.title("👁️ Urban Eye AI - Security Portal")
     
     # Dropdown Menu Text Fix Component (JavaScript Injection)
     components.html("""
