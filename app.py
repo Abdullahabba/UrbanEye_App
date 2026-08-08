@@ -1,18 +1,6 @@
 import streamlit as st
-import os
 from auth.login import render_login_page
 from views.dashboard import render_dashboard_page
-
-# Check karein ke user logged in hai ya nahi
-is_logged_in = st.session_state.get("user") is not None
-
-# Logged in hai toh dashboard.css, warna login.css load karo
-css_file = "dashboard.css" if is_logged_in else "login.css"
-css_path = os.path.join(os.path.dirname(__file__), css_file)
-
-if os.path.exists(css_path):
-    with open(css_path, "r", encoding="utf-8") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # Page Configuration
 st.set_page_config(
@@ -71,16 +59,3 @@ else:
 
     # Render Main Dashboard
     render_dashboard_page()
-    # -----------------------------------------------------------------------------
-# 5. CSS STYLING INJECTION (AUTO-LOAD)
-# -----------------------------------------------------------------------------
-import os
-
-def load_global_css():
-    css_path = os.path.join(os.path.dirname(__file__), "style.css")
-    if os.path.exists(css_path):
-        with open(css_path, "r", encoding="utf-8") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-# App ke start mein CSS load karwana
-load_global_css()
