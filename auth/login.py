@@ -3,18 +3,6 @@ import streamlit as st
 from database.supabase_client import supabase, supabase_admin
 import streamlit.components.v1 as components
 
-# CSS File Load 
-def load_css():
-    css_path = os.path.join(os.path.dirname(__file__), "style.css")
-    if os.path.exists(css_path):
-        with open(css_path, "r", encoding="utf-8") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    else:
-        st.error("style.css file nahi mili! Check karein ke file same folder mein hai.")
-
-# Apne function ya app ke start mein isay call kar dein
-load_css()
-
 # Pakistan Locations Dictionary (Province -> Cities)
 PAK_LOCATIONS = {
     "Punjab": ["Lahore", "Rawalpindi", "Faisalabad", "Multan", "Gujranwala", "Sialkot", "Bahawalpur", "Sargodha", "Gujrat", "Sheikhupura"],
@@ -27,10 +15,6 @@ PAK_LOCATIONS = {
 }
 
 def render_login_page():
-   
-    # Yeh rahi woh test line:
-    st.markdown("<style>.stApp { background-color: purple !important; }</style>", unsafe_allow_html=True)
-
     # Dropdown Menu Text Fix Component (JavaScript Injection)
     components.html("""
     <script>
