@@ -15,8 +15,6 @@ PAK_LOCATIONS = {
 }
 
 def render_login_page():
-    st.markdown('<link rel="stylesheet" href="style.css">', unsafe_allow_html=True)
-    
     # Dropdown Menu Text Fix Component (JavaScript Injection)
     components.html("""
     <script>
