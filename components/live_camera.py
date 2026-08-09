@@ -45,9 +45,9 @@ class AutoStopTransformer:
         if self.detected:
             return frame
         
-        # CPU & Lag Optimization: Har 3rd frame par detection run hogi taake camera smooth rahay
+        # Smooth Streaming Optimization: Har 5th frame par detection run hogi, baaki 4 frames foran pass hon ge
         self.frame_counter += 1
-        if self.frame_counter % 3 != 0:
+        if self.frame_counter % 5 != 0:
             return frame
         
         img = frame.to_ndarray(format="bgr24")
@@ -106,7 +106,7 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
     st.markdown("### Auto-Stop AI Detection & Dispatch")
     st.markdown("**Start the camera—once a hazard is detected, the camera will stop automatically and the dispatch panel will unlock!**")
 
-    # Safe polling interval (3 seconds) taake background detection screen par foran show ho jaye
+    # Safe polling interval to switch UI once hazard is caught
     if st_autorefresh is not None:
         st_autorefresh(interval=3000, key="auto_detection_poll")
 
@@ -143,15 +143,16 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
             st.rerun()
 
     else:
-        # HD Resolution constraints with smooth asynchronous processing
+        # Optimized constraints: 640x480 resolution with max 15fps to eliminate freezing/stuck issues completely
         ctx = webrtc_streamer(
-            key="auto-stop-streamer-hd-v2",
+            key="auto-stop-streamer-smooth-v3",
             video_processor_factory=AutoStopTransformer,
             rtc_configuration=RTC_CONFIGURATION,
             media_stream_constraints={
                 "video": {
-                    "width": {"ideal": 1280},
-                    "height": {"ideal": 720}
+                    "width": {"ideal": 640},
+                    "height": {"ideal": 480},
+                    "frameRate": {"ideal": 15, "max": 20}
                 }, 
                 "audio": False
             },
