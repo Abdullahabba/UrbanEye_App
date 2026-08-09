@@ -29,7 +29,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     with col_title:
         st.subheader("📤 Dispatch & Verification Panel")
     with col_btn:
-        if st.button("🔄 Reset Panel", use_container_width=True, help="Click to clear stale counts and detections"):
+        if st.button("🔄 Reset Panel", key="dispatch_reset_panel_btn", use_container_width=True, help="Click to clear stale counts and detections"):
             st.session_state["counts"] = {}
             st.session_state.pop("processed_img", None)
             st.session_state["captured_images"] = []
