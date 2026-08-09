@@ -1,52 +1,52 @@
 import streamlit as st
-from PIL import Image
-import numpy as np
+import av
 import cv2
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
-def render_live_camera_mode(conf_threshold):
-    st.markdown("### 📸 Field Camera Live Capture")
-    cam_photo = st.camera_input("Take Live Photo from Camera", key="camera_input")
-    
-    if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_cam"):
-        img = Image.open(cam_photo)
-        with st.spinner("Analyzing Camera Capture..."):
-            proc_img, counts = run_detection(img, conf_threshold)
+# WebRTC configuration (STUN servers for connection stability)
+RTC_CONFIGURATION = RTCConfiguration(
+    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+)
+
+def render_live_camera_mode(conf_threshold=0.7):
+    st.markdown("### 🚗 UrbanEye AI - Dashcam Live Stream Mode")
+    st.info("Live video streaming active hai. AI automatic 70% confidence par issues detect kar raha hai.")
+
+    # Frame processor class jo har video frame ko pakar kar YOLO model chalayegi
+    class VideoTransformer(VideoTransformerBase):
+        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+            img = frame.to_ndarray(format="bgr24")
             
-            # YOLO Results object ya list ko safely NumPy array mein badlein
+            # Yahan 70% confidence (0.7) fix kar diya hai ya passed threshold use hoga
+            processed_img, counts = run_detection(img, conf_threshold=0.7)
+            
+            # Agar YOLO Results object ya list aaye toh usko plot/ndarray mein convert karna
             try:
                 from ultralytics.engine.results import Results
-                if isinstance(proc_img, Results):
-                    proc_img = proc_img.plot()
-            except ImportError:
+                if isinstance(processed_img, Results):
+                    processed_img = processed_img.plot()
+            except:
                 pass
                 
-            if isinstance(proc_img, list) and len(proc_img) > 0:
+            if isinstance(processed_img, list) and len(processed_img) > 0:
                 try:
-                    proc_img = proc_img[0].plot()
+                    processed_img = processed_img[0].plot()
                 except:
                     pass
             
-            # Agar NumPy array hai toh BGR se RGB karke PIL Image bana lein
-            if isinstance(proc_img, np.ndarray):
-                if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
-                    proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
-                proc_img = Image.fromarray(proc_img)
-            
-            st.session_state.update({
-                "processed_img": proc_img, 
-                "counts": counts, 
-                "current_tracking_id": generate_tracking_id()
-            })
-            
-    if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
-        img_to_show = st.session_state["processed_img"]
-        
-        # Render ke waqt dobara safety check
-        if isinstance(img_to_show, np.ndarray):
-            if len(img_to_show.shape) == 3 and img_to_show.shape[2] == 3:
-                img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
-            img_to_show = Image.fromarray(img_to_show)
-            
-        st.image(img_to_show, caption="Live Camera AI Result", use_container_width=True)
+            # Agar processed image ndarray hai toh wapas VideoFrame mein badal dein
+            if not isinstance(processed_img, np.ndarray):
+                processed_img = img # Fallback agar format match na ho
+                
+            return av.VideoFrame.from_ndarray(processed_img, format="bgr24")
+
+    # WebRTC Streamer component jo browser ka camera direct on kar dega bina kisi button ke
+    webrtc_streamer(
+        key="urbaneye-dashcam",
+        rtc_configuration=RTC_CONFIGURATION,
+        video_processor_factory=VideoTransformer,
+        media_stream_constraints={"video": {"facingMode": "environment"}, "audio": False},
+        async_processing=True,
+    )
