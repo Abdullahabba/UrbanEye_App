@@ -24,10 +24,13 @@ except Exception:
             "sla_target": "24 Hours"
         }
 
+# Expanded robust STUN configuration to bypass network/timeout issues
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
-            {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun.stunprotocol.org:3478"]}
+            {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]},
+            {"urls": ["stun:stun.stunprotocol.org:3478"]},
+            {"urls": ["stun:stun.services.mozilla.com"]}
         ]
     }
 )
@@ -36,6 +39,7 @@ class AutoStopTransformer:
     def __init__(self):
         self.detected = False
         self.result_data = None
+        # Safe threshold set to 0.50 to avoid false positives like faces/skin tones
         self.conf_threshold = 0.50
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
@@ -95,8 +99,8 @@ class AutoStopTransformer:
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
-    st.markdown("### 📸 Auto-Stop AI Detection & Dispatch")
-    st.markdown("💡 **Camera start karein—hazard detect hote hi camera stop ho ga aur dispatch panel unlock ho kar sync ho jaye ga!**")
+    st.markdown("### Auto-Stop AI Detection & Dispatch")
+    st.markdown("**Start the camera—once a hazard is detected, the camera will stop automatically and the dispatch panel will unlock!**")
 
     if st_autorefresh is not None:
         st_autorefresh(interval=1000, key="webrtc_poll_counter")
@@ -115,19 +119,19 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
         st.image(img_to_show, caption="Detected Hazard Result with Bounding Boxes", use_container_width=True)
 
         with st.container(border=True):
-            st.markdown(f"**🏷️ Tracking ID:** `{res['tracking_id']}`")
+            st.markdown(f"**Tracking ID:** `{res['tracking_id']}`")
             summary_bullets = "".join([f"- **{str(k).capitalize()}**: {v}\n" for k, v in res['counts'].items() if v is not None])
-            st.markdown("**📋 Detected Items:**")
+            st.markdown("**Detected Items:**")
             st.markdown(summary_bullets if summary_bullets else "- Hazard Detected")
             
             assessment = res['assessment']
-            st.markdown(f"**⚡ Priority Score:** {assessment.get('priority_score')}/100 | **Severity:** {assessment.get('severity')}")
-            st.markdown(f"**🏢 Assigned Dept:** {assessment.get('assigned_dept')} | **⏱️ SLA:** {assessment.get('sla_target')}")
+            st.markdown(f"**Priority Score:** {assessment.get('priority_score')}/100 | **Severity:** {assessment.get('severity')}")
+            st.markdown(f"**Assigned Dept:** {assessment.get('assigned_dept')} | **SLA Target:** {assessment.get('sla_target')}")
 
         if st.session_state.get("synced_to_db", False):
-            st.success("✅ Data kamyabi ke sath automatically Supabase mein save ho gaya hai!")
+            st.success("Data successfully saved and synced with Supabase database automatically!")
 
-        if st.button("🔄 Dobara Scanning Shuru Karein", use_container_width=True):
+        if st.button("Restart Scanning", use_container_width=True):
             st.session_state["captured_result"] = None
             st.session_state["counts"] = {}
             st.session_state["synced_to_db"] = False
@@ -135,7 +139,7 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
 
     else:
         ctx = webrtc_streamer(
-            key="auto-stop-streamer-v4",
+            key="auto-stop-streamer-v5",
             video_processor_factory=AutoStopTransformer,
             rtc_configuration=RTC_CONFIGURATION,
             media_stream_constraints={"video": {"width": 640, "height": 480}, "audio": False},
@@ -148,7 +152,7 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
         if ctx.video_processor and ctx.video_processor.detected and ctx.video_processor.result_data:
             res = ctx.video_processor.result_data
             st.session_state["captured_result"] = res
-            st.session_state["counts"] = res["counts"]  # <--- Dispatch panel unlock karne ke liye zaroori line
+            st.session_state["counts"] = res["counts"]  # Unlocks the dispatch panel instantly
             
             try:
                 payload = {
