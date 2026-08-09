@@ -13,7 +13,7 @@ RTC_CONFIGURATION = RTCConfiguration(
 
 def render_live_camera_mode(conf_threshold=0.3):
     st.markdown("### 🚗 UrbanEye AI - Dashcam Live Stream Mode")
-    st.info("Live video streaming active hai. Confidence threshold **30% (0.3)** set kar diya gaya hai.")
+    st.info("Live video streaming active hai. Detections ko mazeed stable aur fast kar diya gaya hai.")
 
     # Frame processor class jo video frames ko handle karegi
     class VideoTransformer(VideoTransformerBase):
@@ -27,28 +27,37 @@ def render_live_camera_mode(conf_threshold=0.3):
             
             # Frame Skipping: Har 3rd frame par YOLO run hoga (0.3 confidence ke sath)
             if self.frame_count % 3 == 0:
-                processed_img, counts = run_detection(img, conf_threshold=conf_threshold)
-                
-                # Agar YOLO Results object ya list aaye toh usko plot/ndarray mein convert karna
                 try:
-                    from ultralytics.engine.results import Results
-                    if isinstance(processed_img, Results):
-                        processed_img = processed_img.plot()
-                except:
-                    pass
+                    # run_detection se result hasil karna
+                    detection_result = run_detection(img, conf_threshold=conf_threshold)
                     
-                if isinstance(processed_img, list) and len(processed_img) > 0:
-                    try:
-                        processed_img = processed_img[0].plot()
-                    except:
-                        pass
-                
-                if isinstance(processed_img, np.ndarray):
-                    self.last_processed_img = processed_img
-                else:
-                    self.last_processed_img = img
+                    # Agar tuple mile (jaise (image, counts)) toh pehla item uthayein
+                    if isinstance(detection_result, tuple):
+                        processed_img = detection_result[0]
+                    else:
+                        processed_img = detection_result
 
-            # Agar processed image mojood hai toh wo dikhayein, warna direct frame
+                    # Agar YOLO Results object ho toh .plot() call karein
+                    if hasattr(processed_img, "plot"):
+                        processed_img = processed_img.plot()
+                    elif isinstance(processed_img, list) and len(processed_img) > 0:
+                        if hasattr(processed_img[0], "plot"):
+                            processed_img = processed_img[0].plot()
+                        else:
+                            processed_img = processed_img[0]
+                    
+                    # Confirm karein ke output valid numpy array hai
+                    if isinstance(processed_img, np.ndarray):
+                        self.last_processed_img = processed_img
+                    else:
+                        if self.last_processed_img is None:
+                            self.last_processed_img = img
+                except Exception as e:
+                    # Agar koi bhi error aaye toh live feed freeze na ho, original frame chalay
+                    if self.last_processed_img is None:
+                        self.last_processed_img = img
+
+            # Output image return karna
             output_img = self.last_processed_img if self.last_processed_img is not None else img
             
             return av.VideoFrame.from_ndarray(output_img, format="bgr24")
