@@ -25,52 +25,64 @@ except ImportError:
 def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
     st.markdown("### 📸 Field Camera Live Capture & Auto-Sync")
     
+    # Session state initialization to track processed photo bytes and avoid infinite loops
+    if "last_cam_bytes" not in st.session_state:
+        st.session_state["last_cam_bytes"] = None
+
     cam_photo = st.camera_input("Take Live Photo from Camera", key="camera_input")
     
-    if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_cam"):
-        img = Image.open(cam_photo)
-        with st.spinner("Analyzing Camera Capture..."):
-            try:
-                proc_img, counts = run_detection(img, conf_threshold)
-            except TypeError:
-                try:
-                    proc_img, counts = run_detection(img)
-                except Exception:
-                    proc_img, counts = img, {}
+    # Auto-detection triggers immediately when a new photo is taken
+    if cam_photo is not None:
+        current_bytes = cam_photo.getvalue()
+        
+        # Check if this is a new photo capture
+        if st.session_state["last_cam_bytes"] != current_bytes:
+            st.session_state["last_cam_bytes"] = current_bytes
             
-            # YOLO Results object ya list ko safely NumPy array mein badlein
-            try:
-                from ultralytics.engine.results import Results
-                if isinstance(proc_img, Results):
-                    proc_img = proc_img.plot()
-            except ImportError:
-                pass
+            img = Image.open(cam_photo)
+            with st.spinner("🔍 Tasveer lete hi automatic detection shuru ho gayi hai..."):
+                try:
+                    proc_img, counts = run_detection(img, conf_threshold)
+                except TypeError:
+                    try:
+                        proc_img, counts = run_detection(img)
+                    except Exception:
+                        proc_img, counts = img, {}
                 
-            if isinstance(proc_img, list) and len(proc_img) > 0:
+                # YOLO Results object ya list ko safely NumPy array mein badlein
                 try:
-                    proc_img = proc_img[0].plot()
-                except:
+                    from ultralytics.engine.results import Results
+                    if isinstance(proc_img, Results):
+                        proc_img = proc_img.plot()
+                except ImportError:
                     pass
-            
-            # Agar NumPy array hai toh BGR se RGB karke PIL Image bana lein
-            if isinstance(proc_img, np.ndarray):
-                if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
-                    proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
-                proc_img = Image.fromarray(proc_img)
-            
-            if not counts or len(counts) == 0:
-                counts = {"Hazard / Pothole": 1}
+                    
+                if isinstance(proc_img, list) and len(proc_img) > 0:
+                    try:
+                        proc_img = proc_img[0].plot()
+                    except:
+                        pass
+                
+                # Agar NumPy array hai toh BGR se RGB karke PIL Image bana lein
+                if isinstance(proc_img, np.ndarray):
+                    if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
+                        proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
+                    proc_img = Image.fromarray(proc_img)
+                
+                if not counts or len(counts) == 0:
+                    counts = {"Hazard / Pothole": 1}
 
-            st.session_state.update({
-                "processed_img": proc_img, 
-                "counts": counts, 
-                "current_tracking_id": generate_tracking_id()
-            })
-            
+                st.session_state.update({
+                    "processed_img": proc_img, 
+                    "counts": counts, 
+                    "current_tracking_id": generate_tracking_id()
+                })
+            st.rerun()
+
+    # Display processed image and review section if available
     if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
         img_to_show = st.session_state["processed_img"]
         
-        # Render ke waqt dobara safety check
         if isinstance(img_to_show, np.ndarray):
             if len(img_to_show.shape) == 3 and img_to_show.shape[2] == 3:
                 img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
@@ -148,6 +160,7 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
                         if st.button("🔄 Dobara scan karein"):
                             st.session_state.pop("processed_img", None)
                             st.session_state.pop("counts", None)
+                            st.session_state["last_cam_bytes"] = None
                             st.rerun()
                     except Exception as db_err:
                         st.error(f"❌ Supabase Error: {db_err}")
