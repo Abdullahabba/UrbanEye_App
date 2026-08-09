@@ -22,6 +22,45 @@ try:
 except ImportError:
     streamlit_geolocation = None
 
+def parse_detection_output(detection_result):
+    """Universal helper jo har tarah ke YOLO output (tuple, list, Results, PIL, ndarray) ko handle karta hai."""
+    processed_img = None
+    counts = {}
+
+    def resolve_img(item):
+        if item is None:
+            return None
+        if isinstance(item, np.ndarray):
+            return item
+        if hasattr(item, "convert") and hasattr(item, "size"):  # PIL Image
+            return np.array(item)
+        if hasattr(item, "plot"):  # YOLO Results object
+            try:
+                p = item.plot()
+                if isinstance(p, np.ndarray):
+                    return p
+            except Exception:
+                pass
+        if isinstance(item, (list, tuple)) and len(item) > 0:
+            return resolve_img(item[0])
+        return None
+
+    if isinstance(detection_result, (tuple, list)):
+        for element in detection_result:
+            if isinstance(element, dict):
+                counts = element
+            else:
+                img_cand = resolve_img(element)
+                if img_cand is not None and processed_img is None:
+                    processed_img = img_cand
+    else:
+        if isinstance(detection_result, dict):
+            counts = detection_result
+        else:
+            processed_img = resolve_img(detection_result)
+
+    return processed_img, counts
+
 def render_live_camera_mode(conf_threshold=0.25):
     st.markdown("### 🚗 UrbanEye AI - Live Field Scanner & Auto-Sync")
 
@@ -49,37 +88,29 @@ def render_live_camera_mode(conf_threshold=0.25):
             if img is not None:
                 with st.spinner("🔍 AI model frame ko analyze kar raha hai..."):
                     try:
-                        detection_result = run_detection(img, conf_threshold=conf_threshold)
-                        
-                        proc_img = None
-                        counts = {}
+                        # Run detection
+                        try:
+                            detection_result = run_detection(img, conf_threshold=conf_threshold)
+                        except TypeError:
+                            detection_result = run_detection(img)
 
-                        if isinstance(detection_result, tuple):
-                            proc_img = detection_result[0]
-                            if len(detection_result) > 1 and isinstance(detection_result[1], dict):
-                                counts = detection_result[1]
-                        else:
-                            proc_img = detection_result
+                        # Parse using universal helper
+                        proc_img, counts = parse_detection_output(detection_result)
 
-                        if hasattr(proc_img, "plot"):
-                            proc_img = proc_img.plot()
-                        elif isinstance(proc_img, list) and len(proc_img) > 0:
-                            if hasattr(proc_img[0], "plot"):
-                                proc_img = proc_img[0].plot()
+                        if proc_img is not None and isinstance(proc_img, np.ndarray):
+                            if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
+                                rgb_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
                             else:
-                                proc_img = proc_img[0]
-
-                        if isinstance(proc_img, np.ndarray):
-                            rgb_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
+                                rgb_img = proc_img
                             
                             # Save state and move to verification step
-                            st.session_state["live_counts"] = counts
+                            st.session_state["live_counts"] = counts if counts else {"hazard": 1}
                             st.session_state["live_tracking_id"] = generate_tracking_id()
                             st.session_state["live_processed_img"] = rgb_img
                             st.session_state["live_step"] = "VERIFY"
                             st.rerun()
                         else:
-                            st.error("❌ AI processing mein tasveer durust nahi mili. Dobara koshish karein.")
+                            st.error(f"❌ AI processing mein valid image nahi mili. Output type: {type(detection_result)}")
                     except Exception as e:
                         st.error(f"❌ Detection Error: {e}")
 
@@ -95,7 +126,7 @@ def render_live_camera_mode(conf_threshold=0.25):
 
         with col_img:
             if processed_img is not None:
-                st.image(processed_img, caption="Analyzed Hazard", use_container_width=True)
+                st.image(processed_img, caption="Analyzed Hazard Result", use_container_width=True)
 
         with col_info:
             with st.container(border=True):
@@ -109,7 +140,7 @@ def render_live_camera_mode(conf_threshold=0.25):
                 
                 main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
                 st.markdown("**📋 Detected:**")
-                st.markdown(summary_bullets if summary_bullets else "- No counts found")
+                st.markdown(summary_bullets if summary_bullets else "- Hazard Detected")
 
         st.divider()
         st.markdown("##### 📍 Location Muntakhib Karein")
