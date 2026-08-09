@@ -6,11 +6,18 @@ import time
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
-from database.supabase_client import supabase  # Aap ki supabase client file se import
+from database.supabase_client import supabase
 
-# WebRTC configuration (STUN servers for connection stability)
+# Multiple robust STUN servers for instant connection stability
 RTC_CONFIGURATION = RTCConfiguration(
-    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+    {
+        "iceServers": [
+            {"urls": ["stun:stun.l.google.com:19302"]},
+            {"urls": ["stun:stun1.l.google.com:19302"]},
+            {"urls": ["stun:stun2.l.google.com:19302"]},
+            {"urls": ["stun:stun.services.mozilla.com"]}
+        ]
+    }
 )
 
 def render_live_camera_mode(conf_threshold=0.3):
@@ -60,7 +67,6 @@ def render_live_camera_mode(conf_threshold=0.3):
                                 
                                 try:
                                     tracking_id = generate_tracking_id()
-                                    # Supabase table mein data insert karna (table ka naam 'reports' hai, aap apni zaroorat ke mutabiq badal sakte hain)
                                     supabase.table("reports").insert({
                                         "tracking_id": tracking_id,
                                         "counts": str(counts),
