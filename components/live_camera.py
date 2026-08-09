@@ -19,7 +19,7 @@ except Exception:
             "sla_target": "24 Hours"
         }
 
-# Multiple STUN servers taake network connection timeout na ho
+# Multiple STUN servers for stable connection
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
@@ -48,19 +48,30 @@ class AutoStopTransformer:
             if counts and len(counts) > 0:
                 self.detected = True
                 
-                from ultralytics.engine.results import Results
-                if isinstance(proc_img, Results):
-                    proc_img = proc_img.plot()
-                elif isinstance(proc_img, list) and len(proc_img) > 0:
+                # --- Aap ka original working bounding-box plotting logic ---
+                try:
+                    from ultralytics.engine.results import Results
+                    if isinstance(proc_img, Results):
+                        proc_img = proc_img.plot()
+                except ImportError:
+                    pass
+                    
+                if isinstance(proc_img, list) and len(proc_img) > 0:
                     try:
                         proc_img = proc_img[0].plot()
                     except:
                         pass
                 
+                # Agar NumPy array hai toh BGR se RGB karke PIL Image bana lein
                 if isinstance(proc_img, np.ndarray):
+                    if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
+                        proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
+                    final_img = Image.fromarray(proc_img)
+                elif isinstance(proc_img, Image.Image):
                     final_img = proc_img
                 else:
-                    final_img = img
+                    final_img = Image.fromarray(img)
+                # -----------------------------------------------------------
                     
                 tracking_id = generate_tracking_id()
                 assessment = calculate_priority_score(counts)
@@ -82,7 +93,7 @@ class AutoStopTransformer:
 
 def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
     st.markdown("### 📸 Auto-Stop AI Detection & Instant Result")
-    st.markdown("💡 **Jaise hi hazard detect hoga, camera stop ho kar foran result aur Supabase sync dikha dega!**")
+    st.markdown("💡 **Jaise hi hazard detect hoga, camera stop ho kar bounding boxes wale result aur Supabase sync dikha dega!**")
 
     if "captured_result" not in st.session_state:
         st.session_state["captured_result"] = None
@@ -94,13 +105,9 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
     if st.session_state["captured_result"] is not None:
         res = st.session_state["captured_result"]
         
+        # Display final processed PIL image with bounding boxes
         img_to_show = res["processed_img"]
-        if isinstance(img_to_show, np.ndarray):
-            if len(img_to_show.shape) == 3 and img_to_show.shape[2] == 3:
-                img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
-            img_to_show = Image.fromarray(img_to_show)
-            
-        st.image(img_to_show, caption="Detected Hazard Result (Auto-Captured)", use_container_width=True)
+        st.image(img_to_show, caption="Detected Hazard Result with Bounding Boxes", use_container_width=True)
 
         with st.container(border=True):
             st.markdown(f"**🏷️ Tracking ID:** `{res['tracking_id']}`")
@@ -121,7 +128,7 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
             st.rerun()
 
     else:
-        st.info("ℹ️ Agar connection mein der lage, to page ko aik bar refresh (F5) kar lein.")
+        st.info("ℹ️ Camera start karein—hazard aate hi yeh khud-ba-khud capture kar ke boxes dikha dega.")
         
         ctx = webrtc_streamer(
             key="auto-stop-streamer",
