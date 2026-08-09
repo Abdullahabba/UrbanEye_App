@@ -11,21 +11,24 @@ RTC_CONFIGURATION = RTCConfiguration(
 )
 
 def render_live_camera_mode(conf_threshold=0.2):
-    st.markdown("### 🔴 Real-Time Live Continuous AI Detection")
-    st.markdown("💡 **Koi snapshot ya button dabane ki zaroorat nahi!** 'Start' button dabayein, camera khulte hi live video par automatic bounding boxes aur detection shuru ho jaye gi.")
+    st.markdown("### 🔴 Real-Time Live Continuous AI Detection (Debug Mode)")
+    st.warning("⚠️ Agar detection nahi ho rahi, to apna terminal/console check karein wahan real error print ho raha hoga.")
 
     class VideoTransformer:
         def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
             img = frame.to_ndarray(format="bgr24")
             try:
-                # Convert BGR frame to RGB PIL Image for model detection
+                # Convert BGR frame to RGB PIL Image
                 img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 pil_img = Image.fromarray(img_rgb)
                 
-                # Run AI detection with threshold
+                # Run AI detection
                 proc_img, counts = run_detection(pil_img, conf_threshold)
                 
-                # Handle YOLO Results object safely
+                # Debug print to terminal
+                print(f"🔍 Detected Counts: {counts}")
+                
+                # YOLO Results object handling
                 from ultralytics.engine.results import Results
                 if isinstance(proc_img, Results):
                     proc_img = proc_img.plot()
@@ -35,17 +38,15 @@ def render_live_camera_mode(conf_threshold=0.2):
                     except:
                         pass
                 
-                # YOLO .plot() returns BGR numpy array
                 if isinstance(proc_img, np.ndarray):
                     if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
                         img = proc_img
             except Exception as e:
-                # Agar kisi frame par error aaye toh original frame return ho taake stream na rukey
-                pass
+                # Terminal par exact error print karein
+                print(f"❌ WebRTC Detection Error: {e}")
                 
             return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-    # Real-time WebRTC Streamer
     webrtc_streamer(
         key="live-ai-continuous-detection",
         video_processor_factory=VideoTransformer,
