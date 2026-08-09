@@ -39,11 +39,16 @@ class AutoStopTransformer:
     def __init__(self):
         self.detected = False
         self.result_data = None
-        # Safe threshold set to 0.50 to avoid false positives like faces/skin tones
         self.conf_threshold = 0.50
+        self.frame_counter = 0  # CPU optimization ke liye frame skip counter
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         if self.detected:
+            return frame
+        
+        # CPU Optimization: Har 3rd frame par detection run karein (Baki frames skip hon ge)
+        self.frame_counter += 1
+        if self.frame_counter % 3 != 0:
             return frame
         
         img = frame.to_ndarray(format="bgr24")
@@ -102,8 +107,9 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
     st.markdown("### Auto-Stop AI Detection & Dispatch")
     st.markdown("**Start the camera—once a hazard is detected, the camera will stop automatically and the dispatch panel will unlock!**")
 
+    # CPU Optimization: Interval ko 1000ms (1 sec) se barha kar 3000ms (3 sec) kar diya hai
     if st_autorefresh is not None:
-        st_autorefresh(interval=1000, key="webrtc_poll_counter")
+        st_autorefresh(interval=3000, key="webrtc_poll_counter")
 
     if "captured_result" not in st.session_state:
         st.session_state["captured_result"] = None
@@ -152,7 +158,7 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
         if ctx.video_processor and ctx.video_processor.detected and ctx.video_processor.result_data:
             res = ctx.video_processor.result_data
             st.session_state["captured_result"] = res
-            st.session_state["counts"] = res["counts"]  # Unlocks the dispatch panel instantly
+            st.session_state["counts"] = res["counts"]  
             
             try:
                 payload = {
