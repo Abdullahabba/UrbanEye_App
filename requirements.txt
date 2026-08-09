@@ -8,3 +8,4 @@ pillow
 streamlit-geolocation
 reportlab
 fpdf
+streamlit-webrtc av
