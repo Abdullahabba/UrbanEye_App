@@ -11,7 +11,7 @@ try:
 except Exception:
     def calculate_priority_score(counts):
         return {
-            "priority_score": 50,
+            "priority_score": 65,
             "severity": "Medium",
             "assigned_dept": "Municipal Operations",
             "sla_target": "24 Hours"
@@ -23,7 +23,7 @@ except ImportError:
     streamlit_geolocation = None
 
 def parse_detection_output(detection_result):
-    """Universal helper jo har tarah ke YOLO output (tuple, list, Results, PIL, ndarray) ko handle karta hai."""
+    """Universal helper jo YOLO output (tuple, list, Results, dict, ndarray) ko reliably parse karta hai."""
     processed_img = None
     counts = {}
 
@@ -32,9 +32,9 @@ def parse_detection_output(detection_result):
             return None
         if isinstance(item, np.ndarray):
             return item
-        if hasattr(item, "convert") and hasattr(item, "size"):  # PIL Image
+        if hasattr(item, "convert") and hasattr(item, "size"):
             return np.array(item)
-        if hasattr(item, "plot"):  # YOLO Results object
+        if hasattr(item, "plot"):
             try:
                 p = item.plot()
                 if isinstance(p, np.ndarray):
@@ -48,16 +48,15 @@ def parse_detection_output(detection_result):
     if isinstance(detection_result, (tuple, list)):
         for element in detection_result:
             if isinstance(element, dict):
-                counts = element
+                counts.update(element)
             else:
                 img_cand = resolve_img(element)
                 if img_cand is not None and processed_img is None:
                     processed_img = img_cand
+    elif isinstance(detection_result, dict):
+        counts.update(detection_result)
     else:
-        if isinstance(detection_result, dict):
-            counts = detection_result
-        else:
-            processed_img = resolve_img(detection_result)
+        processed_img = resolve_img(detection_result)
 
     return processed_img, counts
 
@@ -66,7 +65,7 @@ def render_live_camera_mode(conf_threshold=0.25):
 
     # Session states initialization
     if "live_step" not in st.session_state:
-        st.session_state["live_step"] = "CAPTURE"  # CAPTURE, VERIFY
+        st.session_state["live_step"] = "CAPTURE"
     if "live_counts" not in st.session_state:
         st.session_state["live_counts"] = {}
     if "live_tracking_id" not in st.session_state:
@@ -88,14 +87,16 @@ def render_live_camera_mode(conf_threshold=0.25):
             if img is not None:
                 with st.spinner("🔍 AI model frame ko analyze kar raha hai..."):
                     try:
-                        # Run detection
                         try:
                             detection_result = run_detection(img, conf_threshold=conf_threshold)
                         except TypeError:
                             detection_result = run_detection(img)
 
-                        # Parse using universal helper
                         proc_img, counts = parse_detection_output(detection_result)
+
+                        # Fallback agar counts empty hon lekin image mil gayi ho
+                        if not counts or len(counts) == 0:
+                            counts = {"General Hazard / Pothole": 1}
 
                         if proc_img is not None and isinstance(proc_img, np.ndarray):
                             if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
@@ -103,20 +104,19 @@ def render_live_camera_mode(conf_threshold=0.25):
                             else:
                                 rgb_img = proc_img
                             
-                            # Save state and move to verification step
-                            st.session_state["live_counts"] = counts if counts else {"hazard": 1}
+                            st.session_state["live_counts"] = counts
                             st.session_state["live_tracking_id"] = generate_tracking_id()
                             st.session_state["live_processed_img"] = rgb_img
                             st.session_state["live_step"] = "VERIFY"
                             st.rerun()
                         else:
-                            st.error(f"❌ AI processing mein valid image nahi mili. Output type: {type(detection_result)}")
+                            st.error(f"❌ AI processing mein valid image nahi mili.")
                     except Exception as e:
                         st.error(f"❌ Detection Error: {e}")
 
     # --- STEP 2: LOCATION & SUPABASE SYNC ---
     elif st.session_state["live_step"] == "VERIFY":
-        st.success("✅ AI detection kamyaab! Ab location darj karein aur data Supabase mein sync karein.")
+        st.success("✅ AI detection kamyaab! Niche di gayi details check karein aur Supabase mein sync karein.")
 
         tracking_id = st.session_state["live_tracking_id"]
         counts = st.session_state["live_counts"]
@@ -131,15 +131,16 @@ def render_live_camera_mode(conf_threshold=0.25):
         with col_info:
             with st.container(border=True):
                 st.markdown(f"**🏷️ Tracking ID:** `{tracking_id}`")
+                
                 summary_bullets = ""
                 hazard_list = []
                 for k, v in counts.items():
-                    if v > 0:
-                        summary_bullets += f"- **{k.capitalize()}**: {v}\n"
-                        hazard_list.append(f"{k.capitalize()} ({v})")
+                    if v is not None:
+                        summary_bullets += f"- **{str(k).capitalize()}**: {v}\n"
+                        hazard_list.append(f"{str(k).capitalize()} ({v})")
                 
                 main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
-                st.markdown("**📋 Detected:**")
+                st.markdown("**📋 Detected Items:**")
                 st.markdown(summary_bullets if summary_bullets else "- Hazard Detected")
 
         st.divider()
