@@ -23,7 +23,7 @@ RTC_CONFIGURATION = RTCConfiguration(
 
 def render_live_camera_mode(conf_threshold=0.3):
     st.markdown("### 🚗 UrbanEye AI - Live Auto-Detection & Supabase Sync")
-    st.info("Live stream active hai. AI detections background mein run ho rahi hain taake camera freeze na ho.")
+    st.info("Live stream active hai. AI model frames par detection run kar raha hai.")
 
     class NonBlockingVideoTransformer(VideoTransformerBase):
         def __init__(self):
@@ -33,7 +33,7 @@ def render_live_camera_mode(conf_threshold=0.3):
             self.running = True
             self.last_db_push_time = 0
 
-            # Alag background thread start karna taake video stream block na ho
+            # Background thread for non-blocking AI processing
             self.thread = threading.Thread(target=self._ai_worker, daemon=True)
             self.thread.start()
 
@@ -43,20 +43,27 @@ def render_live_camera_mode(conf_threshold=0.3):
                 with self.lock:
                     if self.latest_frame is not None:
                         frame_to_process = self.latest_frame.copy()
-                        self.latest_frame = None  # New frame consume kar liya
+                        self.latest_frame = None  # Consume latest frame
 
                 if frame_to_process is not None:
                     try:
-                        # YOLO detection run karna
-                        detection_result = run_detection(frame_to_process, conf_threshold=conf_threshold)
+                        # Safe call supporting different function signatures
+                        try:
+                            detection_result = run_detection(frame_to_process, conf_threshold=conf_threshold)
+                        except TypeError:
+                            detection_result = run_detection(frame_to_process)
                         
+                        processed_img = None
+                        counts = {}
+
                         if isinstance(detection_result, tuple):
-                            processed_img, counts = detection_result
+                            processed_img = detection_result[0]
+                            if len(detection_result) > 1 and isinstance(detection_result[1], dict):
+                                counts = detection_result[1]
                         else:
                             processed_img = detection_result
-                            counts = {}
 
-                        # YOLO Results object ya list ko plot/ndarray mein convert karna
+                        # Handle Ultralytics YOLO Results object or list
                         if hasattr(processed_img, "plot"):
                             processed_img = processed_img.plot()
                         elif isinstance(processed_img, list) and len(processed_img) > 0:
@@ -70,7 +77,8 @@ def render_live_camera_mode(conf_threshold=0.3):
                                 self.annotated_frame = processed_img
 
                             # Background Supabase sync check
-                            total_detected = sum(counts.values()) if isinstance(counts, dict) else 1
+                            total_detected = sum(counts.values()) if isinstance(counts, dict) and len(counts) > 0 else 1
+                            
                             if total_detected > 0:
                                 curr_time = time.time()
                                 if curr_time - self.last_db_push_time > 15:
@@ -85,18 +93,17 @@ def render_live_camera_mode(conf_threshold=0.3):
                                     except Exception as db_err:
                                         print(f"Supabase Sync Error: {db_err}")
                         else:
-                            print("AI Warning: processed_img is not a valid numpy array.")
+                            print(f"AI Warning: processed_img is type {type(processed_img)}")
                     except Exception as e:
                         print(f"AI Detection Worker Error: {e}")
                 else:
-                    time.sleep(0.02) # CPU overload bachane ke liye chota sleep
+                    time.sleep(0.01)
 
         def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
             img = frame.to_ndarray(format="bgr24")
             
             with self.lock:
                 self.latest_frame = img
-                # Agar processed frame mojood hai toh wo dikhayein, warna live raw frame
                 current_output = self.annotated_frame if self.annotated_frame is not None else img
 
             return av.VideoFrame.from_ndarray(current_output, format="bgr24")
