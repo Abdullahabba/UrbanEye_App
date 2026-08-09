@@ -23,7 +23,7 @@ except ImportError:
     streamlit_geolocation = None
 
 def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
-    st.markdown("### 📸 Live Camera AI Detection & Real GPS Auto-Sync")
+    st.markdown("### 📸 Fully Automated Live GPS Scanner & Supabase Sync")
     
     # Session state initialization
     if "last_cam_bytes" not in st.session_state:
@@ -42,7 +42,7 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
             st.session_state["auto_synced"] = False
             
             img = Image.open(cam_photo)
-            with st.spinner("🔍 Tasveer lete hi automatic detection aur bounding boxes ban rahe hain..."):
+            with st.spinner("🔍 Tasveer lete hi automatic detection shuru ho gayi hai..."):
                 try:
                     proc_img, counts = run_detection(img, conf_threshold)
                 except TypeError:
@@ -51,7 +51,7 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
                     except Exception:
                         proc_img, counts = img, {}
                 
-                # YOLO Results object ya list ko safely NumPy array mein badlein (Original Working Logic)
+                # YOLO Results object ya list ko safely NumPy array mein badlein
                 try:
                     from ultralytics.engine.results import Results
                     if isinstance(proc_img, Results):
@@ -81,7 +81,7 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
                 })
             st.rerun()
 
-    # Display processed image with bounding boxes and real GPS handling
+    # Display processed image and review section if available
     if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
         img_to_show = st.session_state["processed_img"]
         
@@ -103,17 +103,12 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
                 if v is not None:
                     summary_bullets += f"- **{str(k).capitalize()}**: {v}\n"
                     hazard_list.append(f"{str(k).capitalize()} ({v})")
-            main_hazard = ", ni join kar raha" if not hazard_list else ", ".join(hazard_list)
             main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
             st.markdown("**📋 Detected Items:**")
             st.markdown(summary_bullets if summary_bullets else "- Hazard Detected")
 
         st.divider()
-        st.markdown("##### 📍 Real Live GPS Location & Auto-Sync")
-
-        lat, lon = 31.5204, 74.3587
-        location_name = "Lahore City (Default)"
-        gps_acquired = False
+        st.markdown("##### 📍 Live GPS Location Fetching & Auto-Sync")
 
         if streamlit_geolocation is not None:
             loc = streamlit_geolocation()
@@ -121,45 +116,20 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
                 lat = loc["latitude"]
                 lon = loc["longitude"]
                 location_name = f"Live GPS (Lat: {lat:.4f}, Lon: {lon:.4f})"
-                gps_acquired = True
-            else:
-                st.info("👆 Baraye meharbani real GPS coordinates hasil karne ke liye nechay diye gaye button par click karein.")
-        else:
-            st.warning("streamlit-geolocation installed nahi hai.")
+                
+                assessment = calculate_priority_score(counts)
+                score = assessment["priority_score"]
+                severity = assessment["severity"]
+                dept = assessment["assigned_dept"]
+                sla = assessment["sla_target"]
 
-        assessment = calculate_priority_score(counts)
-        score = assessment["priority_score"]
-        severity = assessment["severity"]
-        dept = assessment["assigned_dept"]
-        sla = assessment["sla_target"]
+                st.markdown(f"**⚡ Priority Score:** {score}/100 | **Severity:** {severity}")
+                st.markdown(f"**🏢 Assigned Dept:** {dept} | **⏱️ SLA:** {sla}")
+                st.success(f"📍 Location Locked: {location_name}")
 
-        st.markdown(f"**⚡ Priority Score:** {score}/100 | **Severity:** {severity}")
-        st.markdown(f"**🏢 Assigned Dept:** {dept} | **⏱️ SLA:** {sla}")
-
-        if not st.session_state.get("auto_synced", False):
-            if gps_acquired:
-                with st.spinner("🚀 Real GPS location ke sath Supabase mein data sync ho raha hai..."):
-                    try:
-                        payload = {
-                            "tracking_id": tracking_id,
-                            "hazard": main_hazard,
-                            "issue_type": main_hazard,
-                            "severity": f"{severity} ({score}/100)",
-                            "status": "Active / Dispatched",
-                            "location_name": location_name,
-                            "latitude": lat,
-                            "longitude": lon,
-                            "assigned_dept": dept,
-                            "sla_target": sla
-                        }
-                        supabase.table("reports").insert(payload).execute()
-                        st.session_state["auto_synced"] = True
-                        st.success("✅ Real GPS location ke sath data kamyabi ke sath Supabase mein mehfooz ho gaya!")
-                    except Exception as db_err:
-                        st.error(f"❌ Supabase Error: {db_err}")
-            else:
-                if st.button("🚀 Current Location ke sath Supabase mein Save karein", use_container_width=True):
-                    with st.spinner("Data sync ho raha hai..."):
+                # Automatically push to Supabase once location is successfully fetched
+                if not st.session_state.get("auto_synced", False):
+                    with st.spinner("🚀 Automatically syncing data to Supabase..."):
                         try:
                             payload = {
                                 "tracking_id": tracking_id,
@@ -175,9 +145,13 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
                             }
                             supabase.table("reports").insert(payload).execute()
                             st.session_state["auto_synced"] = True
-                            st.success("✅ Data kamyabi ke sath Supabase mein mehfooz ho gaya!")
+                            st.success("✅ Data kamyabi ke sath automatically Supabase mein save ho gaya!")
                         except Exception as db_err:
                             st.error(f"❌ Supabase Error: {db_err}")
+            else:
+                st.info("📡 Live GPS signal talash ki ja rahi hai... Baraye meharbani browser ki location permission allow karein.")
+        else:
+            st.error("⚠️ `streamlit-geolocation` library installed nahi hai.")
 
         if st.session_state.get("auto_synced", False):
             if st.button("🔄 Nayi Scanning Shuru Karein", use_container_width=True):
