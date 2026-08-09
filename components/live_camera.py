@@ -21,9 +21,9 @@ RTC_CONFIGURATION = RTCConfiguration(
     }
 )
 
-def render_live_camera_mode(conf_threshold=0.3):
+def render_live_camera_mode(conf_threshold=0.2):  # Confidence mazeed kam (20%) kar di hai taake easily detect ho
     st.markdown("### 🚗 UrbanEye AI - Live Auto-Detection & Supabase Sync")
-    st.info("Live stream active hai. AI model frames par detection run kar raha hai.")
+    st.info("Live stream active hai. Agar koi urban hazard samne aayega toh terminal mein counts print honge aur box ban jayega.")
 
     class NonBlockingVideoTransformer(VideoTransformerBase):
         def __init__(self):
@@ -63,6 +63,9 @@ def render_live_camera_mode(conf_threshold=0.3):
                         else:
                             processed_img = detection_result
 
+                        # Terminal mein print kar ke check karein ke kya detect ho raha hai
+                        print(f"AI Scan - Detected Counts: {counts}")
+
                         # Handle Ultralytics YOLO Results object or list
                         if hasattr(processed_img, "plot"):
                             processed_img = processed_img.plot()
@@ -77,7 +80,7 @@ def render_live_camera_mode(conf_threshold=0.3):
                                 self.annotated_frame = processed_img
 
                             # Background Supabase sync check
-                            total_detected = sum(counts.values()) if isinstance(counts, dict) and len(counts) > 0 else 1
+                            total_detected = sum(counts.values()) if isinstance(counts, dict) and len(counts) > 0 else 0
                             
                             if total_detected > 0:
                                 curr_time = time.time()
@@ -90,10 +93,9 @@ def render_live_camera_mode(conf_threshold=0.3):
                                             "counts": str(counts),
                                             "status": "Auto-Synced Live"
                                         }).execute()
+                                        print("Successfully synced detected hazard to Supabase!")
                                     except Exception as db_err:
                                         print(f"Supabase Sync Error: {db_err}")
-                        else:
-                            print(f"AI Warning: processed_img is type {type(processed_img)}")
                     except Exception as e:
                         print(f"AI Detection Worker Error: {e}")
                 else:
