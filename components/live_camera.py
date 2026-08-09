@@ -1,6 +1,7 @@
 import streamlit as st
 import av
 import cv2
+import numpy as np
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
@@ -10,43 +11,61 @@ RTC_CONFIGURATION = RTCConfiguration(
     {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 )
 
-def render_live_camera_mode(conf_threshold=0.7):
+def render_live_camera_mode(conf_threshold=0.3):
     st.markdown("### 🚗 UrbanEye AI - Dashcam Live Stream Mode")
-    st.info("Live video streaming active hai. AI automatic 70% confidence par issues detect kar raha hai.")
+    st.info("Live video streaming active hai. Confidence threshold **30% (0.3)** set kar diya gaya hai.")
 
-    # Frame processor class jo har video frame ko pakar kar YOLO model chalayegi
+    # Frame processor class jo video frames ko handle karegi
     class VideoTransformer(VideoTransformerBase):
+        def __init__(self):
+            self.frame_count = 0
+            self.last_processed_img = None
+
         def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
             img = frame.to_ndarray(format="bgr24")
+            self.frame_count += 1
             
-            # Yahan 70% confidence (0.7) fix kar diya hai ya passed threshold use hoga
-            processed_img, counts = run_detection(img, conf_threshold=0.7)
-            
-            # Agar YOLO Results object ya list aaye toh usko plot/ndarray mein convert karna
-            try:
-                from ultralytics.engine.results import Results
-                if isinstance(processed_img, Results):
-                    processed_img = processed_img.plot()
-            except:
-                pass
+            # Frame Skipping: Har 3rd frame par YOLO run hoga (0.3 confidence ke sath)
+            if self.frame_count % 3 == 0:
+                processed_img, counts = run_detection(img, conf_threshold=conf_threshold)
                 
-            if isinstance(processed_img, list) and len(processed_img) > 0:
+                # Agar YOLO Results object ya list aaye toh usko plot/ndarray mein convert karna
                 try:
-                    processed_img = processed_img[0].plot()
+                    from ultralytics.engine.results import Results
+                    if isinstance(processed_img, Results):
+                        processed_img = processed_img.plot()
                 except:
                     pass
-            
-            # Agar processed image ndarray hai toh wapas VideoFrame mein badal dein
-            if not isinstance(processed_img, np.ndarray):
-                processed_img = img # Fallback agar format match na ho
+                    
+                if isinstance(processed_img, list) and len(processed_img) > 0:
+                    try:
+                        processed_img = processed_img[0].plot()
+                    except:
+                        pass
                 
-            return av.VideoFrame.from_ndarray(processed_img, format="bgr24")
+                if isinstance(processed_img, np.ndarray):
+                    self.last_processed_img = processed_img
+                else:
+                    self.last_processed_img = img
 
-    # WebRTC Streamer component jo browser ka camera direct on kar dega bina kisi button ke
+            # Agar processed image mojood hai toh wo dikhayein, warna direct frame
+            output_img = self.last_processed_img if self.last_processed_img is not None else img
+            
+            return av.VideoFrame.from_ndarray(output_img, format="bgr24")
+
+    # WebRTC Streamer component with optimized constraints
     webrtc_streamer(
         key="urbaneye-dashcam",
         rtc_configuration=RTC_CONFIGURATION,
         video_processor_factory=VideoTransformer,
-        media_stream_constraints={"video": {"facingMode": "environment"}, "audio": False},
+        media_stream_constraints={
+            "video": {
+                "facingMode": "environment",
+                "width": {"ideal": 640},
+                "height": {"ideal": 480},
+                "frameRate": {"ideal": 15}
+            }, 
+            "audio": False
+        },
         async_processing=True,
     )
