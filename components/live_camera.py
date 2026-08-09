@@ -23,23 +23,23 @@ except ImportError:
     streamlit_geolocation = None
 
 def parse_and_plot_results(detection_result, original_img):
-    """YOLO results ko parse karta hai aur scanned image par wazeh bounding boxes draw karta hai."""
+    """YOLO results aur image ko parse kar ke wazeh bounding boxes draw karta hai."""
     processed_img = original_img.copy()
     counts = {}
-    total_boxes = 0
 
-    actual_results = detection_result
+    # 1. Check if detection_result is a tuple (img, counts) or YOLO Results object
+    actual_res = detection_result
     if isinstance(detection_result, tuple):
-        actual_results = detection_result[0]
+        actual_res = detection_result[0]
+        if isinstance(detection_result[0], np.ndarray):
+            processed_img = detection_result[0].copy()
         if len(detection_result) > 1 and isinstance(detection_result[1], dict):
             counts.update(detection_result[1])
 
-    results_list = actual_results
-    if not isinstance(results_list, (list, tuple)):
-        results_list = [actual_results]
+    # 2. If it's a YOLO Results object or list, extract boxes and draw rectangles
+    results_list = actual_res if isinstance(actual_res, (list, tuple)) else [actual_res]
 
     for res in results_list:
-        # 1. Try YOLO built-in plot method first
         if hasattr(res, "plot"):
             try:
                 plotted = res.plot()
@@ -48,34 +48,28 @@ def parse_and_plot_results(detection_result, original_img):
             except Exception:
                 pass
         
-        # 2. Extract boxes and ensure manual drawing fallback for absolute reliability
         if hasattr(res, "boxes") and res.boxes is not None:
             try:
                 boxes = res.boxes
-                total_boxes += len(boxes)
                 names = getattr(res, "names", {})
-                
                 for box in boxes:
-                    # Get box coordinates
                     coords = box.xyxy[0].cpu().numpy().astype(int)
                     x1, y1, x2, y2 = coords
-                    
                     cls_id = int(box.cls[0].item()) if hasattr(box, "cls") else 0
                     conf = float(box.conf[0].item()) if hasattr(box, "conf") else 1.0
                     c_name = names.get(cls_id, "Hazard")
                     
-                    # Count items
                     counts[c_name] = counts.get(c_name, 0) + 1
                     
-                    # Draw explicit rectangle and label on image using OpenCV to guarantee visibility
+                    # Guaranteed OpenCV Bounding Box
                     cv2.rectangle(processed_img, (x1, y1), (x2, y2), (0, 255, 0), 3)
                     label = f"{c_name} ({conf:.2f})"
-                    cv2.putText(processed_img, label, (x1, max(y1 - 10, 15)), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    cv2.putText(processed_img, label, (x1, max(y1 - 10, 20)), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             except Exception:
                 pass
 
-    return processed_img, counts, total_boxes
+    return processed_img, counts
 
 def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
     st.markdown("### 🚗 UrbanEye AI - Live Field Scanner & Auto-Sync")
@@ -102,7 +96,7 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
 
     # --- STEP 1: CAPTURE PHOTO ---
     if st.session_state["live_step"] == "CAPTURE":
-        st.info("💡 Camera se tasveer lein. AI model scanned image par bounding boxes draw karega!")
+        st.info("💡 Camera se tasveer lein. Model detection kar ke boxes banaye ga!")
         
         cam_file = st.camera_input("Take Live Photo", key="live_cam_input")
 
@@ -122,7 +116,7 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
                             except TypeError:
                                 detection_result = run_detection(img)
 
-                        proc_img, counts, total_boxes = parse_and_plot_results(detection_result, img)
+                        proc_img, counts = parse_and_plot_results(detection_result, img)
 
                         if not counts or len(counts) == 0:
                             counts = {"Detected Hazard": 1}
