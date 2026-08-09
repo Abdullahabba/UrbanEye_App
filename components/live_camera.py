@@ -9,6 +9,11 @@ from utils.helpers import generate_tracking_id
 from database.supabase_client import supabase
 
 try:
+    from streamlit_autorefresh import st_autorefresh
+except ImportError:
+    st_autorefresh = None
+
+try:
     from utils.priority_engine import calculate_priority_score
 except Exception:
     def calculate_priority_score(counts):
@@ -40,9 +45,9 @@ class AutoStopTransformer:
         if self.detected:
             return frame
         
-        # Frame skip for smooth processing (Har 2nd frame process hoga)
+        # CPU & Lag Optimization: Har 3rd frame par detection run hogi taake camera smooth rahay
         self.frame_counter += 1
-        if self.frame_counter % 2 != 0:
+        if self.frame_counter % 3 != 0:
             return frame
         
         img = frame.to_ndarray(format="bgr24")
@@ -101,7 +106,9 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
     st.markdown("### Auto-Stop AI Detection & Dispatch")
     st.markdown("**Start the camera—once a hazard is detected, the camera will stop automatically and the dispatch panel will unlock!**")
 
-    # NOTE: st_autorefresh ko yahan se mukammal remove kar diya gaya hai taake camera freeze na ho.
+    # Safe polling interval (3 seconds) taake background detection screen par foran show ho jaye
+    if st_autorefresh is not None:
+        st_autorefresh(interval=3000, key="auto_detection_poll")
 
     if "captured_result" not in st.session_state:
         st.session_state["captured_result"] = None
@@ -136,9 +143,9 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
             st.rerun()
 
     else:
-        # HD Resolution constraints (1280x720) taake video saaf nazar aaye
+        # HD Resolution constraints with smooth asynchronous processing
         ctx = webrtc_streamer(
-            key="auto-stop-streamer-hd",
+            key="auto-stop-streamer-hd-v2",
             video_processor_factory=AutoStopTransformer,
             rtc_configuration=RTC_CONFIGURATION,
             media_stream_constraints={
