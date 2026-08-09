@@ -275,7 +275,7 @@ def render_dashboard_page():
 
         if current_view == "🔍 AI Visual Detection Engine":
             st.subheader("⚙️ Detector Settings")
-            conf_threshold = st.slider("YOLO Confidence Threshold", 0.1, 1.0, 0.45, step=0.05)
+            conf_threshold = st.slider("YOLO Confidence Threshold", 0.1, 1.0, 0.45, step=0.05, key="dashboard_yolo_conf_slider")
             st.subheader("📷 Input Media Source")
             input_mode = st.radio(
                 "Select Source Type:", 
