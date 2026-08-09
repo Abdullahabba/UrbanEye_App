@@ -24,93 +24,139 @@ RTC_CONFIGURATION = RTCConfiguration(
 )
 
 def render_live_camera_mode(conf_threshold=0.15):
-    st.markdown("### 🔴 Real-Time Live Continuous AI Detection")
-    st.markdown("💡 **Koi snapshot ya button dabane ki zaroorat nahi!** Camera start karein, live video feed par foran bounding boxes aur detection shuru ho jaye gi.")
+    st.markdown("### 📸 Auto-Stop AI Detection & Instant Result")
+    st.markdown("💡 **Jaise hi hazard detect hoga, camera khud band ho kar foran result aur Supabase sync dikha dega!**")
 
-    # Confidence Threshold Slider (Default: 0.15)
-    conf_threshold = st.slider("Confidence Threshold", 0.05, 0.90, 0.15, 0.05, key="live_conf_slider")
+    # Session states initialization
+    if "playing" not in st.session_state:
+        st.session_state["playing"] = True
+    if "captured_result" not in st.session_state:
+        st.session_state["captured_result"] = None
+    if "synced_to_db" not in st.session_state:
+        st.session_state["synced_to_db"] = False
 
-    class VideoTransformer:
-        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-            img = frame.to_ndarray(format="bgr24")
-            try:
-                # Convert BGR frame to RGB PIL Image for model detection
-                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                pil_img = Image.fromarray(img_rgb)
-                
-                # Run AI detection with threshold 0.15
-                proc_img, counts = run_detection(pil_img, conf_threshold)
-                
-                # Save counts to session state safely for live UI updates
-                if counts:
-                    st.session_state["live_detected_counts"] = counts
-                
-                # Handle YOLO Results object safely
-                from ultralytics.engine.results import Results
-                if isinstance(proc_img, Results):
-                    proc_img = proc_img.plot()
-                elif isinstance(proc_img, list) and len(proc_img) > 0:
-                    try:
-                        proc_img = proc_img[0].plot()
-                    except:
-                        pass
-                
-                # YOLO .plot() returns BGR numpy array with drawn bounding boxes
-                if isinstance(proc_img, np.ndarray):
-                    if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
-                        img = proc_img
-            except Exception as e:
-                print(f"WebRTC Detection Error: {e}")
-                
-            return av.VideoFrame.from_ndarray(img, format="bgr24")
+    # Confidence Threshold Slider
+    conf_threshold = st.slider("Confidence Threshold", 0.05, 0.90, 0.15, 0.05, key="auto_stop_conf")
 
-    # Real-time WebRTC Streamer (No snapshot required)
-    webrtc_streamer(
-        key="live-ai-continuous-detection",
-        video_processor_factory=VideoTransformer,
-        rtc_configuration=RTC_CONFIGURATION,
-        media_stream_constraints={"video": {"width": 640, "height": 480}, "audio": False},
-        async_processing=True,
-    )
-
-    # Live UI Section for Detected Results below the video feed
-    st.markdown("---")
-    st.markdown("### 📋 Live Detection Dashboard")
-    
-    if "live_detected_counts" in st.session_state and st.session_state["live_detected_counts"]:
-        counts = st.session_state["live_detected_counts"]
+    # Agar result capture ho chuka hai, toh camera ki bajaye final dashboard dikhayein
+    if st.session_state["captured_result"] is not None:
+        res = st.session_state["captured_result"]
         
-        summary_bullets = "".join([f"- **{str(k).capitalize()}**: {v}\n" for k, v in counts.items() if v is not None])
-        st.markdown(summary_bullets)
-        
-        # Optional quick sync button if user wants to save current detected frame state to Supabase
-        if st.button("💾 Save Current Hazard to Database", use_container_width=True):
-            tracking_id = generate_tracking_id()
-            assessment = calculate_priority_score(counts)
-            score = assessment["priority_score"]
-            severity = assessment["severity"]
-            dept = assessment["assigned_dept"]
-            sla = assessment["sla_target"]
+        img_to_show = res["processed_img"]
+        if isinstance(img_to_show, np.ndarray):
+            if len(img_to_show.shape) == 3 and img_to_show.shape[2] == 3:
+                img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
+            img_to_show = Image.fromarray(img_to_show)
+            
+        st.image(img_to_show, caption="Detected Hazard Result (Auto-Captured)", use_container_width=True)
 
-            hazard_list = [f"{str(k).capitalize()} ({v})" for k, v in counts.items() if v is not None]
-            main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
+        with st.container(border=True):
+            st.markdown(f"**🏷️ Tracking ID:** `{res['tracking_id']}`")
+            summary_bullets = "".join([f"- **{str(k).capitalize()}**: {v}\n" for k, v in res['counts'].items() if v is not None])
+            st.markdown("**📋 Detected Items:**")
+            st.markdown(summary_bullets if summary_bullets else "- Hazard Detected")
+            
+            assessment = res['assessment']
+            st.markdown(f"**⚡ Priority Score:** {assessment.get('priority_score')}/100 | **Severity:** {assessment.get('severity')}")
+            st.markdown(f"**🏢 Assigned Dept:** {assessment.get('assigned_dept')} | **⏱️ SLA:** {assessment.get('sla_target')}")
 
+        if st.session_state.get("synced_to_db", False):
+            st.success("✅ Data kamyabi ke sath automatically Supabase mein save ho gaya hai!")
+
+        if st.button("🔄 Dobara Scanning Shuru Karein", use_container_width=True):
+            st.session_state["captured_result"] = None
+            st.session_state["playing"] = True
+            st.session_state["synced_to_db"] = False
+            st.rerun()
+
+    else:
+        # Video Transformer class to detect and trigger auto-stop
+        class AutoStopTransformer:
+            def __init__(self):
+                self.detected = False
+                self.result_data = None
+
+            def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+                if self.detected:
+                    return frame
+                
+                img = frame.to_ndarray(format="bgr24")
+                try:
+                    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    pil_img = Image.fromarray(img_rgb)
+                    
+                    proc_img, counts = run_detection(pil_img, conf_threshold)
+                    
+                    # Agar detection ho jaye
+                    if counts and len(counts) > 0:
+                        self.detected = True
+                        
+                        from ultralytics.engine.results import Results
+                        if isinstance(proc_img, Results):
+                            proc_img = proc_img.plot()
+                        elif isinstance(proc_img, list) and len(proc_img) > 0:
+                            try:
+                                proc_img = proc_img[0].plot()
+                            except:
+                                pass
+                        
+                        if isinstance(proc_img, np.ndarray):
+                            final_img = proc_img
+                        else:
+                            final_img = img
+                            
+                        tracking_id = generate_tracking_id()
+                        assessment = calculate_priority_score(counts)
+                        
+                        hazard_list = [f"{str(k).capitalize()} ({v})" for k, v in counts.items() if v is not None]
+                        main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
+                        
+                        self.result_data = {
+                            "tracking_id": tracking_id,
+                            "counts": counts,
+                            "processed_img": final_img,
+                            "assessment": assessment,
+                            "main_hazard": main_hazard
+                        }
+                except Exception as e:
+                    print(f"Auto-Stop Error: {e}")
+                    
+                return av.VideoFrame.from_ndarray(img, format="bgr24")
+
+        # Streamer controlled via session state playing flag
+        ctx = webrtc_streamer(
+            key="auto-stop-streamer",
+            video_processor_factory=AutoStopTransformer,
+            rtc_configuration=RTC_CONFIGURATION,
+            media_stream_constraints={"video": {"width": 640, "height": 480}, "audio": False},
+            async_processing=True,
+            playing=st.session_state["playing"]
+        )
+
+        # Check if transformer detected something
+        if ctx.video_transformer and ctx.video_transformer.detected and ctx.video_transformer.result_data:
+            res = ctx.video_transformer.result_data
+            st.session_state["captured_result"] = res
+            st.session_state["playing"] = False  # Stop the camera feed automatically
+            
+            # Sync to Supabase automatically
             try:
                 payload = {
-                    "tracking_id": tracking_id,
-                    "hazard": main_hazard,
-                    "issue_type": main_hazard,
-                    "severity": f"{severity} ({score}/100)",
+                    "tracking_id": res["tracking_id"],
+                    "hazard": res["main_hazard"],
+                    "issue_type": res["main_hazard"],
+                    "severity": f"{res['assessment']['severity']} ({res['assessment']['priority_score']}/100)",
                     "status": "Active / Dispatched",
-                    "location_name": "Live Camera Feed",
+                    "location_name": "Live Auto-Stop Camera",
                     "latitude": 31.5204,
                     "longitude": 74.3587,
-                    "assigned_dept": dept,
-                    "sla_target": sla
+                    "assigned_dept": res['assessment']['assigned_dept'],
+                    "sla_target": res['assessment']['sla_target']
                 }
                 supabase.table("reports").insert(payload).execute()
-                st.success(f"✅ Successfully saved! Tracking ID: `{tracking_id}`")
+                st.session_state["synced_to_db"] = True
             except Exception as db_err:
-                st.error(f"❌ Supabase Error: {db_err}")
-    else:
-        st.info("🔍 Camera ke samne hazard layein—detection foran screen par nazar aye gi.")
+                print(f"Supabase Error: {db_err}")
+                st.session_state["synced_to_db"] = False
+            
+            st.rerun()
