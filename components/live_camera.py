@@ -19,11 +19,15 @@ except Exception:
             "sla_target": "24 Hours"
         }
 
+# Multiple STUN servers taake network connection timeout na ho
 RTC_CONFIGURATION = RTCConfiguration(
-    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+    {
+        "iceServers": [
+            {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun.stunprotocol.org:3478"]}
+        ]
+    }
 )
 
-# Define transformer class outside the function to prevent TypeErrors and re-definition conflicts
 class AutoStopTransformer:
     def __init__(self):
         self.detected = False
@@ -117,6 +121,8 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
             st.rerun()
 
     else:
+        st.info("ℹ️ Agar connection mein der lage, to page ko aik bar refresh (F5) kar lein.")
+        
         ctx = webrtc_streamer(
             key="auto-stop-streamer",
             video_processor_factory=AutoStopTransformer,
