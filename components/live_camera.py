@@ -1,7 +1,7 @@
 import streamlit as st
-import cv2
-import numpy as np
 from PIL import Image
+import numpy as np
+import cv2
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 from database.supabase_client import supabase
@@ -22,153 +22,79 @@ try:
 except ImportError:
     streamlit_geolocation = None
 
-def parse_and_plot_results(detection_result, original_img):
-    """YOLO results aur image ko parse kar ke wazeh bounding boxes draw karta hai."""
-    processed_img = original_img.copy()
-    counts = {}
-
-    # 1. Check if detection_result is a tuple (img, counts) or YOLO Results object
-    actual_res = detection_result
-    if isinstance(detection_result, tuple):
-        actual_res = detection_result[0]
-        if isinstance(detection_result[0], np.ndarray):
-            processed_img = detection_result[0].copy()
-        if len(detection_result) > 1 and isinstance(detection_result[1], dict):
-            counts.update(detection_result[1])
-
-    # 2. If it's a YOLO Results object or list, extract boxes and draw rectangles
-    results_list = actual_res if isinstance(actual_res, (list, tuple)) else [actual_res]
-
-    for res in results_list:
-        if hasattr(res, "plot"):
+def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
+    st.markdown("### 📸 Field Camera Live Capture & Auto-Sync")
+    
+    cam_photo = st.camera_input("Take Live Photo from Camera", key="camera_input")
+    
+    if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_cam"):
+        img = Image.open(cam_photo)
+        with st.spinner("Analyzing Camera Capture..."):
             try:
-                plotted = res.plot()
-                if isinstance(plotted, np.ndarray):
-                    processed_img = plotted
-            except Exception:
-                pass
-        
-        if hasattr(res, "boxes") and res.boxes is not None:
+                proc_img, counts = run_detection(img, conf_threshold)
+            except TypeError:
+                try:
+                    proc_img, counts = run_detection(img)
+                except Exception:
+                    proc_img, counts = img, {}
+            
+            # YOLO Results object ya list ko safely NumPy array mein badlein
             try:
-                boxes = res.boxes
-                names = getattr(res, "names", {})
-                for box in boxes:
-                    coords = box.xyxy[0].cpu().numpy().astype(int)
-                    x1, y1, x2, y2 = coords
-                    cls_id = int(box.cls[0].item()) if hasattr(box, "cls") else 0
-                    conf = float(box.conf[0].item()) if hasattr(box, "conf") else 1.0
-                    c_name = names.get(cls_id, "Hazard")
-                    
-                    counts[c_name] = counts.get(c_name, 0) + 1
-                    
-                    # Guaranteed OpenCV Bounding Box
-                    cv2.rectangle(processed_img, (x1, y1), (x2, y2), (0, 255, 0), 3)
-                    label = f"{c_name} ({conf:.2f})"
-                    cv2.putText(processed_img, label, (x1, max(y1 - 10, 20)), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            except Exception:
+                from ultralytics.engine.results import Results
+                if isinstance(proc_img, Results):
+                    proc_img = proc_img.plot()
+            except ImportError:
                 pass
+                
+            if isinstance(proc_img, list) and len(proc_img) > 0:
+                try:
+                    proc_img = proc_img[0].plot()
+                except:
+                    pass
+            
+            # Agar NumPy array hai toh BGR se RGB karke PIL Image bana lein
+            if isinstance(proc_img, np.ndarray):
+                if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
+                    proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
+                proc_img = Image.fromarray(proc_img)
+            
+            if not counts or len(counts) == 0:
+                counts = {"Hazard / Pothole": 1}
 
-    return processed_img, counts
-
-def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
-    st.markdown("### 🚗 UrbanEye AI - Live Field Scanner & Auto-Sync")
-
-    # Session states initialization
-    if "live_step" not in st.session_state:
-        st.session_state["live_step"] = "CAPTURE"
-    if "live_counts" not in st.session_state:
-        st.session_state["live_counts"] = {}
-    if "live_tracking_id" not in st.session_state:
-        st.session_state["live_tracking_id"] = None
-    if "live_processed_img" not in st.session_state:
-        st.session_state["live_processed_img"] = None
-
-    # Confidence Threshold Slider for live tuning
-    slider_conf = st.slider(
-        "⚙️ AI Confidence Threshold", 
-        min_value=0.01, 
-        max_value=0.90, 
-        value=float(conf_threshold), 
-        step=0.01,
-        key="live_conf_slider"
-    )
-
-    # --- STEP 1: CAPTURE PHOTO ---
-    if st.session_state["live_step"] == "CAPTURE":
-        st.info("💡 Camera se tasveer lein. Model detection kar ke boxes banaye ga!")
+            st.session_state.update({
+                "processed_img": proc_img, 
+                "counts": counts, 
+                "current_tracking_id": generate_tracking_id()
+            })
+            
+    if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
+        img_to_show = st.session_state["processed_img"]
         
-        cam_file = st.camera_input("Take Live Photo", key="live_cam_input")
-
-        if cam_file is not None:
-            bytes_data = cam_file.getvalue()
-            np_arr = np.frombuffer(bytes_data, np.uint8)
-            img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-            if img is not None:
-                with st.spinner("🔍 AI model scan aur bounding boxes bana raha hai..."):
-                    try:
-                        try:
-                            detection_result = run_detection(img, conf=slider_conf)
-                        except TypeError:
-                            try:
-                                detection_result = run_detection(img, conf_threshold=slider_conf)
-                            except TypeError:
-                                detection_result = run_detection(img)
-
-                        proc_img, counts = parse_and_plot_results(detection_result, img)
-
-                        if not counts or len(counts) == 0:
-                            counts = {"Detected Hazard": 1}
-
-                        if proc_img is not None and isinstance(proc_img, np.ndarray):
-                            if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
-                                rgb_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
-                            else:
-                                rgb_img = proc_img
-                            
-                            st.session_state["live_counts"] = counts
-                            st.session_state["live_tracking_id"] = generate_tracking_id()
-                            st.session_state["live_processed_img"] = rgb_img
-                            st.session_state["live_step"] = "VERIFY"
-                            st.rerun()
-                        else:
-                            st.error("❌ Valid image process nahi ho saki.")
-                    except Exception as e:
-                        st.error(f"❌ Detection Error: {e}")
-
-    # --- STEP 2: LOCATION & SUPABASE SYNC ---
-    elif st.session_state["live_step"] == "VERIFY":
-        st.success("✅ Scan mukammal! Scanned image par bounding boxes ban chuke hain.")
-
-        tracking_id = st.session_state["live_tracking_id"]
-        counts = st.session_state["live_counts"]
-        processed_img = st.session_state["live_processed_img"]
-
-        col_img, col_info = st.columns([1, 1])
-
-        with col_img:
-            if processed_img is not None:
-                st.image(processed_img, caption="Scanned Image Result with Bounding Boxes", use_container_width=True)
-
-        with col_info:
-            with st.container(border=True):
-                st.markdown(f"**🏷️ Tracking ID:** `{tracking_id}`")
-                
-                summary_bullets = ""
-                hazard_list = []
-                for k, v in counts.items():
-                    if v is not None:
-                        summary_bullets += f"- **{str(k).capitalize()}**: {v}\n"
-                        hazard_list.append(f"{str(k).capitalize()} ({v})")
-                
-                main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
-                st.markdown("**📋 Detected Items:**")
-                st.markdown(summary_bullets if summary_bullets else "- Hazard Item")
+        # Render ke waqt dobara safety check
+        if isinstance(img_to_show, np.ndarray):
+            if len(img_to_show.shape) == 3 and img_to_show.shape[2] == 3:
+                img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
+            img_to_show = Image.fromarray(img_to_show)
+            
+        st.image(img_to_show, caption="Live Camera AI Result with Bounding Boxes", use_container_width=True)
 
         st.divider()
-        st.markdown("##### 📍 Location Muntakhib Karein")
+        tracking_id = st.session_state.get("current_tracking_id", generate_tracking_id())
+        counts = st.session_state.get("counts", {"Hazard": 1})
 
+        with st.container(border=True):
+            st.markdown(f"**🏷️ Tracking ID:** `{tracking_id}`")
+            summary_bullets = ""
+            hazard_list = []
+            for k, v in counts.items():
+                if v is not None:
+                    summary_bullets += f"- **{str(k).capitalize()}**: {v}\n"
+                    hazard_list.append(f"{str(k).capitalize()} ({v})")
+            main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
+            st.markdown("**📋 Detected Items:**")
+            st.markdown(summary_bullets if summary_bullets else "- Hazard Detected")
+
+        st.markdown("##### 📍 Location Muntakhib Karein")
         loc_mode = st.radio("Location Mode", ["Manual Address", "Automatic Live GPS"], horizontal=True, key="live_loc_mode")
         
         location_name = "Lahore City"
@@ -216,14 +142,12 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
                             "assigned_dept": dept,
                             "sla_target": sla
                         }
-                        
                         supabase.table("reports").insert(payload).execute()
                         st.success("✅ Data kamyabi ke sath Supabase mein mehfooz ho gaya!")
                         
                         if st.button("🔄 Dobara scan karein"):
-                            st.session_state["live_step"] = "CAPTURE"
-                            st.session_state["live_counts"] = {}
-                            st.session_state.pop("live_processed_img", None)
+                            st.session_state.pop("processed_img", None)
+                            st.session_state.pop("counts", None)
                             st.rerun()
                     except Exception as db_err:
                         st.error(f"❌ Supabase Error: {db_err}")
