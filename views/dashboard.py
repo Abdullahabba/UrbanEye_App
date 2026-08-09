@@ -695,36 +695,39 @@ def render_dashboard_page():
                 conf_threshold
             )
 
-        all_evidence_images = (
-            st.session_state.get(
-                "captured_images",
-                []
+        # Live Camera handles its own dispatch panel internally.
+        # This condition prevents duplicate dispatch panels on the screen.
+        if input_mode != "📸 Live Camera":
+            all_evidence_images = (
+                st.session_state.get(
+                    "captured_images",
+                    []
+                )
             )
-        )
 
-        if (
-            not all_evidence_images
-            and "processed_img"
-            in st.session_state
-        ):
+            if (
+                not all_evidence_images
+                and "processed_img"
+                in st.session_state
+            ):
 
-            all_evidence_images = [
-                st.session_state["processed_img"]
-            ]
+                all_evidence_images = [
+                    st.session_state["processed_img"]
+                ]
 
-        manual_loc_name = user_details.get(
-            "address",
-            "Iqbal Sector, Block AA, Lahore"
-        )
+            manual_loc_name = user_details.get(
+                "address",
+                "Iqbal Sector, Block AA, Lahore"
+            )
 
-        render_dispatch_panel(
-            st.session_state[
-                "current_tracking_id"
-            ],
-            manual_loc_name,
-            user_details,
-            create_pdf_report
-        )
+            render_dispatch_panel(
+                st.session_state[
+                    "current_tracking_id"
+                ],
+                manual_loc_name,
+                user_details,
+                create_pdf_report
+            )
 
     elif current_view == "🔎 Public Hazard Tracker":
 
