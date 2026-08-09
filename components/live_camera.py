@@ -12,8 +12,8 @@ RTC_CONFIGURATION = RTCConfiguration(
 )
 
 def render_live_camera_mode(conf_threshold=0.3):
-    st.markdown("### 🚗 UrbanEye AI - Dashcam Live Stream Mode")
-    st.info("Live video streaming active hai. Detections ko mazeed stable aur fast kar diya gaya hai.")
+    st.markdown("### 🚗 UrbanEye AI - HD Dashcam Live Stream")
+    st.info("Resolution ko **HD (1280x720)** kar diya gaya hai aur freezing rokne ke liye smart frame-skipping active hai.")
 
     # Frame processor class jo video frames ko handle karegi
     class VideoTransformer(VideoTransformerBase):
@@ -25,19 +25,16 @@ def render_live_camera_mode(conf_threshold=0.3):
             img = frame.to_ndarray(format="bgr24")
             self.frame_count += 1
             
-            # Frame Skipping: Har 3rd frame par YOLO run hoga (0.3 confidence ke sath)
-            if self.frame_count % 3 == 0:
+            # Frame Skipping: Har 5th frame par AI run hoga taake HD video smooth chale
+            if self.frame_count % 5 == 0:
                 try:
-                    # run_detection se result hasil karna
                     detection_result = run_detection(img, conf_threshold=conf_threshold)
                     
-                    # Agar tuple mile (jaise (image, counts)) toh pehla item uthayein
                     if isinstance(detection_result, tuple):
                         processed_img = detection_result[0]
                     else:
                         processed_img = detection_result
 
-                    # Agar YOLO Results object ho toh .plot() call karein
                     if hasattr(processed_img, "plot"):
                         processed_img = processed_img.plot()
                     elif isinstance(processed_img, list) and len(processed_img) > 0:
@@ -46,33 +43,31 @@ def render_live_camera_mode(conf_threshold=0.3):
                         else:
                             processed_img = processed_img[0]
                     
-                    # Confirm karein ke output valid numpy array hai
                     if isinstance(processed_img, np.ndarray):
                         self.last_processed_img = processed_img
                     else:
                         if self.last_processed_img is None:
                             self.last_processed_img = img
                 except Exception as e:
-                    # Agar koi bhi error aaye toh live feed freeze na ho, original frame chalay
                     if self.last_processed_img is None:
                         self.last_processed_img = img
 
-            # Output image return karna
+            # Output image return karna (agar processed nahi hai toh original HD frame dikhayein)
             output_img = self.last_processed_img if self.last_processed_img is not None else img
             
             return av.VideoFrame.from_ndarray(output_img, format="bgr24")
 
-    # WebRTC Streamer component with optimized constraints
+    # WebRTC Streamer component with HD constraints
     webrtc_streamer(
-        key="urbaneye-dashcam",
+        key="urbaneye-hd-dashcam",
         rtc_configuration=RTC_CONFIGURATION,
         video_processor_factory=VideoTransformer,
         media_stream_constraints={
             "video": {
                 "facingMode": "environment",
-                "width": {"ideal": 640},
-                "height": {"ideal": 480},
-                "frameRate": {"ideal": 15}
+                "width": {"ideal": 1280, "min": 640, "max": 1920},
+                "height": {"ideal": 720, "min": 480, "max": 1080},
+                "frameRate": {"ideal": 30, "max": 30}
             }, 
             "audio": False
         },
