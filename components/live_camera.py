@@ -1,8 +1,9 @@
 import streamlit as st
 import cv2
 import av
-import time
 import numpy as np
+import queue
+import threading
 from PIL import Image
 from streamlit_webrtc import webrtc_streamer, RTCConfiguration
 from models.detector import run_detection
@@ -40,7 +41,75 @@ class AutoStopTransformer:
         self.detected = False
         self.result_data = None
         self.conf_threshold = 0.50
-        self.last_checked_time = 0
+        
+        # Non-blocking queue aur Background Worker thread taake video bilkul smooth rahay
+        self.frame_queue = queue.Queue(maxsize=1)
+        self.worker_thread = threading.Thread(target=self._processing_loop, daemon=True)
+        self.worker_thread.start()
+
+    def _processing_loop(self):
+        while not self.detected:
+            try:
+                img = self.frame_queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
+            
+            try:
+                # Speed boost ke liye downscaled image par detection run karein
+                img_small = cv2.resize(img, (320, 320))
+                img_rgb = cv2.cvtColor(img_small, cv2.COLOR_BGR2RGB)
+                pil_img = Image.fromarray(img_rgb)
+                
+                proc_img, counts = run_detection(pil_img, self.conf_threshold)
+                
+                if counts and isinstance(counts, dict) and len(counts) > 0:
+                    has_hazard = any(v is not None and v > 0 for v in counts.values())
+                    if has_hazard:
+                        self.detected = True
+                        
+                        # Jab hazard mil jaye toh original size par bounding box plot karein
+                        full_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                        full_pil = Image.fromarray(full_rgb)
+                        final_proc_img, _ = run_detection(full_pil, self.conf_threshold)
+                        
+                        try:
+                            from ultralytics.engine.results import Results
+                            if isinstance(final_proc_img, Results):
+                                final_proc_img = final_proc_img.plot()
+                        except ImportError:
+                            pass
+                            
+                        if isinstance(final_proc_img, list) and len(final_proc_img) > 0:
+                            try:
+                                final_proc_img = final_proc_img[0].plot()
+                            except:
+                                pass
+                        
+                        if isinstance(final_proc_img, np.ndarray):
+                            if len(final_proc_img.shape) == 3 and final_proc_img.shape[2] == 3:
+                                final_proc_img = cv2.cvtColor(final_proc_img, cv2.COLOR_BGR2RGB)
+                            final_img = Image.fromarray(final_proc_img)
+                        elif isinstance(final_proc_img, Image.Image):
+                            final_img = final_proc_img
+                        else:
+                            final_img = Image.fromarray(img)
+                            
+                        tracking_id = generate_tracking_id()
+                        assessment = calculate_priority_score(counts)
+                        
+                        hazard_list = [f"{str(k).capitalize()} ({v})" for k, v in counts.items() if v is not None]
+                        main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
+                        
+                        self.result_data = {
+                            "tracking_id": tracking_id,
+                            "counts": counts,
+                            "processed_img": final_img,
+                            "assessment": assessment,
+                            "main_hazard": main_hazard
+                        }
+                        break
+            except Exception as e:
+                print(f"Background Worker Error: {e}")
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         if self.detected:
@@ -48,77 +117,20 @@ class AutoStopTransformer:
         
         img = frame.to_ndarray(format="bgr24")
         
-        # Time-based throttling: Har 0.7 seconds mein sirf aik baar detection chalegi 
-        # Taake video stream bilkul smooth aur lag-free rahay
-        current_time = time.time()
-        if current_time - self.last_checked_time < 0.7:
-            return frame
-        
-        self.last_checked_time = current_time
-        
-        try:
-            # Speed boost ke liye image ko chota kar ke model ko dein (Fast Inference)
-            img_small = cv2.resize(img, (320, 320))
-            img_rgb = cv2.cvtColor(img_small, cv2.COLOR_BGR2RGB)
-            pil_img = Image.fromarray(img_rgb)
+        # Frame ko queue mein non-blocking tareeqay se phenk dein taake video thread block na ho
+        if self.frame_queue.empty():
+            try:
+                self.frame_queue.put_nowait(img)
+            except queue.Full:
+                pass
             
-            proc_img, counts = run_detection(pil_img, self.conf_threshold)
-            
-            if counts and isinstance(counts, dict) and len(counts) > 0:
-                has_hazard = any(v is not None and v > 0 for v in counts.values())
-                if has_hazard:
-                    self.detected = True
-                    
-                    # Jab hazard mil jaye toh original size ki image par bounding box plot karein
-                    full_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    full_pil = Image.fromarray(full_rgb)
-                    final_proc_img, _ = run_detection(full_pil, self.conf_threshold)
-                    
-                    try:
-                        from ultralytics.engine.results import Results
-                        if isinstance(final_proc_img, Results):
-                            final_proc_img = final_proc_img.plot()
-                    except ImportError:
-                        pass
-                        
-                    if isinstance(final_proc_img, list) and len(final_proc_img) > 0:
-                        try:
-                            final_proc_img = final_proc_img[0].plot()
-                        except:
-                            pass
-                    
-                    if isinstance(final_proc_img, np.ndarray):
-                        if len(final_proc_img.shape) == 3 and final_proc_img.shape[2] == 3:
-                            final_proc_img = cv2.cvtColor(final_proc_img, cv2.COLOR_BGR2RGB)
-                        final_img = Image.fromarray(final_proc_img)
-                    elif isinstance(final_proc_img, Image.Image):
-                        final_img = final_proc_img
-                    else:
-                        final_img = Image.fromarray(img)
-                        
-                    tracking_id = generate_tracking_id()
-                    assessment = calculate_priority_score(counts)
-                    
-                    hazard_list = [f"{str(k).capitalize()} ({v})" for k, v in counts.items() if v is not None]
-                    main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
-                    
-                    self.result_data = {
-                        "tracking_id": tracking_id,
-                        "counts": counts,
-                        "processed_img": final_img,
-                        "assessment": assessment,
-                        "main_hazard": main_hazard
-                    }
-        except Exception as e:
-            print(f"Auto-Stop Error: {e}")
-            
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
+        return frame
 
 def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
     st.markdown("### Auto-Stop AI Detection & Dispatch")
     st.markdown("**Start the camera—once a hazard is detected, the camera will stop automatically and the dispatch panel will unlock!**")
 
-    # Polling to switch UI instantly when detection triggers
+    # Polling to switch UI instantly when background thread triggers detection
     if st_autorefresh is not None:
         st_autorefresh(interval=2000, key="auto_detection_poll")
 
@@ -156,7 +168,7 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
 
     else:
         ctx = webrtc_streamer(
-            key="auto-stop-streamer-smooth-v4",
+            key="auto-stop-streamer-threaded-v5",
             video_processor_factory=AutoStopTransformer,
             rtc_configuration=RTC_CONFIGURATION,
             media_stream_constraints={
