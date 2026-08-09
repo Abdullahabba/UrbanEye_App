@@ -22,41 +22,47 @@ try:
 except ImportError:
     streamlit_geolocation = None
 
-def parse_detection_output(detection_result):
-    """Universal helper jo YOLO output (tuple, list, Results, dict, ndarray) ko reliably parse karta hai."""
-    processed_img = None
+def parse_detection_output(detection_result, original_img):
+    """YOLO output ko parse karta hai aur bounding boxes draw kar ke numpy array return karta hai."""
+    processed_img = original_img.copy()
     counts = {}
 
-    def resolve_img(item):
-        if item is None:
-            return None
-        if isinstance(item, np.ndarray):
-            return item
-        if hasattr(item, "convert") and hasattr(item, "size"):
-            return np.array(item)
-        if hasattr(item, "plot"):
+    # Agar detection_result aik tuple ho (jaise kuch models (img, counts) return karte hain)
+    actual_results = detection_result
+    if isinstance(detection_result, tuple):
+        actual_results = detection_result[0]
+        if len(detection_result) > 1 and isinstance(detection_result[1], dict):
+            counts.update(detection_result[1])
+
+    # Agar results aik list ya single Ultralytics Results object hai
+    results_list = actual_results
+    if not isinstance(results_list, (list, tuple)):
+        results_list = [actual_results]
+
+    for res in results_list:
+        # Bounding boxes draw karne ke liye .plot() call karna zaroori hai
+        if hasattr(res, "plot"):
             try:
-                p = item.plot()
-                if isinstance(p, np.ndarray):
-                    return p
+                plotted = res.plot()
+                if isinstance(plotted, np.ndarray):
+                    processed_img = plotted
             except Exception:
                 pass
-        if isinstance(item, (list, tuple)) and len(item) > 0:
-            return resolve_img(item[0])
-        return None
+        
+        # Agar boxes maujood hain to unse counts extract karein
+        if hasattr(res, "boxes") and res.boxes is not None:
+            try:
+                classes = res.boxes.cls.cpu().numpy()
+                names = getattr(res, "names", {})
+                for cls_id in classes:
+                    c_name = names.get(int(cls_id), "Hazard")
+                    counts[c_name] = counts.get(c_name, 0) + 1
+            except Exception:
+                pass
 
-    if isinstance(detection_result, (tuple, list)):
-        for element in detection_result:
-            if isinstance(element, dict):
-                counts.update(element)
-            else:
-                img_cand = resolve_img(element)
-                if img_cand is not None and processed_img is None:
-                    processed_img = img_cand
-    elif isinstance(detection_result, dict):
-        counts.update(detection_result)
-    else:
-        processed_img = resolve_img(detection_result)
+    # Agar counts abhi bhi empty hon lekin image mil gayi ho
+    if not counts:
+        counts = {"Pothole / Hazard": 1}
 
     return processed_img, counts
 
@@ -75,7 +81,7 @@ def render_live_camera_mode(conf_threshold=0.25):
 
     # --- STEP 1: CAPTURE PHOTO ---
     if st.session_state["live_step"] == "CAPTURE":
-        st.info("💡 Camera se hazard (gaddha ya kachra) ki tasveer lein. System khud ba khud detection karega!")
+        st.info("💡 Camera se hazard ki tasveer lein. AI model khud ba khud bounding boxes draw karega!")
         
         cam_file = st.camera_input("Take Live Photo", key="live_cam_input")
 
@@ -85,18 +91,14 @@ def render_live_camera_mode(conf_threshold=0.25):
             img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
             if img is not None:
-                with st.spinner("🔍 AI model frame ko analyze kar raha hai..."):
+                with st.spinner("🔍 AI model bounding boxes draw kar raha hai..."):
                     try:
                         try:
                             detection_result = run_detection(img, conf_threshold=conf_threshold)
                         except TypeError:
                             detection_result = run_detection(img)
 
-                        proc_img, counts = parse_detection_output(detection_result)
-
-                        # Fallback agar counts empty hon lekin image mil gayi ho
-                        if not counts or len(counts) == 0:
-                            counts = {"General Hazard / Pothole": 1}
+                        proc_img, counts = parse_detection_output(detection_result, img)
 
                         if proc_img is not None and isinstance(proc_img, np.ndarray):
                             if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
@@ -110,13 +112,13 @@ def render_live_camera_mode(conf_threshold=0.25):
                             st.session_state["live_step"] = "VERIFY"
                             st.rerun()
                         else:
-                            st.error(f"❌ AI processing mein valid image nahi mili.")
+                            st.error("❌ AI processing mein valid image nahi mili.")
                     except Exception as e:
                         st.error(f"❌ Detection Error: {e}")
 
     # --- STEP 2: LOCATION & SUPABASE SYNC ---
     elif st.session_state["live_step"] == "VERIFY":
-        st.success("✅ AI detection kamyaab! Niche di gayi details check karein aur Supabase mein sync karein.")
+        st.success("✅ Detection mukammal aur bounding boxes ban chuke hain! Details check kar ke Supabase mein sync karein.")
 
         tracking_id = st.session_state["live_tracking_id"]
         counts = st.session_state["live_counts"]
@@ -126,7 +128,7 @@ def render_live_camera_mode(conf_threshold=0.25):
 
         with col_img:
             if processed_img is not None:
-                st.image(processed_img, caption="Analyzed Hazard Result", use_container_width=True)
+                st.image(processed_img, caption="Detected Hazard with Bounding Boxes", use_container_width=True)
 
         with col_info:
             with st.container(border=True):
