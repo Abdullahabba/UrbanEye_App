@@ -17,10 +17,15 @@ except Exception:
             "sla_target": "24 Hours"
         }
 
+try:
+    from streamlit_geolocation import streamlit_geolocation
+except ImportError:
+    streamlit_geolocation = None
+
 def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
-    st.markdown("### 📸 Fully Automated Live Field Scanner & Instant Sync")
+    st.markdown("### 📸 Live Camera AI Detection & Real GPS Auto-Sync")
     
-    # Session states initialization
+    # Session state initialization
     if "last_cam_bytes" not in st.session_state:
         st.session_state["last_cam_bytes"] = None
     if "auto_synced" not in st.session_state:
@@ -37,7 +42,7 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
             st.session_state["auto_synced"] = False
             
             img = Image.open(cam_photo)
-            with st.spinner("🔍 AI detection aur automatic sync jari hai..."):
+            with st.spinner("🔍 Tasveer lete hi automatic detection aur bounding boxes ban rahe hain..."):
                 try:
                     proc_img, counts = run_detection(img, conf_threshold)
                 except TypeError:
@@ -46,7 +51,7 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
                     except Exception:
                         proc_img, counts = img, {}
                 
-                # YOLO Results object ya list ko safely NumPy array mein badlein
+                # YOLO Results object ya list ko safely NumPy array mein badlein (Original Working Logic)
                 try:
                     from ultralytics.engine.results import Results
                     if isinstance(proc_img, Results):
@@ -69,52 +74,14 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
                 if not counts or len(counts) == 0:
                     counts = {"Hazard / Pothole": 1}
 
-                tracking_id = generate_tracking_id()
-                
-                # Format hazards
-                hazard_list = [f"{str(k).capitalize()} ({v})" for k, v in counts.items() if v is not None]
-                main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
-                
-                # Priority Assessment
-                assessment = calculate_priority_score(counts)
-                score = assessment["priority_score"]
-                severity = assessment["severity"]
-                dept = assessment["assigned_dept"]
-                sla = assessment["sla_target"]
-
-                # Live GPS Coordinates & Location
-                lat, lon = 31.5204, 74.3587
-                location_name = f"Live Field GPS (Lat: {lat:.4f}, Lon: {lon:.4f})"
-
-                # Automatically push to Supabase
-                try:
-                    payload = {
-                        "tracking_id": tracking_id,
-                        "hazard": main_hazard,
-                        "issue_type": main_hazard,
-                        "severity": f"{severity} ({score}/100)",
-                        "status": "Active / Dispatched",
-                        "location_name": location_name,
-                        "latitude": lat,
-                        "longitude": lon,
-                        "assigned_dept": dept,
-                        "sla_target": sla
-                    }
-                    supabase.table("reports").insert(payload).execute()
-                    st.session_state["auto_synced"] = True
-                except Exception as db_err:
-                    st.error(f"❌ Supabase Error: {db_err}")
-
                 st.session_state.update({
                     "processed_img": proc_img, 
                     "counts": counts, 
-                    "current_tracking_id": tracking_id,
-                    "assessment": assessment,
-                    "location_name": location_name
+                    "current_tracking_id": generate_tracking_id()
                 })
             st.rerun()
 
-    # Display processed image and review section if available
+    # Display processed image with bounding boxes and real GPS handling
     if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
         img_to_show = st.session_state["processed_img"]
         
@@ -125,30 +92,97 @@ def render_live_camera_mode(conf_threshold=0.25, *args, **kwargs):
             
         st.image(img_to_show, caption="Live Camera AI Result with Bounding Boxes", use_container_width=True)
 
-        tracking_id = st.session_state.get("current_tracking_id", "TRK-0000")
-        counts = st.session_state.get("counts", {})
-        assessment = st.session_state.get("assessment", {})
-        location_name = st.session_state.get("location_name", "Live Field GPS")
+        tracking_id = st.session_state.get("current_tracking_id", generate_tracking_id())
+        counts = st.session_state.get("counts", {"Hazard": 1})
 
         with st.container(border=True):
             st.markdown(f"**🏷️ Tracking ID:** `{tracking_id}`")
-            summary_bullets = "".join([f"- **{str(k).capitalize()}**: {v}\n" for k, v in counts.items() if v is not None])
+            summary_bullets = ""
+            hazard_list = []
+            for k, v in counts.items():
+                if v is not None:
+                    summary_bullets += f"- **{str(k).capitalize()}**: {v}\n"
+                    hazard_list.append(f"{str(k).capitalize()} ({v})")
+            main_hazard = ", ni join kar raha" if not hazard_list else ", ".join(hazard_list)
+            main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
             st.markdown("**📋 Detected Items:**")
             st.markdown(summary_bullets if summary_bullets else "- Hazard Detected")
 
-        st.success(f"📍 Location Locked & Synced: {location_name}")
-        
-        if assessment:
-            st.markdown(f"**⚡ Priority Score:** {assessment.get('priority_score')}/100 | **Severity:** {assessment.get('severity')}")
-            st.markdown(f"**🏢 Assigned Dept:** {assessment.get('assigned_dept')} | **⏱️ SLA:** {assessment.get('sla_target')}")
+        st.divider()
+        st.markdown("##### 📍 Real Live GPS Location & Auto-Sync")
+
+        lat, lon = 31.5204, 74.3587
+        location_name = "Lahore City (Default)"
+        gps_acquired = False
+
+        if streamlit_geolocation is not None:
+            loc = streamlit_geolocation()
+            if loc and loc.get("latitude"):
+                lat = loc["latitude"]
+                lon = loc["longitude"]
+                location_name = f"Live GPS (Lat: {lat:.4f}, Lon: {lon:.4f})"
+                gps_acquired = True
+            else:
+                st.info("👆 Baraye meharbani real GPS coordinates hasil karne ke liye nechay diye gaye button par click karein.")
+        else:
+            st.warning("streamlit-geolocation installed nahi hai.")
+
+        assessment = calculate_priority_score(counts)
+        score = assessment["priority_score"]
+        severity = assessment["severity"]
+        dept = assessment["assigned_dept"]
+        sla = assessment["sla_target"]
+
+        st.markdown(f"**⚡ Priority Score:** {score}/100 | **Severity:** {severity}")
+        st.markdown(f"**🏢 Assigned Dept:** {dept} | **⏱️ SLA:** {sla}")
+
+        if not st.session_state.get("auto_synced", False):
+            if gps_acquired:
+                with st.spinner("🚀 Real GPS location ke sath Supabase mein data sync ho raha hai..."):
+                    try:
+                        payload = {
+                            "tracking_id": tracking_id,
+                            "hazard": main_hazard,
+                            "issue_type": main_hazard,
+                            "severity": f"{severity} ({score}/100)",
+                            "status": "Active / Dispatched",
+                            "location_name": location_name,
+                            "latitude": lat,
+                            "longitude": lon,
+                            "assigned_dept": dept,
+                            "sla_target": sla
+                        }
+                        supabase.table("reports").insert(payload).execute()
+                        st.session_state["auto_synced"] = True
+                        st.success("✅ Real GPS location ke sath data kamyabi ke sath Supabase mein mehfooz ho gaya!")
+                    except Exception as db_err:
+                        st.error(f"❌ Supabase Error: {db_err}")
+            else:
+                if st.button("🚀 Current Location ke sath Supabase mein Save karein", use_container_width=True):
+                    with st.spinner("Data sync ho raha hai..."):
+                        try:
+                            payload = {
+                                "tracking_id": tracking_id,
+                                "hazard": main_hazard,
+                                "issue_type": main_hazard,
+                                "severity": f"{severity} ({score}/100)",
+                                "status": "Active / Dispatched",
+                                "location_name": location_name,
+                                "latitude": lat,
+                                "longitude": lon,
+                                "assigned_dept": dept,
+                                "sla_target": sla
+                            }
+                            supabase.table("reports").insert(payload).execute()
+                            st.session_state["auto_synced"] = True
+                            st.success("✅ Data kamyabi ke sath Supabase mein mehfooz ho gaya!")
+                        except Exception as db_err:
+                            st.error(f"❌ Supabase Error: {db_err}")
 
         if st.session_state.get("auto_synced", False):
-            st.success("✅ Data kamyabi ke sath automatically Supabase mein save ho gaya!")
-
-        if st.button("🔄 Nayi Scanning Shuru Karein", use_container_width=True):
-            st.session_state.pop("processed_img", None)
-            st.session_state.pop("counts", None)
-            st.session_state.pop("assessment", None)
-            st.session_state["last_cam_bytes"] = None
-            st.session_state["auto_synced"] = False
-            st.rerun()
+            if st.button("🔄 Nayi Scanning Shuru Karein", use_container_width=True):
+                st.session_state.pop("processed_img", None)
+                st.session_state.pop("counts", None)
+                st.session_state["last_cam_bytes"] = None
+                st.session_state["auto_synced"] = False
+                st.rerun()
