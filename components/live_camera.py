@@ -9,16 +9,16 @@ from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 from database.supabase_client import supabase
 
-# Local connection ke liye empty ICE servers taake network block/timeout na ho
+# Localhost ke liye clean configuration
 RTC_CONFIGURATION = RTCConfiguration(
     {
-        "iceServers": []
+        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
     }
 )
 
 def render_live_camera_mode(conf_threshold=0.2):
     st.markdown("### 🚗 UrbanEye AI - Live Auto-Detection & Supabase Sync")
-    st.info("Live stream connected hai. AI model frames par detection run kar raha hai.")
+    st.info("Yaqeeni banayein ke aap URL mein http://localhost:8501 istemal kar rahe hain taake browser camera allow kare.")
 
     class NonBlockingVideoTransformer(VideoTransformerBase):
         def __init__(self):
@@ -38,11 +38,10 @@ def render_live_camera_mode(conf_threshold=0.2):
                 with self.lock:
                     if self.latest_frame is not None:
                         frame_to_process = self.latest_frame.copy()
-                        self.latest_frame = None  # Consume latest frame
+                        self.latest_frame = None
 
                 if frame_to_process is not None:
                     try:
-                        # Safe call supporting different function signatures
                         try:
                             detection_result = run_detection(frame_to_process, conf_threshold=conf_threshold)
                         except TypeError:
@@ -58,7 +57,6 @@ def render_live_camera_mode(conf_threshold=0.2):
                         else:
                             processed_img = detection_result
 
-                        # Handle Ultralytics YOLO Results object or list
                         if hasattr(processed_img, "plot"):
                             processed_img = processed_img.plot()
                         elif isinstance(processed_img, list) and len(processed_img) > 0:
@@ -71,7 +69,6 @@ def render_live_camera_mode(conf_threshold=0.2):
                             with self.lock:
                                 self.annotated_frame = processed_img
 
-                            # Background Supabase sync check
                             total_detected = sum(counts.values()) if isinstance(counts, dict) and len(counts) > 0 else 0
                             
                             if total_detected > 0:
@@ -104,7 +101,7 @@ def render_live_camera_mode(conf_threshold=0.2):
         def __del__(self):
             self.running = False
 
-    # WebRTC Streamer with local host configuration
+    # WebRTC Streamer setup
     webrtc_streamer(
         key="urbaneye-local-dashcam",
         rtc_configuration=RTC_CONFIGURATION,
