@@ -9,11 +9,6 @@ from utils.helpers import generate_tracking_id
 from database.supabase_client import supabase
 
 try:
-    from streamlit_autorefresh import st_autorefresh
-except ImportError:
-    st_autorefresh = None
-
-try:
     from utils.priority_engine import calculate_priority_score
 except Exception:
     def calculate_priority_score(counts):
@@ -24,7 +19,7 @@ except Exception:
             "sla_target": "24 Hours"
         }
 
-# Simplified STUN configuration for stable and fast connection
+# Stable STUN configuration
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
@@ -39,15 +34,15 @@ class AutoStopTransformer:
         self.detected = False
         self.result_data = None
         self.conf_threshold = 0.50
-        self.frame_counter = 0  # CPU optimization ke liye frame skip counter
+        self.frame_counter = 0
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         if self.detected:
             return frame
         
-        # CPU Optimization: Har 3rd frame par detection run karein taake lag na ho
+        # Frame skip for smooth processing (Har 2nd frame process hoga)
         self.frame_counter += 1
-        if self.frame_counter % 3 != 0:
+        if self.frame_counter % 2 != 0:
             return frame
         
         img = frame.to_ndarray(format="bgr24")
@@ -106,9 +101,7 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
     st.markdown("### Auto-Stop AI Detection & Dispatch")
     st.markdown("**Start the camera—once a hazard is detected, the camera will stop automatically and the dispatch panel will unlock!**")
 
-    # Safe interval (5 seconds) taake WebRTC ko connect hone ka pora waqt mil jaye
-    if st_autorefresh is not None:
-        st_autorefresh(interval=5000, key="webrtc_poll_counter")
+    # NOTE: st_autorefresh ko yahan se mukammal remove kar diya gaya hai taake camera freeze na ho.
 
     if "captured_result" not in st.session_state:
         st.session_state["captured_result"] = None
@@ -143,11 +136,18 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
             st.rerun()
 
     else:
+        # HD Resolution constraints (1280x720) taake video saaf nazar aaye
         ctx = webrtc_streamer(
-            key="auto-stop-streamer-v6",
+            key="auto-stop-streamer-hd",
             video_processor_factory=AutoStopTransformer,
             rtc_configuration=RTC_CONFIGURATION,
-            media_stream_constraints={"video": {"width": 640, "height": 480}, "audio": False},
+            media_stream_constraints={
+                "video": {
+                    "width": {"ideal": 1280},
+                    "height": {"ideal": 720}
+                }, 
+                "audio": False
+            },
             async_processing=True,
         )
 
