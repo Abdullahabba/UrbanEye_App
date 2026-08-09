@@ -37,7 +37,7 @@ def render_live_camera_mode(conf_threshold=0.25):
 
     # --- STEP 1: CAPTURE PHOTO ---
     if st.session_state["live_step"] == "CAPTURE":
-        st.info("💡 کیمرہ سے ہیزرڈ (گڈھا یا کچرا) کی تصویر لیں۔ سسٹم خودکار طور پر ڈیٹیکشن کرے گا!")
+        st.info("💡 Camera se hazard (gaddha ya kachra) ki tasveer lein. System khud ba khud detection karega!")
         
         cam_file = st.camera_input("Take Live Photo", key="live_cam_input")
 
@@ -47,7 +47,7 @@ def render_live_camera_mode(conf_threshold=0.25):
             img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
             if img is not None:
-                with st.spinner("🔍 AI model فریم کو تجزیہ کر رہا ہے..."):
+                with st.spinner("🔍 AI model frame ko analyze kar raha hai..."):
                     try:
                         detection_result = run_detection(img, conf_threshold=conf_threshold)
                         
@@ -79,15 +79,15 @@ def render_live_camera_mode(conf_threshold=0.25):
                             st.session_state["live_step"] = "VERIFY"
                             st.rerun()
                         else:
-                            st.error("❌ AI پردازش میں تصویر درست نہیں ملی۔ دوبارہ کوشش کریں۔")
+                            st.error("❌ AI processing mein tasveer durust nahi mili. Dobara koshish karein.")
                     except Exception as e:
                         st.error(f"❌ Detection Error: {e}")
 
     # --- STEP 2: LOCATION & SUPABASE SYNC ---
     elif st.session_state["live_step"] == "VERIFY":
-        st.success("✅ AI ڈیٹیکشن کامیاب! اب مقام (Location) درج کریں اور ڈیٹا سپابیس میں سنک کریں۔")
+        st.success("✅ AI detection kamyaab! Ab location darj karein aur data Supabase mein sync karein.")
 
-        tracking_id = st.session_state["live_last_tracking_id"] = st.session_state["live_tracking_id"]
+        tracking_id = st.session_state["live_tracking_id"]
         counts = st.session_state["live_counts"]
         processed_img = st.session_state["live_processed_img"]
 
@@ -112,7 +112,7 @@ def render_live_camera_mode(conf_threshold=0.25):
                 st.markdown(summary_bullets if summary_bullets else "- No counts found")
 
         st.divider()
-        st.markdown("##### 📍 لوکیشن منتخب کریں")
+        st.markdown("##### 📍 Location Muntakhib Karein")
 
         loc_mode = st.radio("Location Mode", ["Manual Address", "Automatic Live GPS"], horizontal=True, key="live_loc_mode")
         
@@ -121,7 +121,7 @@ def render_live_camera_mode(conf_threshold=0.25):
         location_ready = False
 
         if loc_mode == "Manual Address":
-            manual_addr = st.text_input("ایڈریس درج کریں:", value="Gulberg III, Lahore", key="live_manual_addr")
+            manual_addr = st.text_input("Address darj karein:", value="Gulberg III, Lahore", key="live_manual_addr")
             if manual_addr.strip():
                 location_name = manual_addr.strip()
                 location_ready = True
@@ -134,7 +134,7 @@ def render_live_camera_mode(conf_threshold=0.25):
                     location_name = f"Live GPS (Lat: {lat:.4f}, Lon: {lon:.4f})"
                     location_ready = True
             else:
-                st.warning("streamlit-geolocation انسٹال نہیں ہے۔")
+                st.warning("streamlit-geolocation installed nahi hai.")
 
         if location_ready:
             assessment = calculate_priority_score(counts)
@@ -146,8 +146,8 @@ def render_live_camera_mode(conf_threshold=0.25):
             st.markdown(f"**⚡ Priority Score:** {score}/100 | **Severity:** {severity}")
             st.markdown(f"**🏢 Assigned Dept:** {dept} | **⏱️ SLA:** {sla}")
 
-            if st.button("🚀 Supabase میں ڈیٹا بھیجیں اور فائنل کریں", use_container_width=True):
-                with st.spinner("ڈیٹا سنک ہو رہا ہے..."):
+            if st.button("🚀 Supabase mein data bhejein aur finalize karein", use_container_width=True):
+                with st.spinner("Data sync ho raha hai..."):
                     try:
                         payload = {
                             "tracking_id": tracking_id,
@@ -163,9 +163,9 @@ def render_live_camera_mode(conf_threshold=0.25):
                         }
                         
                         supabase.table("reports").insert(payload).execute()
-                        st.success("✅ ڈیٹا کامیابی کے ساتھ Supabase میں محفوظ ہو گیا!")
+                        st.success("✅ Data kamyabi ke sath Supabase mein mehfooz ho gaya!")
                         
-                        if st.button("🔄 اگلی اسکیننگ شروع کریں"):
+                        if st.button("🔄 Agli scanning shuru karein"):
                             st.session_state["live_step"] = "CAPTURE"
                             st.session_state["live_counts"] = {}
                             st.session_state.pop("live_processed_img", None)
