@@ -36,7 +36,6 @@ class AutoStopTransformer:
     def __init__(self):
         self.detected = False
         self.result_data = None
-        # Safe threshold set to 0.50 to avoid false positives like faces/skin tones
         self.conf_threshold = 0.50
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
@@ -96,10 +95,9 @@ class AutoStopTransformer:
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
-    st.markdown("### 📸 Auto-Stop AI Detection (False-Positive Protected)")
-    st.markdown("💡 **Confidence threshold 0.50 par hai taake face/skin tone detect na ho. Camera start karein aur hazard samne layein!**")
+    st.markdown("### 📸 Auto-Stop AI Detection & Dispatch")
+    st.markdown("💡 **Camera start karein—hazard detect hote hi camera stop ho ga aur dispatch panel unlock ho kar sync ho jaye ga!**")
 
-    # Auto-poll every 1 second so the app detects background changes without manual slider movement
     if st_autorefresh is not None:
         st_autorefresh(interval=1000, key="webrtc_poll_counter")
 
@@ -108,7 +106,6 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
     if "synced_to_db" not in st.session_state:
         st.session_state["synced_to_db"] = False
 
-    # Adjustable slider if user wants to fine-tune threshold further
     conf_threshold = st.slider("Confidence Threshold (Safe: 0.50+)", 0.10, 0.90, conf_threshold, 0.05, key="auto_stop_conf")
 
     if st.session_state["captured_result"] is not None:
@@ -132,12 +129,13 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
 
         if st.button("🔄 Dobara Scanning Shuru Karein", use_container_width=True):
             st.session_state["captured_result"] = None
+            st.session_state["counts"] = {}
             st.session_state["synced_to_db"] = False
             st.rerun()
 
     else:
         ctx = webrtc_streamer(
-            key="auto-stop-streamer-v3",
+            key="auto-stop-streamer-v4",
             video_processor_factory=AutoStopTransformer,
             rtc_configuration=RTC_CONFIGURATION,
             media_stream_constraints={"video": {"width": 640, "height": 480}, "audio": False},
@@ -150,6 +148,7 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
         if ctx.video_processor and ctx.video_processor.detected and ctx.video_processor.result_data:
             res = ctx.video_processor.result_data
             st.session_state["captured_result"] = res
+            st.session_state["counts"] = res["counts"]  # <--- Dispatch panel unlock karne ke liye zaroori line
             
             try:
                 payload = {
