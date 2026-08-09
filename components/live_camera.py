@@ -23,12 +23,10 @@ except ImportError:
     streamlit_geolocation = None
 
 def parse_and_plot_results(detection_result, original_img):
-    """YOLO results ko parse karta hai aur har halat mein image aur counts return karta hai."""
     processed_img = original_img.copy()
     counts = {}
     total_boxes = 0
 
-    # Handle different return formats from run_detection
     actual_results = detection_result
     if isinstance(detection_result, tuple):
         actual_results = detection_result[0]
@@ -40,7 +38,6 @@ def parse_and_plot_results(detection_result, original_img):
         results_list = [actual_results]
 
     for res in results_list:
-        # Draw bounding boxes if .plot exists
         if hasattr(res, "plot"):
             try:
                 plotted = res.plot()
@@ -49,7 +46,6 @@ def parse_and_plot_results(detection_result, original_img):
             except Exception:
                 pass
         
-        # Extract boxes and classes
         if hasattr(res, "boxes") and res.boxes is not None:
             try:
                 boxes = res.boxes
@@ -64,7 +60,7 @@ def parse_and_plot_results(detection_result, original_img):
 
     return processed_img, counts, total_boxes
 
-def render_live_camera_mode():
+def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
     st.markdown("### 🚗 UrbanEye AI - Live Field Scanner & Auto-Sync")
 
     # Session states initialization
@@ -78,11 +74,11 @@ def render_live_camera_mode():
         st.session_state["live_processed_img"] = None
 
     # Confidence Threshold Slider for live tuning
-    conf_threshold = st.slider(
-        "⚙️ AI Confidence Threshold (Agar detection na ho to yeh kam karein)", 
+    slider_conf = st.slider(
+        "⚙️ AI Confidence Threshold", 
         min_value=0.01, 
         max_value=0.90, 
-        value=0.15, 
+        value=float(conf_threshold), 
         step=0.01,
         key="live_conf_slider"
     )
@@ -101,18 +97,16 @@ def render_live_camera_mode():
             if img is not None:
                 with st.spinner("🔍 AI model scan kar raha hai..."):
                     try:
-                        # Try passing conf_threshold in different formats depending on detector function signature
                         try:
-                            detection_result = run_detection(img, conf=conf_threshold)
+                            detection_result = run_detection(img, conf=slider_conf)
                         except TypeError:
                             try:
-                                detection_result = run_detection(img, conf_threshold=conf_threshold)
+                                detection_result = run_detection(img, conf_threshold=slider_conf)
                             except TypeError:
                                 detection_result = run_detection(img)
 
                         proc_img, counts, total_boxes = parse_and_plot_results(detection_result, img)
 
-                        # Flexible check: Agar boxes nahi bhi mile lekin user aage barhna chahe ya image mil gayi ho
                         if not counts or len(counts) == 0:
                             counts = {"Detected Hazard": 1}
 
