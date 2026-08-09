@@ -10,3 +10,4 @@ reportlab
 fpdf
 streamlit-webrtc
 av
+streamlit-autorefresh
