@@ -22,8 +22,8 @@ RTC_CONFIGURATION = RTCConfiguration(
 )
 
 def render_live_camera_mode(conf_threshold=0.3):
-    st.markdown("### 🚗 UrbanEye AI - Non-Blocking Live Stream")
-    st.info("Live stream ko non-blocking background architecture par shift kar diya gaya hai taake camera bilkul freeze na ho.")
+    st.markdown("### 🚗 UrbanEye AI - Live Auto-Detection & Supabase Sync")
+    st.info("Live stream active hai. AI detections background mein run ho rahi hain taake camera freeze na ho.")
 
     class NonBlockingVideoTransformer(VideoTransformerBase):
         def __init__(self):
@@ -43,10 +43,11 @@ def render_live_camera_mode(conf_threshold=0.3):
                 with self.lock:
                     if self.latest_frame is not None:
                         frame_to_process = self.latest_frame.copy()
-                        self.latest_frame = None  # Frame consume ho gaya
+                        self.latest_frame = None  # New frame consume kar liya
 
                 if frame_to_process is not None:
                     try:
+                        # YOLO detection run karna
                         detection_result = run_detection(frame_to_process, conf_threshold=conf_threshold)
                         
                         if isinstance(detection_result, tuple):
@@ -55,6 +56,7 @@ def render_live_camera_mode(conf_threshold=0.3):
                             processed_img = detection_result
                             counts = {}
 
+                        # YOLO Results object ya list ko plot/ndarray mein convert karna
                         if hasattr(processed_img, "plot"):
                             processed_img = processed_img.plot()
                         elif isinstance(processed_img, list) and len(processed_img) > 0:
@@ -81,18 +83,20 @@ def render_live_camera_mode(conf_threshold=0.3):
                                             "status": "Auto-Synced Live"
                                         }).execute()
                                     except Exception as db_err:
-                                        pass
+                                        print(f"Supabase Sync Error: {db_err}")
+                        else:
+                            print("AI Warning: processed_img is not a valid numpy array.")
                     except Exception as e:
-                        pass
+                        print(f"AI Detection Worker Error: {e}")
                 else:
-                    time.sleep(0.01)
+                    time.sleep(0.02) # CPU overload bachane ke liye chota sleep
 
         def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
             img = frame.to_ndarray(format="bgr24")
             
-            # Non-blocking frame passing
             with self.lock:
                 self.latest_frame = img
+                # Agar processed frame mojood hai toh wo dikhayein, warna live raw frame
                 current_output = self.annotated_frame if self.annotated_frame is not None else img
 
             return av.VideoFrame.from_ndarray(current_output, format="bgr24")
@@ -100,7 +104,7 @@ def render_live_camera_mode(conf_threshold=0.3):
         def __del__(self):
             self.running = False
 
-    # WebRTC Streamer with lightweight constraints
+    # WebRTC Streamer with optimized settings
     webrtc_streamer(
         key="urbaneye-nonblocking-dashcam",
         rtc_configuration=RTC_CONFIGURATION,
