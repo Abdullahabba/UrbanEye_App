@@ -9,21 +9,16 @@ from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 from database.supabase_client import supabase
 
-# Multiple robust STUN servers for instant connection stability
+# Local connection ke liye empty ICE servers taake network block/timeout na ho
 RTC_CONFIGURATION = RTCConfiguration(
     {
-        "iceServers": [
-            {"urls": ["stun:stun.l.google.com:19302"]},
-            {"urls": ["stun:stun1.l.google.com:19302"]},
-            {"urls": ["stun:stun2.l.google.com:19302"]},
-            {"urls": ["stun:stun.services.mozilla.com"]}
-        ]
+        "iceServers": []
     }
 )
 
-def render_live_camera_mode(conf_threshold=0.2):  # Confidence mazeed kam (20%) kar di hai taake easily detect ho
+def render_live_camera_mode(conf_threshold=0.2):
     st.markdown("### 🚗 UrbanEye AI - Live Auto-Detection & Supabase Sync")
-    st.info("Live stream active hai. Agar koi urban hazard samne aayega toh terminal mein counts print honge aur box ban jayega.")
+    st.info("Live stream connected hai. AI model frames par detection run kar raha hai.")
 
     class NonBlockingVideoTransformer(VideoTransformerBase):
         def __init__(self):
@@ -63,9 +58,6 @@ def render_live_camera_mode(conf_threshold=0.2):  # Confidence mazeed kam (20%) 
                         else:
                             processed_img = detection_result
 
-                        # Terminal mein print kar ke check karein ke kya detect ho raha hai
-                        print(f"AI Scan - Detected Counts: {counts}")
-
                         # Handle Ultralytics YOLO Results object or list
                         if hasattr(processed_img, "plot"):
                             processed_img = processed_img.plot()
@@ -93,7 +85,6 @@ def render_live_camera_mode(conf_threshold=0.2):  # Confidence mazeed kam (20%) 
                                             "counts": str(counts),
                                             "status": "Auto-Synced Live"
                                         }).execute()
-                                        print("Successfully synced detected hazard to Supabase!")
                                     except Exception as db_err:
                                         print(f"Supabase Sync Error: {db_err}")
                     except Exception as e:
@@ -113,9 +104,9 @@ def render_live_camera_mode(conf_threshold=0.2):  # Confidence mazeed kam (20%) 
         def __del__(self):
             self.running = False
 
-    # WebRTC Streamer with optimized settings
+    # WebRTC Streamer with local host configuration
     webrtc_streamer(
-        key="urbaneye-nonblocking-dashcam",
+        key="urbaneye-local-dashcam",
         rtc_configuration=RTC_CONFIGURATION,
         video_processor_factory=NonBlockingVideoTransformer,
         media_stream_constraints={
