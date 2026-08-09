@@ -23,6 +23,7 @@ except ImportError:
     streamlit_geolocation = None
 
 def parse_and_plot_results(detection_result, original_img):
+    """YOLO results ko parse karta hai aur scanned image par wazeh bounding boxes draw karta hai."""
     processed_img = original_img.copy()
     counts = {}
     total_boxes = 0
@@ -38,6 +39,7 @@ def parse_and_plot_results(detection_result, original_img):
         results_list = [actual_results]
 
     for res in results_list:
+        # 1. Try YOLO built-in plot method first
         if hasattr(res, "plot"):
             try:
                 plotted = res.plot()
@@ -46,15 +48,30 @@ def parse_and_plot_results(detection_result, original_img):
             except Exception:
                 pass
         
+        # 2. Extract boxes and ensure manual drawing fallback for absolute reliability
         if hasattr(res, "boxes") and res.boxes is not None:
             try:
                 boxes = res.boxes
                 total_boxes += len(boxes)
-                classes = boxes.cls.cpu().numpy()
                 names = getattr(res, "names", {})
-                for cls_id in classes:
-                    c_name = names.get(int(cls_id), "Municipal Hazard")
+                
+                for box in boxes:
+                    # Get box coordinates
+                    coords = box.xyxy[0].cpu().numpy().astype(int)
+                    x1, y1, x2, y2 = coords
+                    
+                    cls_id = int(box.cls[0].item()) if hasattr(box, "cls") else 0
+                    conf = float(box.conf[0].item()) if hasattr(box, "conf") else 1.0
+                    c_name = names.get(cls_id, "Hazard")
+                    
+                    # Count items
                     counts[c_name] = counts.get(c_name, 0) + 1
+                    
+                    # Draw explicit rectangle and label on image using OpenCV to guarantee visibility
+                    cv2.rectangle(processed_img, (x1, y1), (x2, y2), (0, 255, 0), 3)
+                    label = f"{c_name} ({conf:.2f})"
+                    cv2.putText(processed_img, label, (x1, max(y1 - 10, 15)), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             except Exception:
                 pass
 
@@ -85,7 +102,7 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
 
     # --- STEP 1: CAPTURE PHOTO ---
     if st.session_state["live_step"] == "CAPTURE":
-        st.info("💡 Camera se tasveer lein. Slider ki madad se confidence adjust kiya ja sakta hai.")
+        st.info("💡 Camera se tasveer lein. AI model scanned image par bounding boxes draw karega!")
         
         cam_file = st.camera_input("Take Live Photo", key="live_cam_input")
 
@@ -95,7 +112,7 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
             img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
             if img is not None:
-                with st.spinner("🔍 AI model scan kar raha hai..."):
+                with st.spinner("🔍 AI model scan aur bounding boxes bana raha hai..."):
                     try:
                         try:
                             detection_result = run_detection(img, conf=slider_conf)
@@ -128,7 +145,7 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
 
     # --- STEP 2: LOCATION & SUPABASE SYNC ---
     elif st.session_state["live_step"] == "VERIFY":
-        st.success("✅ Scan mukammal ho gaya hai! Niche details check kar ke Supabase mein sync karein.")
+        st.success("✅ Scan mukammal! Scanned image par bounding boxes ban chuke hain.")
 
         tracking_id = st.session_state["live_tracking_id"]
         counts = st.session_state["live_counts"]
@@ -138,7 +155,7 @@ def render_live_camera_mode(conf_threshold=0.15, *args, **kwargs):
 
         with col_img:
             if processed_img is not None:
-                st.image(processed_img, caption="Scanned Image Result", use_container_width=True)
+                st.image(processed_img, caption="Scanned Image Result with Bounding Boxes", use_container_width=True)
 
         with col_info:
             with st.container(border=True):
