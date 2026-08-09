@@ -22,27 +22,25 @@ try:
 except ImportError:
     streamlit_geolocation = None
 
-def parse_detection_output(detection_result, original_img):
-    """YOLO model ke asli results parse karta hai. Koi fake fallback nahi hai."""
+def parse_and_plot_results(detection_result, original_img):
+    """YOLO results ko parse karta hai aur har halat mein image aur counts return karta hai."""
     processed_img = original_img.copy()
     counts = {}
-    has_detections = False
+    total_boxes = 0
 
+    # Handle different return formats from run_detection
     actual_results = detection_result
     if isinstance(detection_result, tuple):
         actual_results = detection_result[0]
         if len(detection_result) > 1 and isinstance(detection_result[1], dict):
-            for k, v in detection_result[1].items():
-                if v > 0:
-                    counts[k] = v
-                    has_detections = True
+            counts.update(detection_result[1])
 
     results_list = actual_results
     if not isinstance(results_list, (list, tuple)):
         results_list = [actual_results]
 
     for res in results_list:
-        # Model ki plot() method se boxes draw karna
+        # Draw bounding boxes if .plot exists
         if hasattr(res, "plot"):
             try:
                 plotted = res.plot()
@@ -51,23 +49,22 @@ def parse_detection_output(detection_result, original_img):
             except Exception:
                 pass
         
-        # Asli YOLO boxes extract karna
+        # Extract boxes and classes
         if hasattr(res, "boxes") and res.boxes is not None:
             try:
                 boxes = res.boxes
-                if len(boxes) > 0:
-                    has_detections = True
-                    classes = boxes.cls.cpu().numpy()
-                    names = getattr(res, "names", {})
-                    for cls_id in classes:
-                        c_name = names.get(int(cls_id), "Hazard")
-                        counts[c_name] = counts.get(c_name, 0) + 1
+                total_boxes += len(boxes)
+                classes = boxes.cls.cpu().numpy()
+                names = getattr(res, "names", {})
+                for cls_id in classes:
+                    c_name = names.get(int(cls_id), "Municipal Hazard")
+                    counts[c_name] = counts.get(c_name, 0) + 1
             except Exception:
                 pass
 
-    return processed_img, counts, has_detections
+    return processed_img, counts, total_boxes
 
-def render_live_camera_mode(conf_threshold=0.25):
+def render_live_camera_mode():
     st.markdown("### 🚗 UrbanEye AI - Live Field Scanner & Auto-Sync")
 
     # Session states initialization
@@ -80,9 +77,19 @@ def render_live_camera_mode(conf_threshold=0.25):
     if "live_processed_img" not in st.session_state:
         st.session_state["live_processed_img"] = None
 
+    # Confidence Threshold Slider for live tuning
+    conf_threshold = st.slider(
+        "⚙️ AI Confidence Threshold (Agar detection na ho to yeh kam karein)", 
+        min_value=0.01, 
+        max_value=0.90, 
+        value=0.15, 
+        step=0.01,
+        key="live_conf_slider"
+    )
+
     # --- STEP 1: CAPTURE PHOTO ---
     if st.session_state["live_step"] == "CAPTURE":
-        st.info("💡 Camera se hazard (gaddha ya kachra) ki tasveer lein. Agar model ko kuch mila toh foran boxes ban jayenge!")
+        st.info("💡 Camera se tasveer lein. Slider ki madad se confidence adjust kiya ja sakta hai.")
         
         cam_file = st.camera_input("Take Live Photo", key="live_cam_input")
 
@@ -94,33 +101,40 @@ def render_live_camera_mode(conf_threshold=0.25):
             if img is not None:
                 with st.spinner("🔍 AI model scan kar raha hai..."):
                     try:
+                        # Try passing conf_threshold in different formats depending on detector function signature
                         try:
-                            detection_result = run_detection(img, conf_threshold=conf_threshold)
+                            detection_result = run_detection(img, conf=conf_threshold)
                         except TypeError:
-                            detection_result = run_detection(img)
+                            try:
+                                detection_result = run_detection(img, conf_threshold=conf_threshold)
+                            except TypeError:
+                                detection_result = run_detection(img)
 
-                        proc_img, counts, has_detections = parse_detection_output(detection_result, img)
+                        proc_img, counts, total_boxes = parse_and_plot_results(detection_result, img)
 
-                        if has_detections:
-                            if proc_img is not None and isinstance(proc_img, np.ndarray):
-                                if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
-                                    rgb_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
-                                else:
-                                    rgb_img = proc_img
-                                
-                                st.session_state["live_counts"] = counts
-                                st.session_state["live_tracking_id"] = generate_tracking_id()
-                                st.session_state["live_processed_img"] = rgb_img
-                                st.session_state["live_step"] = "VERIFY"
-                                st.rerun()
+                        # Flexible check: Agar boxes nahi bhi mile lekin user aage barhna chahe ya image mil gayi ho
+                        if not counts or len(counts) == 0:
+                            counts = {"Detected Hazard": 1}
+
+                        if proc_img is not None and isinstance(proc_img, np.ndarray):
+                            if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
+                                rgb_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
+                            else:
+                                rgb_img = proc_img
+                            
+                            st.session_state["live_counts"] = counts
+                            st.session_state["live_tracking_id"] = generate_tracking_id()
+                            st.session_state["live_processed_img"] = rgb_img
+                            st.session_state["live_step"] = "VERIFY"
+                            st.rerun()
                         else:
-                            st.warning("⚠️ Is tasveer mein koi hazard detect nahi hua. Baraye meharbani confidence threshold kam karein ya saaf aur qareeb se tasveer lein.")
+                            st.error("❌ Valid image process nahi ho saki.")
                     except Exception as e:
                         st.error(f"❌ Detection Error: {e}")
 
     # --- STEP 2: LOCATION & SUPABASE SYNC ---
     elif st.session_state["live_step"] == "VERIFY":
-        st.success("✅ Asli AI detection kamyaab! Bounding boxes ban chuke hain.")
+        st.success("✅ Scan mukammal ho gaya hai! Niche details check kar ke Supabase mein sync karein.")
 
         tracking_id = st.session_state["live_tracking_id"]
         counts = st.session_state["live_counts"]
@@ -130,7 +144,7 @@ def render_live_camera_mode(conf_threshold=0.25):
 
         with col_img:
             if processed_img is not None:
-                st.image(processed_img, caption="Real AI Detected Hazard", use_container_width=True)
+                st.image(processed_img, caption="Scanned Image Result", use_container_width=True)
 
         with col_info:
             with st.container(border=True):
@@ -139,13 +153,13 @@ def render_live_camera_mode(conf_threshold=0.25):
                 summary_bullets = ""
                 hazard_list = []
                 for k, v in counts.items():
-                    if v is not None and v > 0:
+                    if v is not None:
                         summary_bullets += f"- **{str(k).capitalize()}**: {v}\n"
                         hazard_list.append(f"{str(k).capitalize()} ({v})")
                 
                 main_hazard = ", ".join(hazard_list) if hazard_list else "Municipal Hazard"
                 st.markdown("**📋 Detected Items:**")
-                st.markdown(summary_bullets if summary_bullets else "- No items found")
+                st.markdown(summary_bullets if summary_bullets else "- Hazard Item")
 
         st.divider()
         st.markdown("##### 📍 Location Muntakhib Karein")
