@@ -3,6 +3,7 @@ import av
 import cv2
 import numpy as np
 import time
+import threading
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
@@ -22,20 +23,20 @@ RTC_CONFIGURATION = RTCConfiguration(
 
 def render_live_camera_mode(conf_threshold=0.3):
     st.markdown("### 🚗 UrbanEye AI - Live Auto-Detection & Supabase Sync")
-    st.info("Live stream active hai. Hazard detect hotay hi live box banay ga aur data khud ba khud Supabase par sync ho jaye ga.")
+    st.info("Live stream active hai. Database sync ab background thread mein ho rahi hai taake camera bilkul freeze na ho.")
 
     class VideoTransformer(VideoTransformerBase):
         def __init__(self):
             self.frame_count = 0
             self.last_processed_img = None
-            self.last_db_push_time = 0  # Cooldown timer taake database spam na ho
+            self.last_db_push_time = 0  # Cooldown timer
 
         def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
             img = frame.to_ndarray(format="bgr24")
             self.frame_count += 1
             
-            # Frame Skipping: Har 5th frame par AI run hoga taake live stream bilkul smooth chale
-            if self.frame_count % 5 == 0:
+            # Frame Skipping: Har 8th frame par AI run hoga taake performance smooth rahay
+            if self.frame_count % 8 == 0:
                 try:
                     detection_result = run_detection(img, conf_threshold=conf_threshold)
                     
@@ -56,24 +57,27 @@ def render_live_camera_mode(conf_threshold=0.3):
                     if isinstance(processed_img, np.ndarray):
                         self.last_processed_img = processed_img
                         
-                        # Check karein ke counts mein koi hazard detect hua hai ya nahi
                         total_detected = sum(counts.values()) if isinstance(counts, dict) else 1
                         
                         if total_detected > 0:
                             current_time = time.time()
-                            # Har 10 seconds mein aik baar automatically Supabase par push karega
-                            if current_time - self.last_db_push_time > 10:
+                            # Har 15 seconds mein aik baar background mein Supabase sync hoga
+                            if current_time - self.last_db_push_time > 15:
                                 self.last_db_push_time = current_time
                                 
-                                try:
-                                    tracking_id = generate_tracking_id()
-                                    supabase.table("reports").insert({
-                                        "tracking_id": tracking_id,
-                                        "counts": str(counts),
-                                        "status": "Auto-Synced Live"
-                                    }).execute()
-                                except Exception as db_err:
-                                    print(f"Supabase Sync Error: {db_err}")
+                                # Background thread taake live video freeze na ho
+                                def background_supabase_sync(c_data):
+                                    try:
+                                        tracking_id = generate_tracking_id()
+                                        supabase.table("reports").insert({
+                                            "tracking_id": tracking_id,
+                                            "counts": str(c_data),
+                                            "status": "Auto-Synced Live"
+                                        }).execute()
+                                    except Exception as db_err:
+                                        pass
+
+                                threading.Thread(target=background_supabase_sync, args=(counts,), daemon=True).start()
                     else:
                         if self.last_processed_img is None:
                             self.last_processed_img = img
@@ -84,17 +88,17 @@ def render_live_camera_mode(conf_threshold=0.3):
             output_img = self.last_processed_img if self.last_processed_img is not None else img
             return av.VideoFrame.from_ndarray(output_img, format="bgr24")
 
-    # WebRTC Streamer with optimized balance for streaming and detection
+    # WebRTC Streamer with lightweight constraints to prevent any freezing
     webrtc_streamer(
-        key="urbaneye-supabase-dashcam",
+        key="urbaneye-bulletproof-dashcam",
         rtc_configuration=RTC_CONFIGURATION,
         video_processor_factory=VideoTransformer,
         media_stream_constraints={
             "video": {
                 "facingMode": "environment",
-                "width": {"ideal": 854},
-                "height": {"ideal": 480},
-                "frameRate": {"ideal": 20}
+                "width": {"ideal": 640},
+                "height": {"ideal": 360},
+                "frameRate": {"ideal": 15}
             }, 
             "audio": False
         },
