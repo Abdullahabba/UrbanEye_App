@@ -22,77 +22,89 @@ RTC_CONFIGURATION = RTCConfiguration(
 )
 
 def render_live_camera_mode(conf_threshold=0.3):
-    st.markdown("### 🚗 UrbanEye AI - Live Auto-Detection & Supabase Sync")
-    st.info("Live stream active hai. Database sync ab background thread mein ho rahi hai taake camera bilkul freeze na ho.")
+    st.markdown("### 🚗 UrbanEye AI - Non-Blocking Live Stream")
+    st.info("Live stream ko non-blocking background architecture par shift kar diya gaya hai taake camera bilkul freeze na ho.")
 
-    class VideoTransformer(VideoTransformerBase):
+    class NonBlockingVideoTransformer(VideoTransformerBase):
         def __init__(self):
-            self.frame_count = 0
-            self.last_processed_img = None
-            self.last_db_push_time = 0  # Cooldown timer
+            self.latest_frame = None
+            self.annotated_frame = None
+            self.lock = threading.Lock()
+            self.running = True
+            self.last_db_push_time = 0
 
-        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-            img = frame.to_ndarray(format="bgr24")
-            self.frame_count += 1
-            
-            # Frame Skipping: Har 8th frame par AI run hoga taake performance smooth rahay
-            if self.frame_count % 8 == 0:
-                try:
-                    detection_result = run_detection(img, conf_threshold=conf_threshold)
-                    
-                    if isinstance(detection_result, tuple):
-                        processed_img, counts = detection_result
-                    else:
-                        processed_img = detection_result
-                        counts = {}
+            # Alag background thread start karna taake video stream block na ho
+            self.thread = threading.Thread(target=self._ai_worker, daemon=True)
+            self.thread.start()
 
-                    if hasattr(processed_img, "plot"):
-                        processed_img = processed_img.plot()
-                    elif isinstance(processed_img, list) and len(processed_img) > 0:
-                        if hasattr(processed_img[0], "plot"):
-                            processed_img = processed_img[0].plot()
+        def _ai_worker(self):
+            while self.running:
+                frame_to_process = None
+                with self.lock:
+                    if self.latest_frame is not None:
+                        frame_to_process = self.latest_frame.copy()
+                        self.latest_frame = None  # Frame consume ho gaya
+
+                if frame_to_process is not None:
+                    try:
+                        detection_result = run_detection(frame_to_process, conf_threshold=conf_threshold)
+                        
+                        if isinstance(detection_result, tuple):
+                            processed_img, counts = detection_result
                         else:
-                            processed_img = processed_img[0]
-                    
-                    if isinstance(processed_img, np.ndarray):
-                        self.last_processed_img = processed_img
-                        
-                        total_detected = sum(counts.values()) if isinstance(counts, dict) else 1
-                        
-                        if total_detected > 0:
-                            current_time = time.time()
-                            # Har 15 seconds mein aik baar background mein Supabase sync hoga
-                            if current_time - self.last_db_push_time > 15:
-                                self.last_db_push_time = current_time
-                                
-                                # Background thread taake live video freeze na ho
-                                def background_supabase_sync(c_data):
+                            processed_img = detection_result
+                            counts = {}
+
+                        if hasattr(processed_img, "plot"):
+                            processed_img = processed_img.plot()
+                        elif isinstance(processed_img, list) and len(processed_img) > 0:
+                            if hasattr(processed_img[0], "plot"):
+                                processed_img = processed_img[0].plot()
+                            else:
+                                processed_img = processed_img[0]
+
+                        if isinstance(processed_img, np.ndarray):
+                            with self.lock:
+                                self.annotated_frame = processed_img
+
+                            # Background Supabase sync check
+                            total_detected = sum(counts.values()) if isinstance(counts, dict) else 1
+                            if total_detected > 0:
+                                curr_time = time.time()
+                                if curr_time - self.last_db_push_time > 15:
+                                    self.last_db_push_time = curr_time
                                     try:
                                         tracking_id = generate_tracking_id()
                                         supabase.table("reports").insert({
                                             "tracking_id": tracking_id,
-                                            "counts": str(c_data),
+                                            "counts": str(counts),
                                             "status": "Auto-Synced Live"
                                         }).execute()
                                     except Exception as db_err:
                                         pass
+                    except Exception as e:
+                        pass
+                else:
+                    time.sleep(0.01)
 
-                                threading.Thread(target=background_supabase_sync, args=(counts,), daemon=True).start()
-                    else:
-                        if self.last_processed_img is None:
-                            self.last_processed_img = img
-                except Exception as e:
-                    if self.last_processed_img is None:
-                        self.last_processed_img = img
+        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+            img = frame.to_ndarray(format="bgr24")
+            
+            # Non-blocking frame passing
+            with self.lock:
+                self.latest_frame = img
+                current_output = self.annotated_frame if self.annotated_frame is not None else img
 
-            output_img = self.last_processed_img if self.last_processed_img is not None else img
-            return av.VideoFrame.from_ndarray(output_img, format="bgr24")
+            return av.VideoFrame.from_ndarray(current_output, format="bgr24")
 
-    # WebRTC Streamer with lightweight constraints to prevent any freezing
+        def __del__(self):
+            self.running = False
+
+    # WebRTC Streamer with lightweight constraints
     webrtc_streamer(
-        key="urbaneye-bulletproof-dashcam",
+        key="urbaneye-nonblocking-dashcam",
         rtc_configuration=RTC_CONFIGURATION,
-        video_processor_factory=VideoTransformer,
+        video_processor_factory=NonBlockingVideoTransformer,
         media_stream_constraints={
             "video": {
                 "facingMode": "environment",
