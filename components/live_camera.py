@@ -1,6 +1,7 @@
 import streamlit as st
 import cv2
 import av
+import time
 import numpy as np
 from PIL import Image
 from streamlit_webrtc import webrtc_streamer, RTCConfiguration
@@ -39,20 +40,26 @@ class AutoStopTransformer:
         self.detected = False
         self.result_data = None
         self.conf_threshold = 0.50
-        self.frame_counter = 0
+        self.last_checked_time = 0
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         if self.detected:
             return frame
         
-        # Smooth Streaming Optimization: Har 5th frame par detection run hogi, baaki 4 frames foran pass hon ge
-        self.frame_counter += 1
-        if self.frame_counter % 5 != 0:
+        img = frame.to_ndarray(format="bgr24")
+        
+        # Time-based throttling: Har 0.7 seconds mein sirf aik baar detection chalegi 
+        # Taake video stream bilkul smooth aur lag-free rahay
+        current_time = time.time()
+        if current_time - self.last_checked_time < 0.7:
             return frame
         
-        img = frame.to_ndarray(format="bgr24")
+        self.last_checked_time = current_time
+        
         try:
-            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            # Speed boost ke liye image ko chota kar ke model ko dein (Fast Inference)
+            img_small = cv2.resize(img, (320, 320))
+            img_rgb = cv2.cvtColor(img_small, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(img_rgb)
             
             proc_img, counts = run_detection(pil_img, self.conf_threshold)
@@ -62,25 +69,30 @@ class AutoStopTransformer:
                 if has_hazard:
                     self.detected = True
                     
+                    # Jab hazard mil jaye toh original size ki image par bounding box plot karein
+                    full_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    full_pil = Image.fromarray(full_rgb)
+                    final_proc_img, _ = run_detection(full_pil, self.conf_threshold)
+                    
                     try:
                         from ultralytics.engine.results import Results
-                        if isinstance(proc_img, Results):
-                            proc_img = proc_img.plot()
+                        if isinstance(final_proc_img, Results):
+                            final_proc_img = final_proc_img.plot()
                     except ImportError:
                         pass
                         
-                    if isinstance(proc_img, list) and len(proc_img) > 0:
+                    if isinstance(final_proc_img, list) and len(final_proc_img) > 0:
                         try:
-                            proc_img = proc_img[0].plot()
+                            final_proc_img = final_proc_img[0].plot()
                         except:
                             pass
                     
-                    if isinstance(proc_img, np.ndarray):
-                        if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
-                            proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
-                        final_img = Image.fromarray(proc_img)
-                    elif isinstance(proc_img, Image.Image):
-                        final_img = proc_img
+                    if isinstance(final_proc_img, np.ndarray):
+                        if len(final_proc_img.shape) == 3 and final_proc_img.shape[2] == 3:
+                            final_proc_img = cv2.cvtColor(final_proc_img, cv2.COLOR_BGR2RGB)
+                        final_img = Image.fromarray(final_proc_img)
+                    elif isinstance(final_proc_img, Image.Image):
+                        final_img = final_proc_img
                     else:
                         final_img = Image.fromarray(img)
                         
@@ -106,9 +118,9 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
     st.markdown("### Auto-Stop AI Detection & Dispatch")
     st.markdown("**Start the camera—once a hazard is detected, the camera will stop automatically and the dispatch panel will unlock!**")
 
-    # Safe polling interval to switch UI once hazard is caught
+    # Polling to switch UI instantly when detection triggers
     if st_autorefresh is not None:
-        st_autorefresh(interval=3000, key="auto_detection_poll")
+        st_autorefresh(interval=2000, key="auto_detection_poll")
 
     if "captured_result" not in st.session_state:
         st.session_state["captured_result"] = None
@@ -143,16 +155,14 @@ def render_live_camera_mode(conf_threshold=0.50, *args, **kwargs):
             st.rerun()
 
     else:
-        # Optimized constraints: 640x480 resolution with max 15fps to eliminate freezing/stuck issues completely
         ctx = webrtc_streamer(
-            key="auto-stop-streamer-smooth-v3",
+            key="auto-stop-streamer-smooth-v4",
             video_processor_factory=AutoStopTransformer,
             rtc_configuration=RTC_CONFIGURATION,
             media_stream_constraints={
                 "video": {
                     "width": {"ideal": 640},
-                    "height": {"ideal": 480},
-                    "frameRate": {"ideal": 15, "max": 20}
+                    "height": {"ideal": 480}
                 }, 
                 "audio": False
             },
