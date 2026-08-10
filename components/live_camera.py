@@ -41,9 +41,21 @@ class AutoStopTransformer:
         
         img = frame.to_ndarray(format="bgr24")
         try:
-            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            # 🌟 IMAGE QUALITY BOOST: Contrast & Lighting Enhancement (CLAHE) for better detection
+            try:
+                lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+                l, a, b = cv2.split(lab)
+                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                cl = clahe.apply(l)
+                enhanced_lab = cv2.merge((cl, a, b))
+                img_enhanced = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+            except Exception:
+                img_enhanced = img
+
+            img_rgb = cv2.cvtColor(img_enhanced, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(img_rgb)
             
+            # Run detection on enhanced image
             proc_img, counts = run_detection(pil_img, self.conf_threshold)
             
             if counts and len(counts) > 0:
@@ -88,8 +100,8 @@ class AutoStopTransformer:
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_report_func=None, *args, **kwargs):
-    st.markdown("### 📸 Auto-Stop AI Detection & Dispatch")
-    st.markdown("💡 **Camera start karein—hazard samne aate hi yeh khud-ba-khud capture kar ke Dispatch Panel khol de ga.**")
+    st.markdown("### 📸 HD Auto-Stop AI Detection & Dispatch")
+    st.markdown("💡 **HD Camera active hai—hazard samne aate hi yeh enhanced accuracy ke sath foran capture kar lega.**")
 
     if "captured_result" not in st.session_state:
         st.session_state["captured_result"] = None
@@ -101,7 +113,7 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         "Confidence Threshold", 0.05, 0.90, st.session_state["conf_threshold"], 0.05, key="auto_stop_conf"
     )
 
-    # 🔑 CRITICAL FIX: Transformer ko session_state mein save rakhein taake state wipe na ho
+    # Persistent transformer instance to avoid state loss on rerun
     if "auto_stop_transformer_instance" not in st.session_state:
         st.session_state["auto_stop_transformer_instance"] = AutoStopTransformer()
     
@@ -114,13 +126,12 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         st.session_state["counts"] = res["counts"]
         st.session_state["processed_img"] = res["processed_img"]
         
-        st.image(res["processed_img"], caption="Detected Hazard Result with Bounding Boxes", use_container_width=True)
+        st.image(res["processed_img"], caption="High-Definition Detected Hazard Result", use_container_width=True)
 
         if st.button("🔄 Capture Another Hazard", key="reset_live_capture_btn"):
             st.session_state["captured_result"] = None
             st.session_state["counts"] = {}
             st.session_state.pop("processed_img", None)
-            # Reset transformer state for next capture
             current_transformer.detected = False
             current_transformer.result_data = None
             st.rerun()
@@ -134,18 +145,23 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         )
 
     else:
-        st.info("ℹ️ Camera live hai... Hazard samne aate hi yeh foran capture kar lega.")
+        st.info("ℹ️ HD Live Stream running... Enhanced processing enabled.")
         
-        # Pass the persistent transformer instance via factory lambda
+        # 🚀 UPGRADED CONSTRAINTS: Requesting HD (1280x720) resolution for crystal clear video quality
         ctx = webrtc_streamer(
             key="auto-stop-streamer-clean",
             video_processor_factory=lambda: current_transformer,
             rtc_configuration=RTC_CONFIGURATION,
-            media_stream_constraints={"video": {"width": 640, "height": 480}, "audio": False},
+            media_stream_constraints={
+                "video": {
+                    "width": {"ideal": 1280, "min": 640},
+                    "height": {"ideal": 720, "min": 480},
+                },
+                "audio": False
+            },
             async_processing=True,
         )
 
-        # Check if hazard was detected in background thread
         if current_transformer.detected and current_transformer.result_data:
             res = current_transformer.result_data
             st.session_state["captured_result"] = res
@@ -153,7 +169,6 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
             st.session_state["processed_img"] = res["processed_img"]
             st.rerun()
 
-        # Smooth polling to instantly catch detection without touching UI
         if ctx.state.playing:
             time.sleep(0.3)
             st.rerun()
