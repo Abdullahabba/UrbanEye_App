@@ -8,19 +8,25 @@ from streamlit_webrtc import webrtc_streamer, RTCConfiguration
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
-# Optimize RTC with higher bitrate for better quality
-RTC_CONFIGURATION = RTCConfiguration({
-    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}],
-    "iceTransportPolicy": "relay"
-})
+# 🌐 Multiple robust STUN servers to bypass network/firewall blocks
+RTC_CONFIGURATION = RTCConfiguration(
+    {
+        "iceServers": [
+            {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]},
+            {"urls": ["stun:stun.stunprotocol.org:3478"]},
+            {"urls": ["stun:stun.voipbuster.com:3478"]},
+            {"urls": ["stun:stun.ekiga.net:3478"]}
+        ]
+    }
+)
 
 class AutoStopTransformer:
     def __init__(self):
         self.detected = False
         self.result_data = None
-        self.conf_threshold = 0.25 # Thora barha diya taake false detection kam ho
+        self.conf_threshold = 0.25
         self.frame_count = 0
-        self.skip_frames = 5  # <--- MAGIC KEY: Har 5th frame process karega
+        self.skip_frames = 5
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         if self.detected:
@@ -29,7 +35,6 @@ class AutoStopTransformer:
         self.frame_count += 1
         img = frame.to_ndarray(format="bgr24")
         
-        # Sirf har 5th frame process karo taake video smooth rahe
         if self.frame_count % self.skip_frames != 0:
             return av.VideoFrame.from_ndarray(img, format="bgr24")
 
@@ -42,7 +47,6 @@ class AutoStopTransformer:
             if counts and len(counts) > 0:
                 self.detected = True
                 
-                # Plotting logic
                 if hasattr(proc_img, 'plot'):
                     proc_img = proc_img.plot()
                 elif isinstance(proc_img, list) and len(proc_img) > 0:
@@ -66,7 +70,6 @@ class AutoStopTransformer:
 def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_report_func=None):
     st.markdown("### ⚡ Real-Time Fast Detection")
     
-    # Session state persistency
     if "captured_result" not in st.session_state: st.session_state["captured_result"] = None
     if "auto_stop_transformer" not in st.session_state:
         st.session_state["auto_stop_transformer"] = AutoStopTransformer()
@@ -86,7 +89,8 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         from components.dispatch_panel import render_dispatch_panel
         render_dispatch_panel(res["tracking_id"], "Live Feed", user_details, create_pdf_report_func)
     else:
-        # Optimization: Fixed 640x480 with balanced constraints
+        st.info("💡 Agar connection mein masla ho, toh mobile data (hotspot) par try karein ya Image Upload mode use karein.")
+        
         webrtc_streamer(
             key="live-fast-feed",
             video_processor_factory=lambda: transformer,
