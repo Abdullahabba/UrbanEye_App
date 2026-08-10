@@ -2,6 +2,7 @@ import streamlit as st
 import cv2
 import av
 import numpy as np
+import time
 from PIL import Image
 from streamlit_webrtc import webrtc_streamer, RTCConfiguration
 from models.detector import run_detection
@@ -93,7 +94,12 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
     if "captured_result" not in st.session_state:
         st.session_state["captured_result"] = None
 
-    conf_threshold = st.slider("Confidence Threshold", 0.05, 0.90, conf_threshold, 0.05, key="auto_stop_conf")
+    if "conf_threshold" not in st.session_state:
+        st.session_state["conf_threshold"] = conf_threshold
+    
+    st.session_state["conf_threshold"] = st.slider(
+        "Confidence Threshold", 0.05, 0.90, st.session_state["conf_threshold"], 0.05, key="auto_stop_conf"
+    )
 
     if st.session_state["captured_result"] is not None:
         res = st.session_state["captured_result"]
@@ -103,7 +109,6 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         
         st.image(res["processed_img"], caption="Detected Hazard Result with Bounding Boxes", use_container_width=True)
 
-        # Reset button taake user dobara live camera chala sakay agar zaroorat paray
         if st.button("🔄 Capture Another Hazard", key="reset_live_capture_btn"):
             st.session_state["captured_result"] = None
             st.session_state["counts"] = {}
@@ -130,9 +135,8 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         )
 
         if ctx.video_processor:
-            ctx.video_processor.conf_threshold = conf_threshold
+            ctx.video_processor.conf_threshold = st.session_state["conf_threshold"]
 
-            # Real-time check: Agar background thread mein detection ho chuki hai
             if ctx.video_processor.detected and ctx.video_processor.result_data:
                 res = ctx.video_processor.result_data
                 st.session_state["captured_result"] = res
@@ -140,6 +144,6 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
                 st.session_state["processed_img"] = res["processed_img"]
                 st.rerun()
             
-            # Agar background mein detect ho gaya hai lekin result_data abhi main thread tak nahi aaya, toh chota sa rerun trigger rakhein
             elif ctx.video_processor.detected:
+                time.sleep(0.1)
                 st.rerun()
