@@ -101,6 +101,13 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         "Confidence Threshold", 0.05, 0.90, st.session_state["conf_threshold"], 0.05, key="auto_stop_conf"
     )
 
+    # 🔑 CRITICAL FIX: Transformer ko session_state mein save rakhein taake state wipe na ho
+    if "auto_stop_transformer_instance" not in st.session_state:
+        st.session_state["auto_stop_transformer_instance"] = AutoStopTransformer()
+    
+    current_transformer = st.session_state["auto_stop_transformer_instance"]
+    current_transformer.conf_threshold = st.session_state["conf_threshold"]
+
     if st.session_state["captured_result"] is not None:
         res = st.session_state["captured_result"]
         
@@ -113,6 +120,9 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
             st.session_state["captured_result"] = None
             st.session_state["counts"] = {}
             st.session_state.pop("processed_img", None)
+            # Reset transformer state for next capture
+            current_transformer.detected = False
+            current_transformer.result_data = None
             st.rerun()
 
         from components.dispatch_panel import render_dispatch_panel
@@ -126,26 +136,24 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
     else:
         st.info("ℹ️ Camera live hai... Hazard samne aate hi yeh foran capture kar lega.")
         
+        # Pass the persistent transformer instance via factory lambda
         ctx = webrtc_streamer(
             key="auto-stop-streamer-clean",
-            video_processor_factory=AutoStopTransformer,
+            video_processor_factory=lambda: current_transformer,
             rtc_configuration=RTC_CONFIGURATION,
             media_stream_constraints={"video": {"width": 640, "height": 480}, "audio": False},
             async_processing=True,
         )
 
-        if ctx.video_processor:
-            ctx.video_processor.conf_threshold = st.session_state["conf_threshold"]
+        # Check if hazard was detected in background thread
+        if current_transformer.detected and current_transformer.result_data:
+            res = current_transformer.result_data
+            st.session_state["captured_result"] = res
+            st.session_state["counts"] = res["counts"]
+            st.session_state["processed_img"] = res["processed_img"]
+            st.rerun()
 
-            # Agar detection ho chuki hai, toh foran result save kar ke rerun karein
-            if ctx.video_processor.detected and ctx.video_processor.result_data:
-                res = ctx.video_processor.result_data
-                st.session_state["captured_result"] = res
-                st.session_state["counts"] = res["counts"]
-                st.session_state["processed_img"] = res["processed_img"]
-                st.rerun()
-
-        # 🚀 AUTO-POLLING: Jab tak camera on hai, yeh har 0.4 seconds baad background check karega
+        # Smooth polling to instantly catch detection without touching UI
         if ctx.state.playing:
-            time.sleep(0.4)
+            time.sleep(0.3)
             st.rerun()
