@@ -24,18 +24,17 @@ except ImportError:
 def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf_report_func):
     st.divider()
     
-    # Header with Reset Button (Using dynamic unique key based on tracking_id)
+    # Header with Reset Button
     col_title, col_btn = st.columns([3, 1])
     with col_title:
         st.subheader("📤 Dispatch & Verification Panel")
     with col_btn:
-        if st.button("🔄 Reset Panel", key=f"dispatch_reset_panel_btn_{tracking_id}", use_container_width=True, help="Click to clear stale counts and detections"):
+        if st.button("🔄 Reset Panel", use_container_width=True, help="Click to clear stale counts and detections"):
             st.session_state["counts"] = {}
             st.session_state.pop("processed_img", None)
             st.session_state["captured_images"] = []
             st.session_state.pop("selected_lat", None)
             st.session_state.pop("selected_lon", None)
-            st.session_state.pop("current_tracking_id", None)
             st.rerun()
     
     # Check if input source mode changed
@@ -70,7 +69,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     
     main_hazard_str = ", ".join(hazard_types_list) if hazard_types_list else "Municipal Hazard"
 
-    # Clean Card Display for AI Detections
+    # Clean Card Display for AI Detections (Replaces ugly text_area)
     with st.container(border=True):
         st.markdown(f"**🏷️ Tracking ID:** `{tracking_id}`")
         st.markdown("**📋 Detected Hazards:**")
@@ -94,7 +93,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         "Choose Location Mode",
         ["Manual Address", "Automatic Live GPS"],
         horizontal=True,
-        key=f"dispatch_loc_mode_{tracking_id}"
+        key="dispatch_loc_mode"
     )
 
     location_ready = False
@@ -103,7 +102,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         manual_input = st.text_input(
             "✍️ Enter Location Name / Address:", 
             value=st.session_state.get("selected_loc_name", manual_loc_name),
-            key=f"manual_address_input_box_{tracking_id}"
+            key="manual_address_input_box"
         )
         if manual_input and manual_input.strip():
             st.session_state["selected_loc_name"] = manual_input.strip()
@@ -135,7 +134,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
     st.divider()
 
     # =========================================================================
-    # STEP 3: DISPATCH PANEL & DETAILED SUMMARY
+    # STEP 3: DISPATCH PANEL & DETAILED SUMMARY (SHOWN AFTER LOCATION)
     # =========================================================================
     st.markdown("##### 🚀 Step 3: Dispatch Panel & Database Sync")
     
@@ -152,6 +151,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         lat = st.session_state["selected_lat"]
         lon = st.session_state["selected_lon"]
 
+        # Display detailed metrics
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
             st.metric(label="Priority Score", value=f"{score}/100")
@@ -166,6 +166,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         user_email = user_details.get("email", "officer@urbaneye.ai") if isinstance(user_details, dict) else "officer@urbaneye.ai"
         timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
+        # 1. Save locally in Session State
         if "hazard_history" not in st.session_state:
             st.session_state["hazard_history"] = []
         
@@ -192,6 +193,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         if tracking_id not in existing_ids:
             st.session_state["hazard_history"].insert(0, new_entry)
 
+        # 2. Automatically Push / Upsert to Supabase Database
         payload = {
             "tracking_id": tracking_id,
             "hazard": main_hazard_str,
@@ -258,6 +260,7 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
         elif isinstance(img, Image.Image):
             all_images.append(img)
 
+    # Generate PDF Bytes
     pdf_bytes = None
     if create_pdf_report_func:
         try:
@@ -279,14 +282,13 @@ def render_dispatch_panel(tracking_id, manual_loc_name, user_details, create_pdf
                 data=pdf_bytes,
                 file_name=f"UrbanEye_Report_{tracking_id}.pdf",
                 mime="application/pdf",
-                use_container_width=True,
-                key=f"download_pdf_btn_{tracking_id}"
+                use_container_width=True
             )
         else:
             st.warning("⚠️ PDF bytes are empty/None.")
 
     with col2:
-        if st.button("📧 Send via Email", use_container_width=True, key=f"send_email_btn_{tracking_id}"):
+        if st.button("📧 Send via Email", use_container_width=True):
             with st.spinner("Sending official report via email..."):
                 try:
                     from utils.email_sender import send_email_with_pdf
