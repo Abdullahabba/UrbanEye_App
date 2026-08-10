@@ -98,16 +98,19 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
     if st.session_state["captured_result"] is not None:
         res = st.session_state["captured_result"]
         
-        # Session state variables set karna taake dispatch panel inhein access kar sakay
         st.session_state["counts"] = res["counts"]
         st.session_state["processed_img"] = res["processed_img"]
         
-        # Display detected image with bounding boxes
         st.image(res["processed_img"], caption="Detected Hazard Result with Bounding Boxes", use_container_width=True)
 
-        # 🚀 Dispatch Panel ko call kar diya hai (Yeh tab tak Supabase mein push nahi karega jab tak location select na ho)
-        from components.dispatch_panel import render_dispatch_panel # Agar aap ke paas alag file hai toh import karein, warna function yahan available hona chahiye
-        
+        # Reset button taake user dobara live camera chala sakay agar zaroorat paray
+        if st.button("🔄 Capture Another Hazard", key="reset_live_capture_btn"):
+            st.session_state["captured_result"] = None
+            st.session_state["counts"] = {}
+            st.session_state.pop("processed_img", None)
+            st.rerun()
+
+        from components.dispatch_panel import render_dispatch_panel
         render_dispatch_panel(
             tracking_id=res["tracking_id"],
             manual_loc_name="Live Camera Feed Location",
@@ -129,11 +132,14 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         if ctx.video_processor:
             ctx.video_processor.conf_threshold = conf_threshold
 
-        if ctx.video_processor and ctx.video_processor.detected and ctx.video_processor.result_data:
-            res = ctx.video_processor.result_data
-            st.session_state["captured_result"] = res
-            st.session_state["counts"] = res["counts"]
-            st.session_state["processed_img"] = res["processed_img"]
+            # Real-time check: Agar background thread mein detection ho chuki hai
+            if ctx.video_processor.detected and ctx.video_processor.result_data:
+                res = ctx.video_processor.result_data
+                st.session_state["captured_result"] = res
+                st.session_state["counts"] = res["counts"]
+                st.session_state["processed_img"] = res["processed_img"]
+                st.rerun()
             
-            # Note: Yahan se Supabase push code mukammal hata diya gaya hai taake bina location ke data save na ho.
-            st.rerun()
+            # Agar background mein detect ho gaya hai lekin result_data abhi main thread tak nahi aaya, toh chota sa rerun trigger rakhein
+            elif ctx.video_processor.detected:
+                st.rerun()
