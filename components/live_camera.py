@@ -89,7 +89,7 @@ class AutoStopTransformer:
 
 def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_report_func=None, *args, **kwargs):
     st.markdown("### 📸 Auto-Stop AI Detection & Dispatch")
-    st.markdown("💡 **Camera start karein—hazard detect hotay hi camera stop ho jaye ga aur neechay Dispatch Panel unlock ho jaye ga.**")
+    st.markdown("💡 **Camera start karein—hazard samne aate hi yeh khud-ba-khud capture kar ke Dispatch Panel khol de ga.**")
 
     if "captured_result" not in st.session_state:
         st.session_state["captured_result"] = None
@@ -124,7 +124,7 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         )
 
     else:
-        st.info("ℹ️ Camera live hai... Samne hazard laane par yeh khud-ba-khud capture kar lega.")
+        st.info("ℹ️ Camera live hai... Hazard samne aate hi yeh foran capture kar lega.")
         
         ctx = webrtc_streamer(
             key="auto-stop-streamer-clean",
@@ -137,13 +137,15 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
         if ctx.video_processor:
             ctx.video_processor.conf_threshold = st.session_state["conf_threshold"]
 
+            # Agar detection ho chuki hai, toh foran result save kar ke rerun karein
             if ctx.video_processor.detected and ctx.video_processor.result_data:
                 res = ctx.video_processor.result_data
                 st.session_state["captured_result"] = res
                 st.session_state["counts"] = res["counts"]
                 st.session_state["processed_img"] = res["processed_img"]
                 st.rerun()
-            
-            elif ctx.video_processor.detected:
-                time.sleep(0.1)
-                st.rerun()
+
+        # 🚀 AUTO-POLLING: Jab tak camera on hai, yeh har 0.4 seconds baad background check karega
+        if ctx.state.playing:
+            time.sleep(0.4)
+            st.rerun()
