@@ -8,18 +8,6 @@ from streamlit_webrtc import webrtc_streamer, RTCConfiguration
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
-# Safe fallback for priority engine
-try:
-    from utils.priority_engine import calculate_priority_score
-except Exception:
-    def calculate_priority_score(counts):
-        return {
-            "priority_score": 65,
-            "severity": "Medium",
-            "assigned_dept": "Municipal Operations",
-            "sla_target": "24 Hours"
-        }
-
 # Robust multi-STUN servers for live video feed
 RTC_CONFIGURATION = RTCConfiguration(
     {
@@ -70,40 +58,37 @@ class AutoStopTransformer:
                     "tracking_id": tracking_id,
                     "counts": counts,
                     "processed_img": final_img,
-                    "assessment": calculate_priority_score(counts)
                 }
         except Exception as e:
             print(f"Inference Error: {e}")
             
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_report_func=None, *args, **kwargs):
+def render_live_camera_mode(conf_threshold):
     st.markdown("### 🎥 Municipal Hazard Detection Portal")
     
     # Mode selection radio button
     detection_mode = st.radio(
         "Select Detection Mode:",
-        ["📸 Snapshot Capture (Recommended / Error-Free)", "⚡ Live Video Feed (Real-Time Stream)"],
+        ["📸 Snapshot Capture (Error-Free)", "⚡ Live Video Feed (Real-Time Stream)"],
         horizontal=True,
         key="camera_mode_selector"
     )
 
     st.markdown("---")
 
-    # Global Confidence Threshold Slider
+    # Global Confidence Threshold
     if "conf_threshold" not in st.session_state:
         st.session_state["conf_threshold"] = conf_threshold
     
-    st.session_state["conf_threshold"] = st.slider(
+    current_conf = st.slider(
         "Confidence Threshold", 0.05, 0.90, st.session_state["conf_threshold"], 0.05, key="global_conf_slider"
     )
-    current_conf = st.session_state["conf_threshold"]
+    st.session_state["conf_threshold"] = current_conf
 
     # ==================== MODE 1: SNAPSHOT CAPTURE ====================
     if "Snapshot Capture" in detection_mode:
         st.markdown("#### 📸 Field Camera Snapshot Mode")
-        st.markdown("💡 *Camera ke samne hazard la kar photo capture karein aur foran analyze karein.*")
-
         cam_photo = st.camera_input("Take Live Photo from Camera", key="native_camera_input")
         
         if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_snapshot_analyze"):
@@ -130,14 +115,13 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
                     proc_img = Image.fromarray(proc_img)
                 
                 st.session_state.update({
-                    "snapshot_processed_img": proc_img,
+                    "processed_img": proc_img,
                     "counts": counts,
-                    "current_tracking_id": generate_tracking_id(),
-                    "snapshot_assessment": calculate_priority_score(counts) if counts else None
+                    "current_tracking_id": generate_tracking_id()
                 })
         
-        if "snapshot_processed_img" in st.session_state and st.session_state["snapshot_processed_img"] is not None:
-            img_to_show = st.session_state["snapshot_processed_img"]
+        if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
+            img_to_show = st.session_state["processed_img"]
             
             if isinstance(img_to_show, np.ndarray):
                 if len(img_to_show.shape) == 3 and img_to_show.shape[2] == 3:
@@ -146,24 +130,14 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
                 
             st.image(img_to_show, caption="Snapshot AI Analysis Result", use_container_width=True)
 
-            if st.button("🔄 Clear Snapshot & Capture Another", key="reset_snapshot_btn"):
-                st.session_state.pop("snapshot_processed_img", None)
-                st.session_state.pop("snapshot_assessment", None)
+            if st.button("🔄 Clear Snapshot", key="reset_snapshot_btn"):
+                st.session_state.pop("processed_img", None)
                 st.session_state["counts"] = {}
                 st.rerun()
-
-            from components.dispatch_panel import render_dispatch_panel
-            render_dispatch_panel(
-                tracking_id=st.session_state.get("current_tracking_id", generate_tracking_id()),
-                manual_loc_name="Snapshot Camera Location",
-                user_details=user_details,
-                create_pdf_report_func=create_pdf_report_func
-            )
 
     # ==================== MODE 2: LIVE VIDEO FEED ====================
     else:
         st.markdown("#### ⚡ Live Video Feed Auto-Stop Mode")
-        st.markdown("💡 *Stream start karein; jaise hi hazard samne aaye ga, AI khud-b-khud capture kar lega.*")
 
         if "captured_result" not in st.session_state:
             st.session_state["captured_result"] = None
@@ -178,6 +152,7 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
             res = st.session_state["captured_result"]
             st.session_state["counts"] = res["counts"]
             st.session_state["processed_img"] = res["processed_img"]
+            st.session_state["current_tracking_id"] = res["tracking_id"]
             
             st.image(res["processed_img"], caption="Live Auto-Stop Detection Result", use_container_width=True)
 
@@ -188,14 +163,6 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
                 current_transformer.detected = False
                 current_transformer.result_data = None
                 st.rerun()
-
-            from components.dispatch_panel import render_dispatch_panel
-            render_dispatch_panel(
-                tracking_id=res["tracking_id"],
-                manual_loc_name="Live Camera Stream Location",
-                user_details=user_details,
-                create_pdf_report_func=create_pdf_report_func
-            )
         else:
             ctx = webrtc_streamer(
                 key="auto-stop-streamer-unified",
@@ -212,6 +179,7 @@ def render_live_camera_mode(conf_threshold=0.15, user_details=None, create_pdf_r
                 st.session_state["captured_result"] = current_transformer.result_data
                 st.session_state["counts"] = current_transformer.result_data["counts"]
                 st.session_state["processed_img"] = current_transformer.result_data["processed_img"]
+                st.session_state["current_tracking_id"] = current_transformer.result_data["tracking_id"]
                 st.rerun()
 
             if ctx.state.playing:
