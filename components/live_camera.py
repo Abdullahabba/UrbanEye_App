@@ -19,7 +19,10 @@ RTC_CONFIGURATION = RTCConfiguration(
 )
 
 def plot_boxes_on_image(img, conf):
-    """Robust helper to plot bounding boxes in the main Streamlit thread (identical to snapshot mode)."""
+    """Robust helper to plot bounding boxes in the main Streamlit thread."""
+    if img is None:
+        return None, {}
+        
     proc_img, counts = run_detection(img, conf)
     
     try:
@@ -61,12 +64,10 @@ class AutoStopTransformer:
         pil_img = Image.fromarray(img_rgb)
         
         try:
-            # Background thread sirf counts check karta hai speed ke liye
             _, counts = run_detection(pil_img, self.conf_threshold)
             
             if counts and len(counts) > 0:
                 self.detected = True
-                # Raw frame save kar lete hain taake main thread mein safe plotting ho sakay
                 tracking_id = generate_tracking_id()
                 self.result_data = {
                     "tracking_id": tracking_id,
@@ -141,13 +142,15 @@ def render_live_camera_mode(conf_threshold):
         current_transformer = st.session_state["auto_stop_transformer_instance"]
         current_transformer.conf_threshold = current_conf
 
+        # Safe handling of captured result from session state
         if st.session_state["captured_result"] is not None:
             res = st.session_state["captured_result"]
-            st.session_state["counts"] = res["counts"]
-            st.session_state["processed_img"] = res["processed_img"]
-            st.session_state["current_tracking_id"] = res["tracking_id"]
+            st.session_state["counts"] = res.get("counts", {})
+            st.session_state["processed_img"] = res.get("processed_img")
+            st.session_state["current_tracking_id"] = res.get("tracking_id", generate_tracking_id())
             
-            st.image(res["processed_img"], caption="Live Auto-Stop Detection Result", use_container_width=True)
+            if st.session_state["processed_img"] is not None:
+                st.image(st.session_state["processed_img"], caption="Live Auto-Stop Detection Result", use_container_width=True)
 
             if st.button("🔄 Reset Live Feed", key="reset_live_capture_btn"):
                 st.session_state["captured_result"] = None
@@ -168,20 +171,25 @@ def render_live_camera_mode(conf_threshold):
                 async_processing=True,
             )
 
-            # Jab background thread hazard detect kar le, toh main thread mein plotting run karo
             if current_transformer.detected and current_transformer.result_data:
                 res = current_transformer.result_data
-                with st.spinner("Processing detected hazard frame..."):
-                    final_img, counts = plot_boxes_on_image(res["raw_img"], current_conf)
+                raw_img = res.get("raw_img")
                 
+                if raw_img is not None:
+                    with st.spinner("Processing detected hazard frame..."):
+                        final_img, counts = plot_boxes_on_image(raw_img, current_conf)
+                else:
+                    final_img = None
+                    counts = res.get("counts", {})
+
                 st.session_state["captured_result"] = {
-                    "tracking_id": res["tracking_id"],
+                    "tracking_id": res.get("tracking_id", generate_tracking_id()),
                     "counts": counts,
                     "processed_img": final_img
                 }
                 st.session_state["counts"] = counts
                 st.session_state["processed_img"] = final_img
-                st.session_state["current_tracking_id"] = res["tracking_id"]
+                st.session_state["current_tracking_id"] = st.session_state["captured_result"]["tracking_id"]
                 st.rerun()
 
             if ctx.state.playing:
