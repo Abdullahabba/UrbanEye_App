@@ -8,6 +8,7 @@ from streamlit_webrtc import webrtc_streamer, RTCConfiguration
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
+# Robust multi-STUN servers for live video feed
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
@@ -16,6 +17,34 @@ RTC_CONFIGURATION = RTCConfiguration(
         ]
     }
 )
+
+def process_detection_output(proc_img, fallback_img):
+    """Universal helper to safely plot bounding boxes and convert any YOLO output to RGB PIL Image."""
+    try:
+        from ultralytics.engine.results import Results
+        if isinstance(proc_img, Results):
+            proc_img = proc_img.plot()
+    except Exception:
+        pass
+        
+    try:
+        if isinstance(proc_img, list) and len(proc_img) > 0:
+            if hasattr(proc_img[0], 'plot'):
+                proc_img = proc_img[0].plot()
+            else:
+                proc_img = proc_img[0]
+    except Exception:
+        pass
+        
+    if isinstance(proc_img, np.ndarray):
+        if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
+            proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(proc_img)
+        
+    if isinstance(proc_img, Image.Image):
+        return proc_img
+        
+    return fallback_img
 
 class AutoStopTransformer:
     def __init__(self):
@@ -36,30 +65,7 @@ class AutoStopTransformer:
             
             if counts and len(counts) > 0:
                 self.detected = True
-                
-                # 🌟 FIXED: Explicit Bounding Box Plotting Logic
-                try:
-                    from ultralytics.engine.results import Results
-                    if isinstance(proc_img, Results):
-                        proc_img = proc_img.plot()
-                except Exception:
-                    pass
-                    
-                if isinstance(proc_img, list) and len(proc_img) > 0:
-                    try:
-                        proc_img = proc_img[0].plot()
-                    except Exception:
-                        pass
-                
-                # Convert plotted output to RGB PIL Image
-                if isinstance(proc_img, np.ndarray):
-                    if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
-                        proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
-                    final_img = Image.fromarray(proc_img)
-                elif isinstance(proc_img, Image.Image):
-                    final_img = proc_img
-                else:
-                    final_img = pil_img
+                final_img = process_detection_output(proc_img, pil_img)
                 
                 tracking_id = generate_tracking_id()
                 self.result_data = {
@@ -101,34 +107,16 @@ def render_live_camera_mode(conf_threshold):
             img = Image.open(cam_photo)
             with st.spinner("Analyzing Camera Capture..."):
                 proc_img, counts = run_detection(img, current_conf)
-                
-                try:
-                    from ultralytics.engine.results import Results
-                    if isinstance(proc_img, Results):
-                        proc_img = proc_img.plot()
-                except ImportError:
-                    pass
-                    
-                if isinstance(proc_img, list) and len(proc_img) > 0:
-                    try:
-                        proc_img = proc_img[0].plot()
-                    except:
-                        pass
-                
-                if isinstance(proc_img, np.ndarray):
-                    if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
-                        proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
-                    proc_img = Image.fromarray(proc_img)
+                final_img = process_detection_output(proc_img, img)
                 
                 st.session_state.update({
-                    "processed_img": proc_img,
+                    "processed_img": final_img,
                     "counts": counts,
                     "current_tracking_id": generate_tracking_id()
                 })
         
         if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
             img_to_show = st.session_state["processed_img"]
-            
             if isinstance(img_to_show, np.ndarray):
                 if len(img_to_show.shape) == 3 and img_to_show.shape[2] == 3:
                     img_to_show = cv2.cvtColor(img_to_show, cv2.COLOR_BGR2RGB)
