@@ -8,7 +8,6 @@ from streamlit_webrtc import webrtc_streamer, RTCConfiguration
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
-# Robust multi-STUN servers for live video feed
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
@@ -38,18 +37,27 @@ class AutoStopTransformer:
             if counts and len(counts) > 0:
                 self.detected = True
                 
+                # 🌟 FIXED: Explicit Bounding Box Plotting Logic
                 try:
                     from ultralytics.engine.results import Results
                     if isinstance(proc_img, Results):
                         proc_img = proc_img.plot()
-                except: pass
+                except Exception:
+                    pass
                     
                 if isinstance(proc_img, list) and len(proc_img) > 0:
-                    try: proc_img = proc_img[0].plot()
-                    except: pass
+                    try:
+                        proc_img = proc_img[0].plot()
+                    except Exception:
+                        pass
                 
+                # Convert plotted output to RGB PIL Image
                 if isinstance(proc_img, np.ndarray):
-                    final_img = Image.fromarray(cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB))
+                    if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
+                        proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
+                    final_img = Image.fromarray(proc_img)
+                elif isinstance(proc_img, Image.Image):
+                    final_img = proc_img
                 else:
                     final_img = pil_img
                 
@@ -67,7 +75,6 @@ class AutoStopTransformer:
 def render_live_camera_mode(conf_threshold):
     st.markdown("### 🎥 Municipal Hazard Detection Portal")
     
-    # Mode selection radio button
     detection_mode = st.radio(
         "Select Detection Mode:",
         ["📸 Snapshot Capture (Error-Free)", "⚡ Live Video Feed (Real-Time Stream)"],
@@ -77,7 +84,6 @@ def render_live_camera_mode(conf_threshold):
 
     st.markdown("---")
 
-    # Global Confidence Threshold
     if "conf_threshold" not in st.session_state:
         st.session_state["conf_threshold"] = conf_threshold
     
