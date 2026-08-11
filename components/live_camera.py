@@ -18,33 +18,33 @@ RTC_CONFIGURATION = RTCConfiguration(
     }
 )
 
-def process_detection_output(proc_img, fallback_img):
-    """Universal helper to safely plot bounding boxes and convert any YOLO output to RGB PIL Image."""
+def plot_boxes_on_image(img, conf):
+    """Robust helper to plot bounding boxes in the main Streamlit thread (identical to snapshot mode)."""
+    proc_img, counts = run_detection(img, conf)
+    
     try:
         from ultralytics.engine.results import Results
         if isinstance(proc_img, Results):
             proc_img = proc_img.plot()
-    except Exception:
+    except ImportError:
         pass
         
-    try:
-        if isinstance(proc_img, list) and len(proc_img) > 0:
-            if hasattr(proc_img[0], 'plot'):
-                proc_img = proc_img[0].plot()
-            else:
-                proc_img = proc_img[0]
-    except Exception:
-        pass
-        
+    if isinstance(proc_img, list) and len(proc_img) > 0:
+        try:
+            proc_img = proc_img[0].plot()
+        except:
+            pass
+            
     if isinstance(proc_img, np.ndarray):
         if len(proc_img.shape) == 3 and proc_img.shape[2] == 3:
             proc_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
-        return Image.fromarray(proc_img)
+        final_img = Image.fromarray(proc_img)
+    elif isinstance(proc_img, Image.Image):
+        final_img = proc_img
+    else:
+        final_img = img
         
-    if isinstance(proc_img, Image.Image):
-        return proc_img
-        
-    return fallback_img
+    return final_img, counts
 
 class AutoStopTransformer:
     def __init__(self):
@@ -61,17 +61,17 @@ class AutoStopTransformer:
         pil_img = Image.fromarray(img_rgb)
         
         try:
-            proc_img, counts = run_detection(pil_img, self.conf_threshold)
+            # Background thread sirf counts check karta hai speed ke liye
+            _, counts = run_detection(pil_img, self.conf_threshold)
             
             if counts and len(counts) > 0:
                 self.detected = True
-                final_img = process_detection_output(proc_img, pil_img)
-                
+                # Raw frame save kar lete hain taake main thread mein safe plotting ho sakay
                 tracking_id = generate_tracking_id()
                 self.result_data = {
                     "tracking_id": tracking_id,
+                    "raw_img": pil_img,
                     "counts": counts,
-                    "processed_img": final_img,
                 }
         except Exception as e:
             print(f"Inference Error: {e}")
@@ -106,8 +106,7 @@ def render_live_camera_mode(conf_threshold):
         if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_snapshot_analyze"):
             img = Image.open(cam_photo)
             with st.spinner("Analyzing Camera Capture..."):
-                proc_img, counts = run_detection(img, current_conf)
-                final_img = process_detection_output(proc_img, img)
+                final_img, counts = plot_boxes_on_image(img, current_conf)
                 
                 st.session_state.update({
                     "processed_img": final_img,
@@ -169,11 +168,20 @@ def render_live_camera_mode(conf_threshold):
                 async_processing=True,
             )
 
+            # Jab background thread hazard detect kar le, toh main thread mein plotting run karo
             if current_transformer.detected and current_transformer.result_data:
-                st.session_state["captured_result"] = current_transformer.result_data
-                st.session_state["counts"] = current_transformer.result_data["counts"]
-                st.session_state["processed_img"] = current_transformer.result_data["processed_img"]
-                st.session_state["current_tracking_id"] = current_transformer.result_data["tracking_id"]
+                res = current_transformer.result_data
+                with st.spinner("Processing detected hazard frame..."):
+                    final_img, counts = plot_boxes_on_image(res["raw_img"], current_conf)
+                
+                st.session_state["captured_result"] = {
+                    "tracking_id": res["tracking_id"],
+                    "counts": counts,
+                    "processed_img": final_img
+                }
+                st.session_state["counts"] = counts
+                st.session_state["processed_img"] = final_img
+                st.session_state["current_tracking_id"] = res["tracking_id"]
                 st.rerun()
 
             if ctx.state.playing:
