@@ -1,2294 +1,373 @@
-/*==========================================================
- UrbanEye AI - Premium Dashboard UI
- Part 1 / 3
- Modern Glassmorphism Theme
-==========================================================*/
+/* ==========================================================
+   UrbanEye AI - LIGHT GREY DASHBOARD OVERRIDE
+   Keeps existing functionality and UI components intact
+   ========================================================== */
 
-/*=========================
- Google Font
-=========================*/
-
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
-
-
-/*=========================
- Root Variables
-=========================*/
-
-:root{
-
---primary:#3B82F6;
---primary2:#2563EB;
-
---secondary:#8B5CF6;
---accent:#06B6D4;
-
---success:#22C55E;
---warning:#F59E0B;
---danger:#EF4444;
-
---text:#FFFFFF;
---muted:#CBD5E1;
-
---glass:rgba(255,255,255,.08);
---glass2:rgba(255,255,255,.12);
-
---border:rgba(255,255,255,.12);
-
---shadow:0 20px 55px rgba(0,0,0,.35);
-
-}
-
-
-/*=========================
- Global
-=========================*/
-
-*{
-
-font-family:"Poppins",sans-serif;
-
-box-sizing:border-box;
-
-scroll-behavior:smooth;
-
-}
-
+/* ---------- Main Application Background ---------- */
 
 html,
 body,
-[class*="css"]{
+.stApp,
+[data-testid="stAppViewContainer"] {
+    background: #E7EBF0 !important;
+    color: #172033 !important;
+}
 
-background:#081120;
-
-color:#FFFFFF;
-
+/* Main content area */
+.main,
+.main .block-container {
+    background: transparent !important;
 }
 
 
-/*=========================
- Main Background
-=========================*/
+/* ---------- Soft Background Glow ---------- */
 
-https://urbaneyeapp-gd6mam2x3lqpmsj82xjb3a.streamlit.app/?logged_in_email=Ayesha%40gmail.com#my-submitted-inspection-reports
-
-/*=========================
- Animated Glow
-=========================*/
-
-.stApp::before{
-
-content:"";
-
-position:fixed;
-
-width:650px;
-
-height:650px;
-
-top:-220px;
-
-left:-180px;
-
-background:rgba(59,130,246,.15);
-
-filter:blur(130px);
-
-animation:moveGlow1 18s infinite alternate;
-
-z-index:-2;
-
+.stApp::before {
+    background: rgba(59, 130, 246, 0.08) !important;
+    filter: blur(140px);
 }
 
-.stApp::after{
-
-content:"";
-
-position:fixed;
-
-width:700px;
-
-height:700px;
-
-right:-220px;
-
-bottom:-220px;
-
-background:rgba(139,92,246,.18);
-
-filter:blur(140px);
-
-animation:moveGlow2 18s infinite alternate;
-
-z-index:-2;
-
+.stApp::after {
+    background: rgba(139, 92, 246, 0.08) !important;
+    filter: blur(150px);
 }
 
 
-@keyframes moveGlow1{
+/* ---------- Main Text ---------- */
 
-0%{
-
-transform:translate(0,0);
-
+.main h1,
+.main h2,
+.main h3,
+.main h4,
+.main h5,
+.main h6 {
+    color: #172033 !important;
 }
 
-100%{
-
-transform:translate(140px,120px);
-
-}
-
-}
-
-@keyframes moveGlow2{
-
-0%{
-
-transform:translate(0,0);
-
-}
-
-100%{
-
-transform:translate(-120px,-140px);
-
-}
-
+.main p,
+.main li,
+.main small {
+    color: #374151 !important;
 }
 
 
-/*=========================
- Hide Streamlit Branding
-=========================*/
+/* ---------- Sidebar ---------- */
 
-#MainMenu{
+[data-testid="stSidebar"] {
+    background:
+        linear-gradient(
+            180deg,
+            #263449 0%,
+            #1D293B 100%
+        ) !important;
 
-display:none;
-
+    border-right: 1px solid rgba(15, 23, 42, 0.15) !important;
 }
 
-header{
-
-display:none;
-
-}
-
-footer{
-
-display:none;
-
+[data-testid="stSidebar"] * {
+    color: #F8FAFC !important;
 }
 
 
-/*=========================
- Main Container
-=========================*/
+/* ---------- Sidebar Radio ---------- */
 
-.main .block-container{
+[data-testid="stSidebar"] .stRadio {
+    background: rgba(255,255,255,0.07) !important;
+    border: 1px solid rgba(255,255,255,0.08);
+}
 
-max-width:1500px;
-
-padding-top:35px;
-
-padding-bottom:80px;
-
-padding-left:40px;
-
-padding-right:40px;
-
-animation:fadePage .8s ease;
-
+[data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label:hover {
+    background: rgba(255,255,255,0.12) !important;
 }
 
 
-@keyframes fadePage{
+/* ---------- Glass Cards ---------- */
 
-from{
-
-opacity:0;
-
-transform:translateY(35px);
-
-}
-
-to{
-
-opacity:1;
-
-transform:translateY(0);
-
-}
-
-}
-
-
-/*=========================
- Typography
-=========================*/
-
-h1{
-
-font-size:42px;
-
-font-weight:800;
-
-margin-bottom:12px;
-
-background:linear-gradient(
-
-90deg,
-
-#ffffff,
-
-#60A5FA,
-
-#8B5CF6
-
-);
-
--webkit-background-clip:text;
-
--webkit-text-fill-color:transparent;
-
-}
-
-
-h2{
-
-font-weight:700;
-
-color:white;
-
-}
-
-
-h3{
-
-font-size:28px;
-
-font-weight:700;
-
-color:white;
-
-margin-bottom:20px;
-
-}
-
-
-h4,h5,h6{
-
-color:white;
-
-}
-
-
-p,
-span,
-label,
-small,
-li{
-
-color:white;
-
-}
-
-
-/*=========================
- Divider
-=========================*/
-
-hr{
-
-border:none;
-
-height:1px;
-
-background:rgba(255,255,255,.08);
-
-margin:22px 0;
-
-}
-
-
-/*=========================
- Sidebar
-=========================*/
-
-[data-testid="stSidebar"]{
-
-background:
-
-linear-gradient(
-
-180deg,
-
-rgba(18,28,48,.96),
-
-rgba(10,15,26,.96)
-
-);
-
-border-right:1px solid rgba(255,255,255,.08);
-
-backdrop-filter:blur(25px);
-
--webkit-backdrop-filter:blur(25px);
-
-}
-
-
-[data-testid="stSidebar"] *{
-
-color:white!important;
-
-}
-
-
-[data-testid="stSidebar"] h1{
-
-font-size:30px;
-
-margin-bottom:5px;
-
-}
-
-
-[data-testid="stSidebar"] h2{
-
-font-size:24px;
-
-}
-
-
-[data-testid="stSidebar"] h3{
-
-font-size:20px;
-
-}
-
-
-[data-testid="stSidebar"] .stRadio{
-
-padding:8px;
-
-border-radius:16px;
-
-background:rgba(255,255,255,.04);
-
-}
-
-
-/*=========================
- Sidebar Radio Buttons
-=========================*/
-
-.stRadio label{
-
-font-weight:600;
-
-font-size:15px;
-
-}
-
-
-.stRadio div[role="radiogroup"]>label{
-
-padding:12px 16px;
-
-border-radius:14px;
-
-transition:.30s;
-
-}
-
-
-.stRadio div[role="radiogroup"]>label:hover{
-
-background:rgba(255,255,255,.08);
-
-transform:translateX(5px);
-
-}
-
-
-/*=========================
- Glass Cards
-=========================*/
-
-/* BAD: Overwrites internal layout structural divs */
-/* div[data-testid="stVerticalBlock"] { ... } */
-
-/* GOOD: Targets custom cards without breaking Streamlit spacing */
 .main [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 24px;
-    padding: 24px;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    box-shadow: var(--shadow);
-}
-
-
-div[data-testid="stVerticalBlock"]::before{
-
-content:"";
-
-position:absolute;
-
-width:260px;
-
-height:260px;
-
-right:-130px;
-
-top:-130px;
-
-background:rgba(255,255,255,.08);
-
-border-radius:50%;
-
-filter:blur(40px);
-
-}
-
-
-div[data-testid="stVerticalBlock"]:hover{
-
-transform:translateY(-6px);
-
-box-shadow:
-
-0 30px 65px rgba(0,0,0,.42),
-
-0 0 35px rgba(59,130,246,.12);
-
-}
-
-
-/*=========================
- Columns
-=========================*/
-
-[data-testid="column"]{
-
-padding:10px;
-
-}
-
-
-/*=========================
- Caption
-=========================*/
-
-[data-testid="stCaptionContainer"]{
-
-color:#CBD5E1!important;
-
-}
-
-
-/*=========================
- Markdown
-=========================*/
-
-.stMarkdown{
-
-color:white!important;
-
-}
-
-
-/*=========================
- Links
-=========================*/
-
-a{
-
-color:#60A5FA;
-
-text-decoration:none;
-
-transition:.30s;
-
-}
-
-a:hover{
-
-color:#93C5FD;
-
-}
-
-
-/*=========================
- Scrollbar
-=========================*/
-
-::-webkit-scrollbar{
-
-width:10px;
-
-height:10px;
-
-}
-
-::-webkit-scrollbar-track{
-
-background:#0f172a;
-
-}
-
-::-webkit-scrollbar-thumb{
-
-background:linear-gradient(
-
-180deg,
-
-#3B82F6,
-
-#8B5CF6
-
-);
-
-border-radius:20px;
-
-}
-
-::-webkit-scrollbar-thumb:hover{
-
-background:#60A5FA;
-
-}
-
-
-/*=========================
- Selection
-=========================*/
-
-::selection{
-
-background:#3B82F6;
-
-color:white;
-
-}
-
-
-/*=========================
- Smooth Transition
-=========================*/
-
-*{
-
-transition:
-
-background .3s,
-
-color .3s,
-
-border-color .3s,
-
-box-shadow .3s,
-
-transform .3s;
-
-}
-/*==========================================================
- UrbanEye AI - Premium Dashboard UI
- Part 2 / 3
- Forms • Uploaders • Buttons • Images • Dispatch Panel
-==========================================================*/
-
-
-/*=========================
- Text Inputs
-=========================*/
-
-.stTextInput{
-
-margin-top:8px;
-margin-bottom:15px;
-
-}
-
-.stTextInput input{
-
-background:rgba(255,255,255,.95)!important;
-
-color:#111827!important;
-
--webkit-text-fill-color:#111827!important;
-
-caret-color:#111827!important;
-
-border-radius:14px!important;
-
-border:1px solid rgba(255,255,255,.18)!important;
-
-padding:15px 18px!important;
-
-font-size:15px!important;
-
-box-shadow:none!important;
-
-transition:.30s;
-
-}
-
-.stTextInput input:hover{
-
-border:1px solid #60A5FA!important;
-
-}
-
-.stTextInput input:focus{
-
-border:1px solid #3B82F6!important;
-
-background:#FFFFFF!important;
-
-box-shadow:0 0 0 4px rgba(59,130,246,.18)!important;
-
-}
-
-.stTextInput input::placeholder{
-
-color:#6B7280!important;
-
-opacity:1;
-
-}
-
-
-/*=========================
- Text Area
-=========================*/
-
-textarea{
-
-background:rgba(255,255,255,.95)!important;
-
-color:#111827!important;
-
-border-radius:16px!important;
-
-border:1px solid rgba(255,255,255,.15)!important;
-
-padding:15px!important;
-
-}
-
-textarea:focus{
-
-border:1px solid #3B82F6!important;
-
-box-shadow:0 0 0 4px rgba(59,130,246,.15)!important;
-
-}
-
-
-/*=========================
- Number Inputs
-=========================*/
-
-input[type="number"]{
-
-background:#FFFFFF!important;
-
-color:#111827!important;
-
-}
-
-
-/*=========================
- Password Inputs
-=========================*/
-
-input[type="password"]{
-
-background:#FFFFFF!important;
-
-color:#111827!important;
-
--webkit-text-fill-color:#111827!important;
-
-letter-spacing:2px;
-
-}
-
-
-/*=========================
- Slider
-=========================*/
-
-.stSlider{
-
-padding-top:15px;
-
-padding-bottom:15px;
-
-}
-
-.stSlider *{
-
-color:white!important;
-
-}
-
-
-/*=========================
- File Uploader
-=========================*/
-
-[data-testid="stFileUploader"]{
-
-border:2px dashed rgba(96,165,250,.45);
-
-border-radius:20px;
-
-background:rgba(255,255,255,.05);
-
-padding:30px;
-
-transition:.35s;
-
-}
-
-[data-testid="stFileUploader"]:hover{
-
-border-color:#60A5FA;
-
-background:rgba(255,255,255,.08);
-
-transform:translateY(-2px);
-
-}
-
-
-/*=========================
- Uploaded File Box
-=========================*/
-
-[data-testid="stFileUploaderFile"]{
-
-background:rgba(255,255,255,.10)!important;
-
-border-radius:12px!important;
-
-border:none!important;
-
-color:white!important;
-
-}
-
-
-/*=========================
- Buttons
-=========================*/
-
-.stButton{
-
-margin-top:10px;
-
-}
-
-.stButton>button{
-
-width:100%;
-
-padding:15px;
-
-border:none;
-
-border-radius:14px;
-
-font-size:15px;
-
-font-weight:700;
-
-cursor:pointer;
-
-color:white!important;
-
-background:
-
-linear-gradient(
-
-135deg,
-
-#2563EB,
-
-#7C3AED
-
-);
-
-box-shadow:
-
-0 18px 35px rgba(37,99,235,.35);
-
-transition:.35s;
-
-position:relative;
-
-overflow:hidden;
-
-}
-
-
-.stButton>button:hover{
-
-transform:translateY(-4px);
-
-background:
-
-linear-gradient(
-
-135deg,
-
-#3B82F6,
-
-#8B5CF6
-
-);
-
-box-shadow:
-
-0 22px 42px rgba(59,130,246,.45);
-
-}
-
-
-.stButton>button:active{
-
-transform:scale(.98);
-
-}
-
-
-/* Ripple */
-
-.stButton>button::after{
-
-content:"";
-
-position:absolute;
-
-top:50%;
-
-left:50%;
-
-width:0;
-
-height:0;
-
-border-radius:50%;
-
-background:rgba(255,255,255,.25);
-
-transform:translate(-50%,-50%);
-
-transition:.65s;
-
-}
-
-.stButton>button:hover::after{
-
-width:420px;
-
-height:420px;
-
-opacity:0;
-
-}
-
-
-/*=========================
- Download Button
-=========================*/
-
-.stDownloadButton>button{
-
-width:100%;
-
-padding:15px;
-
-border:none;
-
-border-radius:14px;
-
-font-weight:700;
-
-color:white;
-
-background:
-
-linear-gradient(
-
-135deg,
-
-#059669,
-
-#10B981
-
-);
-
-box-shadow:
-
-0 15px 30px rgba(16,185,129,.35);
-
-}
-
-.stDownloadButton>button:hover{
-
-transform:translateY(-3px);
-
-}
-
-
-/*=========================
- Checkbox
-=========================*/
-
-.stCheckbox{
-
-margin-top:10px;
-
-margin-bottom:10px;
-
-}
-
-.stCheckbox label{
-
-color:white!important;
-
-}
-
-
-/*=========================
- Radio Buttons
-=========================*/
-
-.stRadio{
-
-padding:8px;
-
-}
-
-.stRadio *{
-
-color:white!important;
-
-}
-
-
-/*=========================
- Images
-=========================*/
-
-img{
-
-border-radius:18px;
-
-}
-
-
-[data-testid="stImage"] img{
-
-border-radius:18px;
-
-border:1px solid rgba(255,255,255,.10);
-
-box-shadow:
-
-0 20px 45px rgba(0,0,0,.30);
-
-transition:.35s;
-
-}
-
-
-[data-testid="stImage"] img:hover{
-
-transform:scale(1.02);
-
-}
-
-
-/*=========================
- Camera
-=========================*/
-
-[data-testid="stCameraInput"]{
-
-border-radius:18px;
-
-border:2px dashed rgba(96,165,250,.40);
-
-padding:20px;
-
-background:rgba(255,255,255,.04);
-
-}
-
-
-/*=========================
- Video
-=========================*/
-
-video{
-
-border-radius:18px;
-
-box-shadow:
-
-0 20px 45px rgba(0,0,0,.35);
-
-}
-
-
-/*=========================
- Spinner
-=========================*/
-
-[data-testid="stSpinner"]{
-
-color:#60A5FA!important;
-
-}
-
-
-/*=========================
- Success
-=========================*/
-
-.stSuccess{
-
-background:rgba(34,197,94,.15)!important;
-
-border-left:5px solid #22C55E!important;
-
-border-radius:16px!important;
-
-color:white!important;
-
-}
-
-
-/*=========================
- Error
-=========================*/
-
-.stError{
-
-background:rgba(239,68,68,.16)!important;
-
-border-left:5px solid #EF4444!important;
-
-border-radius:16px!important;
-
-color:white!important;
-
-}
-
-
-/*=========================
- Warning
-=========================*/
-
-.stWarning{
-
-background:rgba(245,158,11,.16)!important;
-
-border-left:5px solid #F59E0B!important;
-
-border-radius:16px!important;
-
-color:white!important;
-
-}
-
-
-/*=========================
- Info
-=========================*/
-
-.stInfo{
-
-background:rgba(59,130,246,.16)!important;
-
-border-left:5px solid #3B82F6!important;
-
-border-radius:16px!important;
-
-color:white!important;
-
-}
-
-
-/*=========================
- Alert Container
-=========================*/
-
-[data-testid="stAlert"]{
-
-border-radius:16px!important;
-
-padding:15px!important;
-
-box-shadow:0 12px 28px rgba(0,0,0,.25);
-
-}
-
-
-/*=========================
- Dispatch Panel
-=========================*/
-
-.stTextArea{
-
-margin-bottom:20px;
-
-}
-
-
-.stTextArea textarea{
-
-min-height:150px;
-
-}
-
-
-.stDownloadButton{
-
-margin-top:10px;
-
-}
-
-
-.stMarkdown code{
-
-background:rgba(255,255,255,.10);
-
-padding:3px 8px;
-
-border-radius:8px;
-
-color:#93C5FD;
-
-}
-
-
-/*=========================
- Horizontal Blocks
-=========================*/
-
-div[data-testid="stHorizontalBlock"]{
-
-gap:20px;
-
-}
-
-
-/*=========================
- Expanders
-=========================*/
-
-details{
-
-background:rgba(255,255,255,.05);
-
-border-radius:16px;
-
-padding:12px;
-
-border:1px solid rgba(255,255,255,.08);
-
-}
-
-summary{
-
-cursor:pointer;
-
-font-weight:600;
-
-color:white;
-
-}
-
-
-/*=========================
- Hover Animation
-=========================*/
-
-.stButton,
-.stDownloadButton,
-.stTextInput,
-.stSlider,
-.stCheckbox{
-
-animation:fadeUp .45s ease;
-
-}
-
-
-@keyframes fadeUp{
-
-from{
-
-opacity:0;
-
-transform:translateY(12px);
-
-}
-
-to{
-
-opacity:1;
-
-transform:translateY(0);
-
-}
-
-}
-/*==========================================================
- UrbanEye AI - Premium Dashboard UI
- Part 3 / 3
- Tables • Map • Tracker • Metrics • Responsive • Final Polish
-==========================================================*/
-
-
-/*=========================
- DataFrame
-=========================*/
-
-[data-testid="stDataFrame"]{
-
-background:rgba(255,255,255,.06)!important;
-
-border-radius:20px!important;
-
-border:1px solid rgba(255,255,255,.10)!important;
-
-overflow:hidden!important;
-
-box-shadow:0 20px 45px rgba(0,0,0,.28);
-
-}
-
-[data-testid="stDataFrame"] *{
-
-color:white!important;
-
-}
-
-[data-testid="stDataFrame"] thead tr{
-
-background:linear-gradient(90deg,#2563EB,#7C3AED)!important;
-
-}
-
-[data-testid="stDataFrame"] tbody tr{
-
-background:transparent!important;
-
-transition:.25s;
-
-}
-
-[data-testid="stDataFrame"] tbody tr:hover{
-
-background:rgba(255,255,255,.08)!important;
-
-}
-
-
-/*=========================
- Tables
-=========================*/
-
-table{
-
-border-collapse:collapse!important;
-
-}
-
-th{
-
-background:linear-gradient(90deg,#2563EB,#8B5CF6)!important;
-
-color:white!important;
-
-font-weight:700!important;
-
-padding:14px!important;
-
-}
-
-td{
-
-background:rgba(255,255,255,.03)!important;
-
-color:white!important;
-
-padding:12px!important;
-
-}
-
-tr:hover td{
-
-background:rgba(255,255,255,.06)!important;
-
-}
-
-
-/*=========================
- Metric Cards
-=========================*/
-
-[data-testid="metric-container"]{
-
-background:rgba(255,255,255,.08);
-
-border:1px solid rgba(255,255,255,.10);
-
-border-radius:18px;
-
-padding:18px;
-
-box-shadow:0 15px 35px rgba(0,0,0,.25);
+    background: rgba(255,255,255,0.72) !important;
+    border: 1px solid rgba(148,163,184,0.35) !important;
 
-transition:.35s;
+    box-shadow:
+        0 12px 35px rgba(15,23,42,0.10) !important;
 
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
-[data-testid="metric-container"]:hover{
 
-transform:translateY(-6px);
+/* ---------- Card Text ---------- */
 
-box-shadow:0 25px 50px rgba(59,130,246,.25);
-
-}
-
-[data-testid="metric-container"] *{
-
-color:white!important;
-
-}
-
-
-/*=========================
- Map
-=========================*/
-
-[data-testid="stMap"]{
-
-border-radius:22px;
-
-overflow:hidden;
-
-border:2px solid rgba(255,255,255,.10);
-
-box-shadow:0 20px 50px rgba(0,0,0,.30);
-
-margin-top:15px;
-
-margin-bottom:20px;
-
-}
-
-
-/*=========================
- Tabs
-=========================*/
-
-.stTabs{
-
-margin-top:20px;
-
-}
-
-.stTabs [data-baseweb="tab-list"]{
-
-gap:10px;
-
-background:rgba(255,255,255,.05);
-
-padding:8px;
-
-border-radius:16px;
-
-}
-
-.stTabs [data-baseweb="tab"]{
-
-background:transparent;
-
-color:white!important;
-
-padding:12px 22px;
-
-font-weight:600;
-
-border-radius:12px;
-
-transition:.30s;
-
-}
-
-.stTabs [data-baseweb="tab"]:hover{
-
-background:rgba(255,255,255,.08);
-
-}
-
-.stTabs [aria-selected="true"]{
-
-background:linear-gradient(135deg,#3B82F6,#8B5CF6)!important;
-
-color:white!important;
-
-box-shadow:0 10px 25px rgba(59,130,246,.35);
-
-}
-
-
-/*=========================
- Progress
-=========================*/
-
-.stProgress > div > div{
-
-background:linear-gradient(90deg,#2563EB,#8B5CF6)!important;
-
-border-radius:20px;
-
-}
-
-
-/*=========================
- Code Blocks
-=========================*/
-
-pre{
-
-border-radius:16px!important;
-
-background:#0F172A!important;
-
-}
-
-code{
-
-color:#93C5FD!important;
-
-}
-
-
-/*=========================
- Notifications
-=========================*/
-
-[data-testid="stNotification"]{
-
-border-radius:18px!important;
-
-}
-
-
-/*=========================
- Block Quotes
-=========================*/
-
-blockquote{
-
-border-left:4px solid #3B82F6;
-
-padding-left:18px;
-
-color:#CBD5E1;
-
-}
-
-
-/*=========================
- Footer Padding
-=========================*/
-
-.block-container{
-
-padding-bottom:100px;
-
-}
-
-
-/*=========================
- Hover Glow
-=========================*/
-
-div[data-testid="stVerticalBlock"]:hover{
-
-border-color:rgba(96,165,250,.25);
-
-box-shadow:
-
-0 30px 70px rgba(0,0,0,.45),
-
-0 0 30px rgba(59,130,246,.15);
-
-}
-
-
-/*=========================
- Glass Glow
-=========================*/
-
-div[data-testid="stVerticalBlock"]::after{
-
-content:"";
-
-position:absolute;
-
-bottom:-140px;
-
-left:-140px;
-
-width:260px;
-
-height:260px;
-
-background:rgba(59,130,246,.08);
-
-border-radius:50%;
-
-filter:blur(40px);
-
-}
-
-
-/*=========================
- Fade Animation
-=========================*/
-
-@keyframes fadeIn{
-
-from{
-
-opacity:0;
-
-transform:translateY(20px);
-
-}
-
-to{
-
-opacity:1;
-
-transform:translateY(0);
-
-}
-
-}
-
-.stApp{
-
-animation:fadeIn .7s ease;
-
+.main [data-testid="stVerticalBlock"] h1,
+.main [data-testid="stVerticalBlock"] h2,
+.main [data-testid="stVerticalBlock"] h3,
+.main [data-testid="stVerticalBlock"] h4 {
+    color: #172033 !important;
 }
 
-
-/*=========================
- Floating Animation
-=========================*/
-
-@keyframes floating{
-
-0%{
-
-transform:translateY(0);
-
-}
-
-50%{
-
-transform:translateY(-5px);
-
-}
-
-100%{
-
-transform:translateY(0);
-
-}
-
-}
-
-.stButton:hover,
-.stDownloadButton:hover{
-
-animation:floating 1.2s infinite;
-
-}
-
-
-/*=========================
- Responsive
-=========================*/
-
-@media(max-width:1200px){
-
-.main .block-container{
-
-padding-left:25px;
-
-padding-right:25px;
-
-}
-
-}
-
-
-@media(max-width:992px){
-
-.main .block-container{
-
-padding-top:20px;
-
-}
-
-h1{
-
-font-size:34px;
-
-}
-
-h3{
-
-font-size:24px;
-
-}
-
-[data-testid="column"]{
-
-padding:6px;
-
-}
-
-}
-
-
-@media(max-width:768px){
-
-.main .block-container{
-
-padding-left:15px;
-
-padding-right:15px;
-
-}
-
-h1{
-
-font-size:28px;
-
-}
-
-h3{
-
-font-size:21px;
-
+.main [data-testid="stVerticalBlock"] p,
+.main [data-testid="stVerticalBlock"] span,
+.main [data-testid="stVerticalBlock"] label {
+    color: #374151 !important;
 }
 
-.stButton>button{
 
-padding:14px;
+/* ---------- Captions ---------- */
 
+[data-testid="stCaptionContainer"] {
+    color: #64748B !important;
 }
-
-.stDownloadButton>button{
-
-padding:14px;
-
-}
-
-[data-testid="stVerticalBlock"]{
-
-padding:18px;
-
-}
-
-}
-
-
-@media(max-width:480px){
-
-.main .block-container{
-
-padding-left:10px;
-
-padding-right:10px;
-
-}
-
-h1{
-
-font-size:24px;
-
-}
-
-h3{
-
-font-size:18px;
-
-}
-
-.stTextInput input{
-
-padding:13px!important;
-
-}
-
-textarea{
-
-padding:13px!important;
-
-}
-
-}
-
-
-/*=========================
- Smooth Transition
-=========================*/
-
-*{
-
-transition:
-
-background .30s ease,
-
-color .30s ease,
-
-border-color .30s ease,
-
-box-shadow .30s ease,
-
-transform .30s ease;
-
-}
-
-
-/*=========================
- Selection
-=========================*/
-
-::selection{
-
-background:#3B82F6;
-
-color:white;
-
-}
-
-
-/*=========================
- Scrollbar
-=========================*/
-
-::-webkit-scrollbar{
-
-width:10px;
-
-height:10px;
-
-}
-
-::-webkit-scrollbar-track{
-
-background:#0B1220;
-
-}
-
-::-webkit-scrollbar-thumb{
 
-background:linear-gradient(180deg,#3B82F6,#8B5CF6);
 
-border-radius:20px;
+/* ---------- Slider ---------- */
 
+.main .stSlider *,
+.main .stSlider label {
+    color: #374151 !important;
 }
 
-::-webkit-scrollbar-thumb:hover{
 
-background:#60A5FA;
+/* ---------- Radio Buttons in Main Area ---------- */
 
+.main .stRadio label {
+    color: #374151 !important;
 }
 
 
-/*=========================
- Final Premium Finish
-=========================*/
+/* ---------- Text Inputs ---------- */
 
-.stButton>button,
-.stDownloadButton>button,
 .stTextInput input,
 textarea,
-[data-testid="stFileUploader"],
-[data-testid="metric-container"],
-[data-testid="stDataFrame"],
-div[data-testid="stVerticalBlock"]{
+input[type="number"],
+input[type="password"] {
+    background: #FFFFFF !important;
+    color: #172033 !important;
+    -webkit-text-fill-color: #172033 !important;
 
-backdrop-filter:blur(18px);
+    border: 1px solid #CBD5E1 !important;
 
--webkit-backdrop-filter:blur(18px);
+    box-shadow:
+        0 4px 12px rgba(15,23,42,0.06) !important;
+}
 
+.stTextInput input::placeholder,
+textarea::placeholder {
+    color: #64748B !important;
 }
 
 
-/*=========================
- UrbanEye AI
- Premium Dashboard UI
- End of File
-==========================================================*/
-/*==========================================================
- UrbanEye AI Dashboard
- Dashboard.py New UI Components
- Final Add-on
-==========================================================*/
+/* ---------- Input Focus ---------- */
 
+.stTextInput input:focus,
+textarea:focus {
+    background: #FFFFFF !important;
+    border-color: #3B82F6 !important;
 
-/*=========================
- Hero Card
-=========================*/
-
-.hero-card{
-
-background:
-
-linear-gradient(
-135deg,
-rgba(59,130,246,.18),
-rgba(139,92,246,.18)
-);
-
-border:1px solid rgba(255,255,255,.15);
-
-border-radius:30px;
-
-padding:35px;
-
-margin-bottom:30px;
-
-backdrop-filter:blur(25px);
-
--webkit-backdrop-filter:blur(25px);
-
-box-shadow:
-
-0 25px 70px rgba(0,0,0,.35);
-
-animation:heroEntry .8s ease;
-
+    box-shadow:
+        0 0 0 4px rgba(59,130,246,0.12) !important;
 }
 
 
-.hero-card h1{
+/* ---------- File Uploader ---------- */
 
-font-size:42px;
+[data-testid="stFileUploader"] {
+    background: rgba(255,255,255,0.72) !important;
 
-margin-bottom:10px;
+    border: 2px dashed #94A3B8 !important;
 
+    box-shadow:
+        0 8px 25px rgba(15,23,42,0.06) !important;
+}
+
+[data-testid="stFileUploader"]:hover {
+    background: rgba(255,255,255,0.90) !important;
+    border-color: #3B82F6 !important;
 }
 
 
-.hero-card p{
+/* ---------- Uploaded File ---------- */
 
-font-size:16px;
-
-color:#CBD5E1;
-
+[data-testid="stFileUploaderFile"] {
+    background: #F8FAFC !important;
+    color: #172033 !important;
+    border: 1px solid #E2E8F0 !important;
 }
 
 
-@keyframes heroEntry{
+/* ---------- Buttons ---------- */
 
-from{
+.stButton > button {
+    color: #FFFFFF !important;
 
-opacity:0;
+    background:
+        linear-gradient(
+            135deg,
+            #2563EB,
+            #7C3AED
+        ) !important;
 
-transform:translateY(-25px);
-
-}
-
-to{
-
-opacity:1;
-
-transform:translateY(0);
-
-}
-
+    box-shadow:
+        0 10px 25px rgba(37,99,235,0.22) !important;
 }
 
 
+/* ---------- Download Button ---------- */
 
-/*=========================
- Status Badge
-=========================*/
+.stDownloadButton > button {
+    color: #FFFFFF !important;
 
-.status-badge{
-
-display:inline-block;
-
-margin-top:18px;
-
-padding:10px 20px;
-
-border-radius:30px;
-
-background:
-
-rgba(34,197,94,.15);
-
-border:
-
-1px solid rgba(34,197,94,.35);
-
-color:#86EFAC;
-
-font-weight:600;
-
-font-size:14px;
-
+    background:
+        linear-gradient(
+            135deg,
+            #059669,
+            #10B981
+        ) !important;
 }
 
 
+/* ---------- Metrics ---------- */
 
-/*=========================
- Sidebar Logo
-=========================*/
+[data-testid="metric-container"] {
+    background: rgba(255,255,255,0.78) !important;
 
-.sidebar-logo{
+    border: 1px solid #D7DEE8 !important;
 
-padding:20px;
+    box-shadow:
+        0 10px 28px rgba(15,23,42,0.08) !important;
+}
 
-border-radius:22px;
-
-background:
-
-linear-gradient(
-
-135deg,
-
-rgba(59,130,246,.18),
-
-rgba(139,92,246,.18)
-
-);
-
-border:
-
-1px solid rgba(255,255,255,.12);
-
-text-align:center;
-
-margin-bottom:20px;
-
+[data-testid="metric-container"] * {
+    color: #172033 !important;
 }
 
 
-.sidebar-logo h1{
+/* ---------- DataFrame ---------- */
 
-font-size:28px!important;
+[data-testid="stDataFrame"] {
+    background: #FFFFFF !important;
 
-margin:0;
+    border: 1px solid #D7DEE8 !important;
 
+    box-shadow:
+        0 12px 30px rgba(15,23,42,0.08) !important;
 }
 
 
-.sidebar-logo p{
+/* ---------- Normal HTML Tables ---------- */
 
-color:#CBD5E1;
+table {
+    background: #FFFFFF !important;
+}
 
-font-size:14px;
+td {
+    background: #FFFFFF !important;
+    color: #172033 !important;
+}
 
+th {
+    color: #FFFFFF !important;
 }
 
 
+/* ---------- Tabs ---------- */
 
-/*=========================
- User Panel
-=========================*/
+.stTabs [data-baseweb="tab-list"] {
+    background: rgba(255,255,255,0.65) !important;
+    border: 1px solid #D7DEE8 !important;
+}
 
-.user-panel{
-
-padding:18px;
-
-border-radius:18px;
-
-background:
-
-rgba(255,255,255,.06);
-
-border:
-
-1px solid rgba(255,255,255,.10);
-
-line-height:1.8;
-
-color:white;
-
+.stTabs [data-baseweb="tab"] {
+    color: #374151 !important;
 }
 
 
-/*=========================
- Section Title
-=========================*/
+/* ---------- Expanders ---------- */
 
-.section-title{
+details {
+    background: rgba(255,255,255,0.72) !important;
+    border: 1px solid #D7DEE8 !important;
+}
 
-margin:25px 0;
-
-padding-bottom:15px;
-
-border-bottom:
-
-1px solid rgba(255,255,255,.10);
-
+summary {
+    color: #172033 !important;
 }
 
 
-.section-title h2{
+/* ---------- Alerts ---------- */
 
-font-size:32px;
-
-font-weight:800;
-
-background:
-
-linear-gradient(
-
-90deg,
-
-#ffffff,
-
-#60A5FA,
-
-#C084FC
-
-);
-
--webkit-background-clip:text;
-
--webkit-text-fill-color:transparent;
-
+[data-testid="stAlert"] {
+    color: #172033 !important;
 }
 
 
-.section-title p{
+/* ---------- Map ---------- */
 
-color:#CBD5E1;
+[data-testid="stMap"] {
+    border: 2px solid #CBD5E1 !important;
 
-font-size:15px;
-
+    box-shadow:
+        0 12px 35px rgba(15,23,42,0.12) !important;
 }
 
 
+/* ---------- Code ---------- */
 
-/*=========================
- Feature Card
-=========================*/
+pre {
+    background: #172033 !important;
+}
 
-.feature-card{
-
-background:
-
-rgba(255,255,255,.06);
-
-border:
-
-1px solid rgba(255,255,255,.12);
-
-border-radius:24px;
-
-padding:25px;
-
-margin:20px 0;
-
-backdrop-filter:blur(20px);
-
--webkit-backdrop-filter:blur(20px);
-
-box-shadow:
-
-0 20px 45px rgba(0,0,0,.25);
-
-transition:.35s;
-
+code {
+    color: #93C5FD !important;
 }
 
 
-.feature-card:hover{
+/* ---------- Horizontal Divider ---------- */
 
-transform:translateY(-5px);
-
-border-color:
-
-rgba(96,165,250,.45);
-
-box-shadow:
-
-0 30px 60px rgba(0,0,0,.35),
-
-0 0 35px rgba(59,130,246,.15);
-
+hr {
+    background: #CBD5E1 !important;
 }
 
 
-.feature-card h3{
+/* ---------- Links ---------- */
 
-font-size:24px;
+a {
+    color: #2563EB !important;
+}
 
-margin-bottom:10px;
-
+a:hover {
+    color: #1D4ED8 !important;
 }
 
 
-.feature-card p{
+/* ---------- Scrollbar ---------- */
 
-color:#CBD5E1;
+::-webkit-scrollbar-track {
+    background: #D8DEE7 !important;
+}
 
+::-webkit-scrollbar-thumb {
+    background:
+        linear-gradient(
+            180deg,
+            #3B82F6,
+            #7C3AED
+        ) !important;
 }
 
 
+/* ---------- Selection ---------- */
 
-/*=========================
- Dispatch Header
-=========================*/
-
-.dispatch-title{
-
-background:
-
-linear-gradient(
-
-135deg,
-
-rgba(6,182,212,.12),
-
-rgba(59,130,246,.12)
-
-);
-
+::selection {
+    background: #3B82F6 !important;
+    color: #FFFFFF !important;
 }
 
 
+/* ---------- Mobile ---------- */
 
-/*=========================
- Info Banner
-=========================*/
+@media(max-width:768px) {
 
-.info-banner{
-
-padding:18px 22px;
-
-margin:20px 0;
-
-border-radius:18px;
-
-background:
-
-linear-gradient(
-
-135deg,
-
-rgba(59,130,246,.15),
-
-rgba(139,92,246,.15)
-
-);
-
-border:
-
-1px solid rgba(96,165,250,.25);
-
-color:#E0F2FE;
-
-font-weight:600;
-
-text-align:center;
-
-box-shadow:
-
-0 15px 35px rgba(0,0,0,.25);
-
-}
-
-
-
-/*=========================
- Responsive
-=========================*/
-
-
-@media(max-width:768px){
-
-
-.hero-card{
-
-padding:22px;
-
-}
-
-
-.hero-card h1{
-
-font-size:28px;
-
-}
-
-
-.section-title h2{
-
-font-size:24px;
-
-}
-
-
-.feature-card{
-
-padding:18px;
-
-}
-
-
-}
-
-
-
-@media(max-width:480px){
-
-
-.hero-card h1{
-
-font-size:22px;
-
-}
-
-
-.status-badge{
-
-font-size:12px;
-
-padding:8px 14px;
-
-}
-
-
-.feature-card h3{
-
-font-size:20px;
-
-}
-
+    .main .block-container {
+        background: transparent !important;
+    }
 
 }
