@@ -1,7 +1,6 @@
 /* =========================================================
-   URBAN EYE AI
-   PREMIUM LOGIN UI
-   Dashboard-Matched Theme
+   URBAN EYE AI - LIGHT GRAY PREMIUM LOGIN UI
+   Dashboard-Matched Blue/Purple Accent Theme
    ========================================================= */
 
 
@@ -13,7 +12,7 @@
 
 
 /* =========================================================
-   ROOT VARIABLES
+   ROOT
    ========================================================= */
 
 :root {
@@ -22,29 +21,27 @@
     --secondary: #06B6D4;
     --accent: #8B5CF6;
 
-    --success: #22C55E;
-    --warning: #F59E0B;
-    --danger: #EF4444;
+    --success: #16A34A;
+    --warning: #D97706;
+    --danger: #DC2626;
 
-    --bg-dark: #111827;
-    --bg-mid: #172033;
-    --bg-light: #202B3D;
+    --page-bg: #E5E7EB;
+    --page-bg-2: #DDE2E8;
 
-    --text: #FFFFFF;
-    --text-dark: #111827;
-    --muted: #CBD5E1;
+    --card-bg: rgba(255,255,255,.82);
+    --card-border: rgba(255,255,255,.75);
 
-    --border: rgba(255,255,255,.12);
+    --dark: #172033;
+    --text: #1E293B;
+    --muted: #64748B;
 
-    --glass: rgba(255,255,255,.07);
-    --glass-strong: rgba(255,255,255,.10);
-
-    --shadow: 0 20px 60px rgba(0,0,0,.35);
+    --shadow:
+        0 25px 65px rgba(15,23,42,.15);
 }
 
 
 /* =========================================================
-   GLOBAL
+   GLOBAL RESET
    ========================================================= */
 
 html,
@@ -52,46 +49,58 @@ body,
 .stApp,
 [class*="css"] {
     font-family: "Poppins", sans-serif !important;
-}
-
-* {
-    box-sizing: border-box;
+    box-sizing: border-box !important;
 }
 
 
 /* =========================================================
-   APP BACKGROUND
+   REAL PAGE BACKGROUND
    ========================================================= */
+
+html,
+body {
+    background: #E5E7EB !important;
+}
+
 
 .stApp {
     min-height: 100vh !important;
 
     background:
         radial-gradient(
-            circle at 10% 10%,
-            rgba(59,130,246,.20),
-            transparent 32%
+            circle at 8% 8%,
+            rgba(59,130,246,.16),
+            transparent 30%
         ),
         radial-gradient(
-            circle at 90% 90%,
-            rgba(139,92,246,.18),
-            transparent 32%
+            circle at 92% 92%,
+            rgba(139,92,246,.13),
+            transparent 30%
         ),
         linear-gradient(
             135deg,
-            #111827 0%,
-            #172033 50%,
-            #202B3D 100%
+            #E5E7EB 0%,
+            #DDE2E8 48%,
+            #E2E5EA 100%
         ) !important;
 
-    background-attachment: fixed !important;
+    background-color: #E5E7EB !important;
 
-    color: #FFFFFF !important;
+    color: #1E293B !important;
+}
+
+
+/* Streamlit main layers */
+
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] > .main,
+[data-testid="stMain"] {
+    background: transparent !important;
 }
 
 
 /* =========================================================
-   ANIMATED GLOW
+   SUBTLE BACKGROUND GLOW
    ========================================================= */
 
 .stApp::before {
@@ -99,21 +108,21 @@ body,
 
     position: fixed;
 
-    width: 650px;
-    height: 650px;
+    width: 500px;
+    height: 500px;
 
-    top: -220px;
-    left: -180px;
+    top: -180px;
+    left: -150px;
 
-    background: rgba(59,130,246,.12);
+    background: rgba(59,130,246,.10);
 
-    filter: blur(130px);
-
-    animation: floatOne 18s infinite alternate;
+    filter: blur(110px);
 
     z-index: 0;
 
     pointer-events: none;
+
+    animation: glowOne 16s infinite alternate;
 }
 
 
@@ -122,58 +131,52 @@ body,
 
     position: fixed;
 
-    width: 650px;
-    height: 650px;
+    width: 500px;
+    height: 500px;
 
-    right: -200px;
-    bottom: -200px;
+    right: -170px;
+    bottom: -180px;
 
-    background: rgba(139,92,246,.15);
+    background: rgba(139,92,246,.10);
 
-    filter: blur(140px);
-
-    animation: floatTwo 18s infinite alternate;
+    filter: blur(115px);
 
     z-index: 0;
 
     pointer-events: none;
+
+    animation: glowTwo 16s infinite alternate;
 }
 
 
-@keyframes floatOne {
-    0% {
+@keyframes glowOne {
+    from {
         transform: translate(0,0);
     }
 
-    100% {
-        transform: translate(130px,120px);
+    to {
+        transform: translate(80px,80px);
     }
 }
 
 
-@keyframes floatTwo {
-    0% {
+@keyframes glowTwo {
+    from {
         transform: translate(0,0);
     }
 
-    100% {
-        transform: translate(-120px,-130px);
+    to {
+        transform: translate(-80px,-80px);
     }
 }
 
 
 /* =========================================================
-   HIDE STREAMLIT BRANDING
+   HIDE STREAMLIT UI
    ========================================================= */
 
-#MainMenu {
-    display: none !important;
-}
-
-header {
-    display: none !important;
-}
-
+#MainMenu,
+header,
 footer {
     display: none !important;
 }
@@ -189,15 +192,15 @@ footer {
     padding-top: 45px !important;
     padding-bottom: 70px !important;
 
-    position: relative;
+    position: relative !important;
 
-    z-index: 1;
+    z-index: 2 !important;
 
-    animation: pageFade .75s ease;
+    animation: pageEnter .7s ease;
 }
 
 
-@keyframes pageFade {
+@keyframes pageEnter {
     from {
         opacity: 0;
         transform: translateY(25px);
@@ -219,716 +222,4 @@ h1 {
 
     font-size: 42px !important;
 
-    font-weight: 800 !important;
-
-    letter-spacing: .5px;
-
-    margin-bottom: 28px !important;
-
-    background:
-        linear-gradient(
-            90deg,
-            #FFFFFF,
-            #60A5FA,
-            #C084FC
-        );
-
-    -webkit-background-clip: text !important;
-    background-clip: text !important;
-
-    -webkit-text-fill-color: transparent !important;
-
-    color: transparent !important;
-}
-
-
-h2,
-h3,
-h4,
-h5,
-h6 {
-    color: #FFFFFF !important;
-}
-
-
-h3 {
-    font-size: 25px !important;
-    font-weight: 700 !important;
-}
-
-
-/* =========================================================
-   GENERAL TEXT
-   ========================================================= */
-
-p,
-span,
-small,
-li {
-    color: #FFFFFF;
-}
-
-
-.stMarkdown {
-    color: #FFFFFF !important;
-}
-
-
-.stCaption,
-[data-testid="stCaptionContainer"] {
-    color: #CBD5E1 !important;
-}
-
-
-/* =========================================================
-   LABELS
-   ========================================================= */
-
-label {
-    color: #FFFFFF !important;
-
-    font-weight: 600 !important;
-
-    font-size: 14px !important;
-}
-
-
-/* =========================================================
-   TEXT INPUTS
-   ========================================================= */
-
-.stTextInput {
-    margin-top: 6px;
-    margin-bottom: 14px;
-}
-
-
-.stTextInput input {
-    background: #F8FAFC !important;
-
-    color: #111827 !important;
-
-    -webkit-text-fill-color: #111827 !important;
-
-    caret-color: #111827 !important;
-
-    border: 1px solid #CBD5E1 !important;
-
-    border-radius: 14px !important;
-
-    padding: 14px 17px !important;
-
-    font-size: 15px !important;
-
-    font-weight: 500 !important;
-
-    box-shadow: 0 5px 15px rgba(0,0,0,.12) !important;
-
-    transition: .25s ease !important;
-}
-
-
-.stTextInput input:hover {
-    border-color: #60A5FA !important;
-}
-
-
-.stTextInput input:focus {
-    background: #FFFFFF !important;
-
-    color: #111827 !important;
-
-    -webkit-text-fill-color: #111827 !important;
-
-    border-color: #3B82F6 !important;
-
-    box-shadow:
-        0 0 0 4px rgba(59,130,246,.18),
-        0 8px 20px rgba(0,0,0,.12) !important;
-
-    transform: translateY(-1px);
-}
-
-
-.stTextInput input::placeholder {
-    color: #64748B !important;
-
-    opacity: 1 !important;
-}
-
-
-/* =========================================================
-   PASSWORD
-   ========================================================= */
-
-input[type="password"] {
-    background: #F8FAFC !important;
-
-    color: #111827 !important;
-
-    -webkit-text-fill-color: #111827 !important;
-
-    caret-color: #111827 !important;
-
-    letter-spacing: 2px !important;
-}
-
-
-/* =========================================================
-   SELECT BOX
-   ========================================================= */
-
-div[data-baseweb="select"] > div {
-    background: #F8FAFC !important;
-
-    color: #111827 !important;
-
-    border: 1px solid #CBD5E1 !important;
-
-    border-radius: 14px !important;
-
-    min-height: 48px !important;
-}
-
-
-div[data-baseweb="select"] span {
-    color: #111827 !important;
-}
-
-
-div[data-baseweb="select"] input {
-    color: #111827 !important;
-}
-
-
-div[data-baseweb="select"] svg {
-    color: #334155 !important;
-
-    fill: #334155 !important;
-}
-
-
-/* =========================================================
-   SELECTBOX POPUP
-   ========================================================= */
-
-div[data-baseweb="popover"],
-div[data-baseweb="menu"],
-ul[role="listbox"],
-div[role="listbox"] {
-    background: #FFFFFF !important;
-
-    border-radius: 12px !important;
-
-    border: 1px solid #CBD5E1 !important;
-
-    box-shadow: 0 15px 40px rgba(0,0,0,.25) !important;
-}
-
-
-div[data-baseweb="popover"] *,
-div[data-baseweb="menu"] *,
-ul[role="listbox"] *,
-div[role="listbox"] * {
-    color: #111827 !important;
-}
-
-
-div[data-baseweb="popover"] [role="option"],
-ul[role="listbox"] li {
-    background: #FFFFFF !important;
-
-    color: #111827 !important;
-
-    padding: 10px 14px !important;
-}
-
-
-div[data-baseweb="popover"] [role="option"]:hover,
-ul[role="listbox"] li:hover {
-    background: #EFF6FF !important;
-
-    color: #1D4ED8 !important;
-}
-
-
-/* =========================================================
-   CHECKBOX
-   ========================================================= */
-
-.stCheckbox {
-    margin-top: 8px;
-    margin-bottom: 16px;
-}
-
-
-.stCheckbox label {
-    color: #FFFFFF !important;
-
-    font-size: 14px !important;
-
-    font-weight: 500 !important;
-}
-
-
-.stCheckbox label span {
-    color: #FFFFFF !important;
-}
-
-
-/* =========================================================
-   TABS
-   ========================================================= */
-
-.stTabs {
-    margin-top: 20px !important;
-}
-
-
-.stTabs [data-baseweb="tab-list"] {
-    display: flex !important;
-
-    gap: 8px !important;
-
-    background: rgba(255,255,255,.08) !important;
-
-    padding: 8px !important;
-
-    border-radius: 17px !important;
-
-    border: 1px solid rgba(255,255,255,.12) !important;
-
-    box-shadow: 0 12px 30px rgba(0,0,0,.22) !important;
-}
-
-
-/* Inactive tabs */
-
-.stTabs [data-baseweb="tab"] {
-    background: rgba(255,255,255,.10) !important;
-
-    color: #E2E8F0 !important;
-
-    -webkit-text-fill-color: #E2E8F0 !important;
-
-    opacity: 1 !important;
-
-    visibility: visible !important;
-
-    display: flex !important;
-
-    align-items: center !important;
-
-    justify-content: center !important;
-
-    padding: 13px 20px !important;
-
-    border-radius: 12px !important;
-
-    border: 1px solid rgba(255,255,255,.10) !important;
-
-    font-size: 14px !important;
-
-    font-weight: 700 !important;
-
-    min-height: 46px !important;
-
-    transition: .25s ease !important;
-}
-
-
-/* Force inactive tab text */
-
-.stTabs [data-baseweb="tab"] *,
-.stTabs [data-baseweb="tab"] p,
-.stTabs [data-baseweb="tab"] span,
-.stTabs [data-baseweb="tab"] div {
-    color: #E2E8F0 !important;
-
-    -webkit-text-fill-color: #E2E8F0 !important;
-
-    opacity: 1 !important;
-
-    visibility: visible !important;
-}
-
-
-/* Tab hover */
-
-.stTabs [data-baseweb="tab"]:hover {
-    background: rgba(96,165,250,.18) !important;
-
-    color: #FFFFFF !important;
-
-    -webkit-text-fill-color: #FFFFFF !important;
-
-    transform: translateY(-2px) !important;
-}
-
-
-.stTabs [data-baseweb="tab"]:hover * {
-    color: #FFFFFF !important;
-
-    -webkit-text-fill-color: #FFFFFF !important;
-}
-
-
-/* Active tab */
-
-.stTabs [aria-selected="true"] {
-    background:
-        linear-gradient(
-            135deg,
-            #2563EB,
-            #8B5CF6
-        ) !important;
-
-    color: #FFFFFF !important;
-
-    -webkit-text-fill-color: #FFFFFF !important;
-
-    border: 1px solid #3B82F6 !important;
-
-    box-shadow:
-        0 10px 25px rgba(59,130,246,.35) !important;
-
-    transform: translateY(-1px) !important;
-}
-
-
-.stTabs [aria-selected="true"] *,
-.stTabs [aria-selected="true"] p,
-.stTabs [aria-selected="true"] span,
-.stTabs [aria-selected="true"] div {
-    color: #FFFFFF !important;
-
-    -webkit-text-fill-color: #FFFFFF !important;
-
-    opacity: 1 !important;
-
-    visibility: visible !important;
-}
-
-
-/* Remove underline */
-
-.stTabs [data-baseweb="tab-highlight"] {
-    display: none !important;
-}
-
-
-/* Tab content */
-
-.stTabs [data-baseweb="tab-panel"] {
-    padding-top: 25px !important;
-}
-
-
-/* =========================================================
-   BUTTONS
-   ========================================================= */
-
-.stButton {
-    margin-top: 8px;
-
-    animation: buttonFade .5s ease;
-}
-
-
-.stButton > button {
-    width: 100% !important;
-
-    padding: 14px !important;
-
-    border: none !important;
-
-    border-radius: 14px !important;
-
-    font-size: 15px !important;
-
-    font-weight: 700 !important;
-
-    color: #FFFFFF !important;
-
-    -webkit-text-fill-color: #FFFFFF !important;
-
-    background:
-        linear-gradient(
-            135deg,
-            #2563EB,
-            #7C3AED
-        ) !important;
-
-    box-shadow:
-        0 15px 35px rgba(37,99,235,.30) !important;
-
-    transition: .3s ease !important;
-}
-
-
-.stButton > button:hover {
-    transform: translateY(-3px) !important;
-
-    background:
-        linear-gradient(
-            135deg,
-            #3B82F6,
-            #8B5CF6
-        ) !important;
-
-    box-shadow:
-        0 22px 42px rgba(59,130,246,.42) !important;
-}
-
-
-.stButton > button:active {
-    transform: scale(.98) !important;
-}
-
-
-/* =========================================================
-   ALERTS
-   ========================================================= */
-
-[data-testid="stAlert"] {
-    border-radius: 15px !important;
-
-    padding: 14px 18px !important;
-
-    box-shadow: 0 12px 28px rgba(0,0,0,.20) !important;
-}
-
-
-[data-testid="stAlert"] p,
-[data-testid="stAlert"] span,
-[data-testid="stAlert"] div {
-    color: #FFFFFF !important;
-}
-
-
-.stSuccess {
-    background: rgba(34,197,94,.14) !important;
-
-    border-left: 5px solid #22C55E !important;
-
-    color: #FFFFFF !important;
-}
-
-
-.stError {
-    background: rgba(239,68,68,.14) !important;
-
-    border-left: 5px solid #EF4444 !important;
-
-    color: #FFFFFF !important;
-}
-
-
-.stWarning {
-    background: rgba(245,158,11,.14) !important;
-
-    border-left: 5px solid #F59E0B !important;
-
-    color: #FFFFFF !important;
-}
-
-
-.stInfo {
-    background: rgba(59,130,246,.14) !important;
-
-    border-left: 5px solid #3B82F6 !important;
-
-    color: #FFFFFF !important;
-}
-
-
-/* =========================================================
-   DIVIDER
-   ========================================================= */
-
-hr {
-    border: none !important;
-
-    height: 1px !important;
-
-    background: rgba(255,255,255,.10) !important;
-
-    margin: 22px 0 !important;
-}
-
-
-/* =========================================================
-   LINKS
-   ========================================================= */
-
-a {
-    color: #60A5FA !important;
-
-    font-weight: 600;
-
-    text-decoration: none !important;
-}
-
-
-a:hover {
-    color: #93C5FD !important;
-}
-
-
-/* =========================================================
-   SPINNER
-   ========================================================= */
-
-[data-testid="stSpinner"] {
-    color: #60A5FA !important;
-}
-
-
-/* =========================================================
-   COLUMNS
-   ========================================================= */
-
-[data-testid="column"] {
-    padding-top: 8px;
-}
-
-
-/* =========================================================
-   SCROLLBAR
-   ========================================================= */
-
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-
-::-webkit-scrollbar-track {
-    background: #111827;
-}
-
-
-::-webkit-scrollbar-thumb {
-    background:
-        linear-gradient(
-            180deg,
-            #3B82F6,
-            #8B5CF6
-        );
-
-    border-radius: 20px;
-}
-
-
-::-webkit-scrollbar-thumb:hover {
-    background: #60A5FA;
-}
-
-
-/* =========================================================
-   TEXT SELECTION
-   ========================================================= */
-
-::selection {
-    background: #3B82F6;
-
-    color: #FFFFFF;
-}
-
-
-/* =========================================================
-   ANIMATIONS
-   ========================================================= */
-
-@keyframes buttonFade {
-    from {
-        opacity: 0;
-        transform: scale(.96);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media screen and (max-width: 992px) {
-
-    .main .block-container {
-        padding-left: 25px !important;
-        padding-right: 25px !important;
-    }
-
-    h1 {
-        font-size: 34px !important;
-    }
-}
-
-
-@media screen and (max-width: 768px) {
-
-    .main .block-container {
-        max-width: 100% !important;
-
-        padding-top: 25px !important;
-    }
-
-    .stTabs [data-baseweb="tab"] {
-        padding: 12px !important;
-
-        font-size: 13px !important;
-    }
-
-    h1 {
-        font-size: 29px !important;
-    }
-
-    .stButton > button {
-        padding: 13px !important;
-    }
-}
-
-
-@media screen and (max-width: 480px) {
-
-    .main .block-container {
-        padding-left: 12px !important;
-
-        padding-right: 12px !important;
-    }
-
-    h1 {
-        font-size: 25px !important;
-    }
-
-    h3 {
-        font-size: 20px !important;
-    }
-
-    .stTextInput input {
-        padding: 13px !important;
-    }
-}
-
-
-/* =========================================================
-   FINAL POLISH
-   ========================================================= */
-
-.stTextInput input,
-textarea,
-div[data-baseweb="select"] > div,
-.stTabs [data-baseweb="tab-list"] {
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-}
-
-
-/* =========================================================
-   END
-   ========================================================= */
+    font-weight: 800 !
