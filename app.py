@@ -48,12 +48,7 @@ else:
             
         st.success(f"👤 {user_email}")
 
-        if st.button("🚪 Logout", key="btn_logout", use_container_width=True):
-            # Clear all session state and query parameters on logout
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.query_params.clear()
-            st.rerun()
+       
 
         st.markdown("---")
 
