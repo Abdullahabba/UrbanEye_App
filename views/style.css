@@ -371,3 +371,70 @@ a:hover {
     }
 
 }
+/* ==========================================================
+   SIDEBAR - LIGHT GREY PROFESSIONAL STYLE
+   ========================================================== */
+
+[data-testid="stSidebar"] {
+    background: #DDE3EA !important;
+    border-right: 1px solid #C5CDD8 !important;
+}
+
+/* Sidebar all text */
+[data-testid="stSidebar"] * {
+    color: #172033 !important;
+}
+
+/* Sidebar headings */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] h4 {
+    color: #172033 !important;
+}
+
+/* Sidebar caption */
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+    color: #526174 !important;
+}
+
+/* Sidebar radio container */
+[data-testid="stSidebar"] .stRadio {
+    background: rgba(255,255,255,0.55) !important;
+    border: 1px solid #C8D0DB !important;
+    border-radius: 16px !important;
+}
+
+/* Radio options */
+[data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label {
+    color: #263447 !important;
+    border-radius: 12px !important;
+}
+
+/* Hover */
+[data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label:hover {
+    background: rgba(59,130,246,0.12) !important;
+    color: #1D4ED8 !important;
+}
+
+/* Selected radio */
+[data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label[data-checked="true"] {
+    background: rgba(59,130,246,0.16) !important;
+    color: #1D4ED8 !important;
+}
+
+/* Sidebar slider */
+[data-testid="stSidebar"] .stSlider * {
+    color: #263447 !important;
+}
+
+/* Sidebar divider */
+[data-testid="stSidebar"] hr {
+    background: #C5CDD8 !important;
+}
+
+/* Sidebar success/status */
+[data-testid="stSidebar"] [data-testid="stAlert"] {
+    background: rgba(255,255,255,0.55) !important;
+    color: #172033 !important;
+}
