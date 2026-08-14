@@ -491,7 +491,6 @@ def render_dashboard_page():
 
     with st.sidebar:
 
-        st.divider()
 
         # --------------------------------------------------
         # 2. USERNAME
