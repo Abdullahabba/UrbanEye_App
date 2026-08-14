@@ -1,6 +1,7 @@
 /* =========================================================
    URBAN EYE AI
    PREMIUM LOGIN UI
+   Dashboard-Matched Theme
    ========================================================= */
 
 
@@ -25,13 +26,20 @@
     --warning: #F59E0B;
     --danger: #EF4444;
 
+    --bg-dark: #111827;
+    --bg-mid: #172033;
+    --bg-light: #202B3D;
+
     --text: #FFFFFF;
-    --muted: #E2E8F0;
+    --text-dark: #111827;
+    --muted: #CBD5E1;
 
-    --border: rgba(255, 255, 255, 0.18);
+    --border: rgba(255,255,255,.12);
 
-    --shadow:
-        0 20px 60px rgba(0, 0, 0, 0.35);
+    --glass: rgba(255,255,255,.07);
+    --glass-strong: rgba(255,255,255,.10);
+
+    --shadow: 0 20px 60px rgba(0,0,0,.35);
 }
 
 
@@ -41,8 +49,13 @@
 
 html,
 body,
-.stApp {
+.stApp,
+[class*="css"] {
     font-family: "Poppins", sans-serif !important;
+}
+
+* {
+    box-sizing: border-box;
 }
 
 
@@ -51,35 +64,34 @@ body,
    ========================================================= */
 
 .stApp {
+    min-height: 100vh !important;
+
     background:
         radial-gradient(
-            circle at top left,
-            #1E3A8A 0%,
-            transparent 35%
+            circle at 10% 10%,
+            rgba(59,130,246,.20),
+            transparent 32%
         ),
         radial-gradient(
-            circle at bottom right,
-            #7C3AED 0%,
-            transparent 35%
+            circle at 90% 90%,
+            rgba(139,92,246,.18),
+            transparent 32%
         ),
         linear-gradient(
             135deg,
-            #071226,
-            #0F172A,
-            #111827
+            #111827 0%,
+            #172033 50%,
+            #202B3D 100%
         ) !important;
 
-    background-size: cover !important;
     background-attachment: fixed !important;
 
     color: #FFFFFF !important;
-
-    min-height: 100vh;
 }
 
 
 /* =========================================================
-   ANIMATED BACKGROUND
+   ANIMATED GLOW
    ========================================================= */
 
 .stApp::before {
@@ -87,15 +99,15 @@ body,
 
     position: fixed;
 
-    width: 700px;
-    height: 700px;
+    width: 650px;
+    height: 650px;
 
-    top: -180px;
+    top: -220px;
     left: -180px;
 
-    background: rgba(59, 130, 246, 0.12);
+    background: rgba(59,130,246,.12);
 
-    filter: blur(140px);
+    filter: blur(130px);
 
     animation: floatOne 18s infinite alternate;
 
@@ -110,17 +122,17 @@ body,
 
     position: fixed;
 
-    width: 600px;
-    height: 600px;
+    width: 650px;
+    height: 650px;
 
-    bottom: -150px;
-    right: -120px;
+    right: -200px;
+    bottom: -200px;
 
-    background: rgba(139, 92, 246, 0.18);
+    background: rgba(139,92,246,.15);
 
-    filter: blur(150px);
+    filter: blur(140px);
 
-    animation: floatTwo 16s infinite alternate;
+    animation: floatTwo 18s infinite alternate;
 
     z-index: 0;
 
@@ -129,47 +141,41 @@ body,
 
 
 @keyframes floatOne {
-
     0% {
-        transform: translate(0, 0);
-    }
-
-    50% {
-        transform: translate(120px, 80px);
+        transform: translate(0,0);
     }
 
     100% {
-        transform: translate(40px, 180px);
+        transform: translate(130px,120px);
     }
 }
 
 
 @keyframes floatTwo {
-
     0% {
-        transform: translate(0, 0);
+        transform: translate(0,0);
     }
 
     100% {
-        transform: translate(-130px, -110px);
+        transform: translate(-120px,-130px);
     }
 }
 
 
 /* =========================================================
-   HIDE STREAMLIT DEFAULT UI
+   HIDE STREAMLIT BRANDING
    ========================================================= */
 
 #MainMenu {
-    visibility: hidden !important;
-}
-
-footer {
-    visibility: hidden !important;
+    display: none !important;
 }
 
 header {
-    visibility: hidden !important;
+    display: none !important;
+}
+
+footer {
+    display: none !important;
 }
 
 
@@ -180,19 +186,32 @@ header {
 .main .block-container {
     max-width: 760px !important;
 
-    padding-top: 55px !important;
+    padding-top: 45px !important;
     padding-bottom: 70px !important;
 
     position: relative;
 
     z-index: 1;
 
-    animation: fadeUp 0.8s ease;
+    animation: pageFade .75s ease;
+}
+
+
+@keyframes pageFade {
+    from {
+        opacity: 0;
+        transform: translateY(25px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 
 /* =========================================================
-   TITLE
+   MAIN TITLE
    ========================================================= */
 
 h1 {
@@ -202,9 +221,9 @@ h1 {
 
     font-weight: 800 !important;
 
-    letter-spacing: 0.5px;
+    letter-spacing: .5px;
 
-    margin-bottom: 35px !important;
+    margin-bottom: 28px !important;
 
     background:
         linear-gradient(
@@ -215,7 +234,6 @@ h1 {
         );
 
     -webkit-background-clip: text !important;
-
     background-clip: text !important;
 
     -webkit-text-fill-color: transparent !important;
@@ -223,10 +241,6 @@ h1 {
     color: transparent !important;
 }
 
-
-/* =========================================================
-   HEADINGS
-   ========================================================= */
 
 h2,
 h3,
@@ -238,11 +252,31 @@ h6 {
 
 
 h3 {
+    font-size: 25px !important;
     font-weight: 700 !important;
+}
 
-    font-size: 26px !important;
 
-    margin-bottom: 20px !important;
+/* =========================================================
+   GENERAL TEXT
+   ========================================================= */
+
+p,
+span,
+small,
+li {
+    color: #FFFFFF;
+}
+
+
+.stMarkdown {
+    color: #FFFFFF !important;
+}
+
+
+.stCaption,
+[data-testid="stCaptionContainer"] {
+    color: #CBD5E1 !important;
 }
 
 
@@ -251,11 +285,11 @@ h3 {
    ========================================================= */
 
 label {
+    color: #FFFFFF !important;
+
     font-weight: 600 !important;
 
-    font-size: 15px !important;
-
-    color: #FFFFFF !important;
+    font-size: 14px !important;
 }
 
 
@@ -263,68 +297,63 @@ label {
    TEXT INPUTS
    ========================================================= */
 
+.stTextInput {
+    margin-top: 6px;
+    margin-bottom: 14px;
+}
+
+
 .stTextInput input {
-    background: #FFFFFF !important;
+    background: #F8FAFC !important;
 
     color: #111827 !important;
 
     -webkit-text-fill-color: #111827 !important;
 
-    border: 1px solid #D1D5DB !important;
+    caret-color: #111827 !important;
 
-    border-radius: 12px !important;
+    border: 1px solid #CBD5E1 !important;
 
-    padding: 13px 16px !important;
+    border-radius: 14px !important;
+
+    padding: 14px 17px !important;
 
     font-size: 15px !important;
 
-    transition:
-        border-color 0.25s ease,
-        box-shadow 0.25s ease,
-        transform 0.25s ease !important;
+    font-weight: 500 !important;
+
+    box-shadow: 0 5px 15px rgba(0,0,0,.12) !important;
+
+    transition: .25s ease !important;
 }
 
-
-/* =========================================================
-   PLACEHOLDER
-   ========================================================= */
-
-.stTextInput input::placeholder {
-    color: #6B7280 !important;
-
-    opacity: 1 !important;
-}
-
-
-/* =========================================================
-   INPUT HOVER
-   ========================================================= */
 
 .stTextInput input:hover {
     border-color: #60A5FA !important;
 }
 
 
-/* =========================================================
-   INPUT FOCUS
-   ========================================================= */
-
 .stTextInput input:focus {
-    border-color: #3B82F6 !important;
-
     background: #FFFFFF !important;
 
     color: #111827 !important;
 
     -webkit-text-fill-color: #111827 !important;
 
+    border-color: #3B82F6 !important;
+
     box-shadow:
-        0 0 0 4px rgba(96, 165, 250, 0.18) !important;
+        0 0 0 4px rgba(59,130,246,.18),
+        0 8px 20px rgba(0,0,0,.12) !important;
+
+    transform: translateY(-1px);
 }
 
 
-.stTextInput:focus-within {
-    transform: translateY(-2px);
+.stTextInput input::placeholder {
+    color: #64748B !important;
+
+    opacity: 1 !important;
 }
 
 
@@ -333,28 +362,32 @@ label {
    ========================================================= */
 
 input[type="password"] {
+    background: #F8FAFC !important;
+
     color: #111827 !important;
 
     -webkit-text-fill-color: #111827 !important;
 
-    font-weight: 600 !important;
+    caret-color: #111827 !important;
 
     letter-spacing: 2px !important;
 }
 
 
 /* =========================================================
-   SELECTBOX
+   SELECT BOX
    ========================================================= */
 
 div[data-baseweb="select"] > div {
-    background: #FFFFFF !important;
+    background: #F8FAFC !important;
 
     color: #111827 !important;
 
-    border: 1px solid #D1D5DB !important;
+    border: 1px solid #CBD5E1 !important;
 
-    border-radius: 12px !important;
+    border-radius: 14px !important;
+
+    min-height: 48px !important;
 }
 
 
@@ -363,24 +396,33 @@ div[data-baseweb="select"] span {
 }
 
 
-div[data-baseweb="select"] svg {
+div[data-baseweb="select"] input {
     color: #111827 !important;
+}
 
-    fill: #111827 !important;
+
+div[data-baseweb="select"] svg {
+    color: #334155 !important;
+
+    fill: #334155 !important;
 }
 
 
 /* =========================================================
-   DROPDOWN POPUP
+   SELECTBOX POPUP
    ========================================================= */
 
 div[data-baseweb="popover"],
 div[data-baseweb="menu"],
 ul[role="listbox"],
 div[role="listbox"] {
-    background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
 
-    border-radius: 10px !important;
+    border-radius: 12px !important;
+
+    border: 1px solid #CBD5E1 !important;
+
+    box-shadow: 0 15px 40px rgba(0,0,0,.25) !important;
 }
 
 
@@ -394,18 +436,19 @@ div[role="listbox"] * {
 
 div[data-baseweb="popover"] [role="option"],
 ul[role="listbox"] li {
-    background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
 
     color: #111827 !important;
+
+    padding: 10px 14px !important;
 }
 
 
 div[data-baseweb="popover"] [role="option"]:hover,
-ul[role="listbox"] li:hover,
-div[role="option"]:hover {
-    background-color: #F3F4F6 !important;
+ul[role="listbox"] li:hover {
+    background: #EFF6FF !important;
 
-    color: #111827 !important;
+    color: #1D4ED8 !important;
 }
 
 
@@ -415,66 +458,58 @@ div[role="option"]:hover {
 
 .stCheckbox {
     margin-top: 8px;
-
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
 
 .stCheckbox label {
+    color: #FFFFFF !important;
+
     font-size: 14px !important;
 
+    font-weight: 500 !important;
+}
+
+
+.stCheckbox label span {
     color: #FFFFFF !important;
 }
 
 
-.stCheckbox input {
-    cursor: pointer;
-}
-
-
-.stCheckbox:hover {
-    transform: translateX(2px);
-
-    transition: 0.25s ease;
-}
-
 /* =========================================================
-   TABS - STRONG VISIBLE VERSION
+   TABS
    ========================================================= */
 
-/* Main tabs wrapper */
 .stTabs {
-    margin-top: 25px !important;
+    margin-top: 20px !important;
 }
 
 
-/* Tab bar */
 .stTabs [data-baseweb="tab-list"] {
     display: flex !important;
 
-    gap: 10px !important;
+    gap: 8px !important;
 
-    background: #FFFFFF !important;
+    background: rgba(255,255,255,.08) !important;
 
     padding: 8px !important;
 
-    border-radius: 16px !important;
+    border-radius: 17px !important;
 
-    border: 2px solid #D1D5DB !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
 
-    box-shadow:
-        0 8px 25px rgba(0, 0, 0, 0.20) !important;
+    box-shadow: 0 12px 30px rgba(0,0,0,.22) !important;
 }
 
 
-/* =========================================================
-   EVERY TAB - FORCE VISIBILITY
-   ========================================================= */
+/* Inactive tabs */
 
 .stTabs [data-baseweb="tab"] {
-    background: #E5E7EB !important;
+    background: rgba(255,255,255,.10) !important;
 
-    color: #111827 !important;
+    color: #E2E8F0 !important;
+
+    -webkit-text-fill-color: #E2E8F0 !important;
 
     opacity: 1 !important;
 
@@ -486,35 +521,31 @@ div[role="option"]:hover {
 
     justify-content: center !important;
 
-    padding: 14px 22px !important;
+    padding: 13px 20px !important;
 
     border-radius: 12px !important;
 
-    border: 1px solid #CBD5E1 !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
 
-    font-size: 15px !important;
+    font-size: 14px !important;
 
     font-weight: 700 !important;
 
-    min-height: 48px !important;
+    min-height: 46px !important;
 
-    transition:
-        background 0.25s ease,
-        color 0.25s ease,
-        transform 0.25s ease,
-        box-shadow 0.25s ease !important;
+    transition: .25s ease !important;
 }
 
 
-/* =========================================================
-   FORCE TAB TEXT VISIBILITY
-   ========================================================= */
+/* Force inactive tab text */
 
 .stTabs [data-baseweb="tab"] *,
 .stTabs [data-baseweb="tab"] p,
 .stTabs [data-baseweb="tab"] span,
 .stTabs [data-baseweb="tab"] div {
-    color: #FFFFFF !important;
+    color: #E2E8F0 !important;
+
+    -webkit-text-fill-color: #E2E8F0 !important;
 
     opacity: 1 !important;
 
@@ -522,32 +553,27 @@ div[role="option"]:hover {
 }
 
 
-/* =========================================================
-   HOVER
-   ========================================================= */
+/* Tab hover */
 
 .stTabs [data-baseweb="tab"]:hover {
-    background: #D1D5DB !important;
+    background: rgba(96,165,250,.18) !important;
 
-    color: #111827 !important;
+    color: #FFFFFF !important;
 
-    opacity: 1 !important;
+    -webkit-text-fill-color: #FFFFFF !important;
 
     transform: translateY(-2px) !important;
-
-    box-shadow:
-        0 5px 15px rgba(0, 0, 0, 0.15) !important;
 }
 
 
 .stTabs [data-baseweb="tab"]:hover * {
-    color: #111827 !important;
+    color: #FFFFFF !important;
+
+    -webkit-text-fill-color: #FFFFFF !important;
 }
 
 
-/* =========================================================
-   ACTIVE / SELECTED TAB
-   ========================================================= */
+/* Active tab */
 
 .stTabs [aria-selected="true"] {
     background:
@@ -559,22 +585,16 @@ div[role="option"]:hover {
 
     color: #FFFFFF !important;
 
-    opacity: 1 !important;
+    -webkit-text-fill-color: #FFFFFF !important;
 
-    visibility: visible !important;
-
-    border: 1px solid #2563EB !important;
+    border: 1px solid #3B82F6 !important;
 
     box-shadow:
-        0 8px 25px rgba(59, 130, 246, 0.45) !important;
+        0 10px 25px rgba(59,130,246,.35) !important;
 
     transform: translateY(-1px) !important;
 }
 
-
-/* =========================================================
-   ACTIVE TAB TEXT
-   ========================================================= */
 
 .stTabs [aria-selected="true"] *,
 .stTabs [aria-selected="true"] p,
@@ -590,45 +610,41 @@ div[role="option"]:hover {
 }
 
 
-/* =========================================================
-   TAB UNDERLINE - REMOVE
-   ========================================================= */
+/* Remove underline */
 
 .stTabs [data-baseweb="tab-highlight"] {
-    background: transparent !important;
-
-    height: 0 !important;
+    display: none !important;
 }
 
 
-/* =========================================================
-   TAB PANEL
-   ========================================================= */
+/* Tab content */
 
 .stTabs [data-baseweb="tab-panel"] {
     padding-top: 25px !important;
 }
+
+
 /* =========================================================
    BUTTONS
    ========================================================= */
 
 .stButton {
-    position: relative;
+    margin-top: 8px;
 
-    animation: buttonFade 0.6s ease;
+    animation: buttonFade .5s ease;
 }
 
 
 .stButton > button {
     width: 100% !important;
 
+    padding: 14px !important;
+
     border: none !important;
 
     border-radius: 14px !important;
 
-    padding: 14px !important;
-
-    font-size: 16px !important;
+    font-size: 15px !important;
 
     font-weight: 700 !important;
 
@@ -636,46 +652,37 @@ div[role="option"]:hover {
 
     -webkit-text-fill-color: #FFFFFF !important;
 
-    cursor: pointer !important;
-
     background:
         linear-gradient(
             135deg,
             #2563EB,
-            #8B5CF6
+            #7C3AED
         ) !important;
 
-    transition:
-        transform 0.25s ease,
-        box-shadow 0.25s ease,
-        filter 0.25s ease !important;
-
     box-shadow:
-        0 15px 35px rgba(59, 130, 246, 0.35) !important;
+        0 15px 35px rgba(37,99,235,.30) !important;
 
-    overflow: hidden !important;
+    transition: .3s ease !important;
 }
 
 
 .stButton > button:hover {
     transform: translateY(-3px) !important;
 
-    box-shadow:
-        0 22px 42px rgba(59, 130, 246, 0.45) !important;
-
     background:
         linear-gradient(
             135deg,
             #3B82F6,
-            #9333EA
+            #8B5CF6
         ) !important;
 
-    filter: brightness(108%);
+    box-shadow:
+        0 22px 42px rgba(59,130,246,.42) !important;
 }
 
 
 .stButton > button:active {
-    transform: scale(0.98) !important;
+    transform: scale(.98) !important;
 }
 
 
@@ -684,98 +691,87 @@ div[role="option"]:hover {
    ========================================================= */
 
 [data-testid="stAlert"] {
-    border-radius: 16px !important;
+    border-radius: 15px !important;
 
     padding: 14px 18px !important;
 
-    margin-top: 15px !important;
+    box-shadow: 0 12px 28px rgba(0,0,0,.20) !important;
+}
 
-    margin-bottom: 15px !important;
 
-    box-shadow:
-        0 12px 28px rgba(0, 0, 0, 0.25) !important;
+[data-testid="stAlert"] p,
+[data-testid="stAlert"] span,
+[data-testid="stAlert"] div {
+    color: #FFFFFF !important;
 }
 
 
 .stSuccess {
-    background: rgba(34, 197, 94, 0.15) !important;
-
-    border: 1px solid rgba(34, 197, 94, 0.45) !important;
+    background: rgba(34,197,94,.14) !important;
 
     border-left: 5px solid #22C55E !important;
 
-    border-radius: 14px !important;
-
     color: #FFFFFF !important;
-
-    animation: fadeAlert 0.45s ease;
 }
 
 
 .stError {
-    background: rgba(239, 68, 68, 0.15) !important;
-
-    border: 1px solid rgba(239, 68, 68, 0.45) !important;
+    background: rgba(239,68,68,.14) !important;
 
     border-left: 5px solid #EF4444 !important;
 
-    border-radius: 14px !important;
-
     color: #FFFFFF !important;
-
-    animation: fadeAlert 0.45s ease;
 }
 
 
 .stWarning {
-    background: rgba(245, 158, 11, 0.15) !important;
-
-    border: 1px solid rgba(245, 158, 11, 0.45) !important;
+    background: rgba(245,158,11,.14) !important;
 
     border-left: 5px solid #F59E0B !important;
 
-    border-radius: 14px !important;
-
     color: #FFFFFF !important;
-
-    animation: fadeAlert 0.45s ease;
 }
 
 
 .stInfo {
-    background: rgba(59, 130, 246, 0.15) !important;
-
-    border: 1px solid rgba(59, 130, 246, 0.40) !important;
+    background: rgba(59,130,246,.14) !important;
 
     border-left: 5px solid #3B82F6 !important;
 
-    border-radius: 14px !important;
-
     color: #FFFFFF !important;
-
-    animation: fadeAlert 0.45s ease;
-
-    backdrop-filter: blur(18px);
 }
 
 
 /* =========================================================
-   ALERT ANIMATION
+   DIVIDER
    ========================================================= */
 
-@keyframes fadeAlert {
+hr {
+    border: none !important;
 
-    from {
-        opacity: 0;
+    height: 1px !important;
 
-        transform: translateY(12px);
-    }
+    background: rgba(255,255,255,.10) !important;
 
-    to {
-        opacity: 1;
+    margin: 22px 0 !important;
+}
 
-        transform: translateY(0);
-    }
+
+/* =========================================================
+   LINKS
+   ========================================================= */
+
+a {
+    color: #60A5FA !important;
+
+    font-weight: 600;
+
+    text-decoration: none !important;
+}
+
+
+a:hover {
+    color: #93C5FD !important;
 }
 
 
@@ -789,26 +785,11 @@ div[role="option"]:hover {
 
 
 /* =========================================================
-   DIVIDER
-   ========================================================= */
-
-hr {
-    border: none !important;
-
-    height: 1px !important;
-
-    background: rgba(255, 255, 255, 0.08) !important;
-
-    margin: 25px 0 !important;
-}
-
-
-/* =========================================================
    COLUMNS
    ========================================================= */
 
 [data-testid="column"] {
-    padding-top: 10px;
+    padding-top: 8px;
 }
 
 
@@ -818,11 +799,12 @@ hr {
 
 ::-webkit-scrollbar {
     width: 10px;
+    height: 10px;
 }
 
 
 ::-webkit-scrollbar-track {
-    background: #0F172A;
+    background: #111827;
 }
 
 
@@ -855,103 +837,62 @@ hr {
 
 
 /* =========================================================
-   ANIMATION - PAGE
-   ========================================================= */
-
-@keyframes fadeUp {
-
-    from {
-        opacity: 0;
-
-        transform: translateY(40px);
-    }
-
-    to {
-        opacity: 1;
-
-        transform: translateY(0);
-    }
-}
-
-
-/* =========================================================
-   ANIMATION - BUTTON
+   ANIMATIONS
    ========================================================= */
 
 @keyframes buttonFade {
-
     from {
         opacity: 0;
-
-        transform: scale(0.95);
+        transform: scale(.96);
     }
 
     to {
         opacity: 1;
-
         transform: scale(1);
     }
 }
 
 
 /* =========================================================
-   RESPONSIVE - TABLET
+   RESPONSIVE
    ========================================================= */
 
 @media screen and (max-width: 992px) {
 
     .main .block-container {
         padding-left: 25px !important;
-
         padding-right: 25px !important;
     }
-
 
     h1 {
         font-size: 34px !important;
     }
-
-
-    h3 {
-        font-size: 22px !important;
-    }
 }
 
-
-/* =========================================================
-   RESPONSIVE - MOBILE
-   ========================================================= */
 
 @media screen and (max-width: 768px) {
 
     .main .block-container {
         max-width: 100% !important;
 
-        padding-top: 20px !important;
+        padding-top: 25px !important;
     }
-
 
     .stTabs [data-baseweb="tab"] {
         padding: 12px !important;
 
-        font-size: 14px !important;
+        font-size: 13px !important;
     }
 
+    h1 {
+        font-size: 29px !important;
+    }
 
     .stButton > button {
         padding: 13px !important;
     }
-
-
-    h1 {
-        font-size: 28px !important;
-    }
 }
 
-
-/* =========================================================
-   RESPONSIVE - SMALL MOBILE
-   ========================================================= */
 
 @media screen and (max-width: 480px) {
 
@@ -961,16 +902,13 @@ hr {
         padding-right: 12px !important;
     }
 
-
     h1 {
-        font-size: 24px !important;
+        font-size: 25px !important;
     }
-
 
     h3 {
         font-size: 20px !important;
     }
-
 
     .stTextInput input {
         padding: 13px !important;
@@ -979,28 +917,18 @@ hr {
 
 
 /* =========================================================
+   FINAL POLISH
+   ========================================================= */
+
+.stTextInput input,
+textarea,
+div[data-baseweb="select"] > div,
+.stTabs [data-baseweb="tab-list"] {
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+}
+
+
+/* =========================================================
    END
    ========================================================= */
-/* FIX INACTIVE LOGIN TABS */
-
-.stTabs [data-baseweb="tab"] {
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important;
-}
-
-.stTabs [data-baseweb="tab"] p {
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important;
-}
-
-.stTabs [data-baseweb="tab"] span {
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important;
-}
-
-.stTabs [data-baseweb="tab"][aria-selected="true"],
-.stTabs [data-baseweb="tab"][aria-selected="true"] p,
-.stTabs [data-baseweb="tab"][aria-selected="true"] span {
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-}
