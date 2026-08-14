@@ -70,24 +70,7 @@ color:#FFFFFF;
  Main Background
 =========================*/
 
-.stApp{
-
-background:
-
-radial-gradient(circle at top left,#2457ff 0%,transparent 32%),
-
-radial-gradient(circle at bottom right,#7c3aed 0%,transparent 30%),
-
-linear-gradient(140deg,#07111d,#0b1629,#121d35);
-
-background-attachment:fixed;
-
-color:white;
-
-overflow-x:hidden;
-
-}
-
+https://urbaneyeapp-gd6mam2x3lqpmsj82xjb3a.streamlit.app/?logged_in_email=Ayesha%40gmail.com#my-submitted-inspection-reports
 
 /*=========================
  Animated Glow
