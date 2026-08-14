@@ -491,16 +491,6 @@ def render_dashboard_page():
 
     with st.sidebar:
 
-        # --------------------------------------------------
-        # 1. BRAND
-        # --------------------------------------------------
-
-        st.title("👁️ UrbanEye AI")
-
-        st.caption(
-            "Smart City Detection & Tracking"
-        )
-
         st.divider()
 
         # --------------------------------------------------
