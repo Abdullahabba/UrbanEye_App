@@ -8,8 +8,8 @@ import streamlit as st
 from PIL import Image
 from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 
-# Fixed Global Confidence Threshold
-FIXED_CONFIDENCE_THRESHOLD = 0.70
+# Updated Global Confidence Threshold to 0.65
+FIXED_CONFIDENCE_THRESHOLD = 0.65
 
 # Multi-STUN & TURN Relays with Optimized Buffer
 RTC_CONFIGURATION = RTCConfiguration(
@@ -81,7 +81,7 @@ class LeakFreePerformanceTransformer:
                 gc.collect()
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-        """Zero-Copy Passthrough for Constant 1080p/4K Crisp Quality"""
+        """Zero-Copy Passthrough for Constant Crisp Quality"""
         img_bgr = frame.to_ndarray(format="bgr24")
 
         if not self.detected and not self.frame_queue.full():
@@ -150,7 +150,7 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
         if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
             st.image(
                 st.session_state["processed_img"],
-                caption="Snapshot AI Analysis Result (Fixed Conf: 0.70)",
+                caption="Snapshot AI Analysis Result (Fixed Conf: 0.65)",
                 use_container_width=True,
             )
 
@@ -174,7 +174,7 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
 
             st.image(
                 res["processed_img"],
-                caption=f"✅ Hazard Detected ({res['tracking_id']}) - Conf: 0.70",
+                caption=f"✅ Hazard Detected ({res['tracking_id']}) - Conf: 0.65",
                 use_container_width=True,
             )
 
@@ -185,7 +185,7 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="extreme-engine-fixed-quality",
+                key="extreme-engine-conf-065",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=LeakFreePerformanceTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
@@ -194,14 +194,13 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
                         "width": {"ideal": 1920, "max": 3840},
                         "height": {"ideal": 1080, "max": 2160},
                         "frameRate": {"ideal": 30, "max": 60},
-                        "degradationPreference": "maintain-resolution",  # Prevents quality drop
+                        "degradationPreference": "maintain-resolution",
                     },
                     "audio": False,
                 },
                 async_processing=True,
             )
 
-            # Polling mechanism replacing st.rerun() infinite loop
             if ctx.video_processor and ctx.video_processor.detected:
                 if ctx.video_processor.result_data:
                     st.session_state["captured_result"] = ctx.video_processor.result_data
