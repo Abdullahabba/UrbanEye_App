@@ -8,10 +8,13 @@ import streamlit as st
 from PIL import Image
 from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 
-# Updated Global Confidence Threshold to 0.65
+# Direct Top-Level Imports (Loop ke andar import karne se Thread Lock ho jata tha)
+from models.detector import run_detection
+from utils.helpers import generate_tracking_id
+
+# Global Confidence Threshold
 FIXED_CONFIDENCE_THRESHOLD = 0.65
 
-# Multi-STUN & TURN Relays with Optimized Buffer
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
@@ -34,17 +37,16 @@ class LeakFreePerformanceTransformer:
         self.result_data = None
         self.conf_threshold = FIXED_CONFIDENCE_THRESHOLD
         
-        # Lock Frame Queue to size 1 with auto-purge
+        # Maxsize 1 queue ensures always fresh frame processing
         self.frame_queue = Queue(maxsize=1)
         self.lock = threading.Lock()
         
-        # Async Worker Control
         self.stopped = False
         self.worker_thread = threading.Thread(target=self._ai_worker_loop, daemon=True)
         self.worker_thread.start()
 
     def _ai_worker_loop(self):
-        """Dedicated Inference Thread with Explicit Garbage Collection"""
+        """Dedicated Inference Thread"""
         while not self.stopped:
             try:
                 img_bgr = self.frame_queue.get(timeout=0.1)
@@ -56,37 +58,37 @@ class LeakFreePerformanceTransformer:
                 continue
 
             try:
-                img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-                pil_img = Image.fromarray(img_rgb)
+                # Valid frame verification
+                if img_bgr is not None and img_bgr.size > 0:
+                    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                    pil_img = Image.fromarray(img_rgb)
 
-                from models.detector import run_detection
-                from utils.helpers import generate_tracking_id
+                    # Model Detection Call
+                    proc_img, counts = run_detection(pil_img, self.conf_threshold)
 
-                proc_img, counts = run_detection(pil_img, self.conf_threshold)
-
-                if counts and len(counts) > 0:
-                    with self.lock:
-                        self.detected = True
-                        tracking_id = generate_tracking_id()
-                        self.result_data = {
-                            "tracking_id": tracking_id,
-                            "counts": counts,
-                            "processed_img": proc_img,
-                        }
+                    if counts and len(counts) > 0:
+                        with self.lock:
+                            self.detected = True
+                            tracking_id = generate_tracking_id()
+                            self.result_data = {
+                                "tracking_id": tracking_id,
+                                "counts": counts,
+                                "processed_img": proc_img,
+                            }
             except Exception as e:
-                print(f"Inference Engine Error: {e}")
+                print(f"❌ Worker Thread Inference Error: {e}")
             finally:
-                # Force Memory Release
                 del img_bgr
                 gc.collect()
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-        """Zero-Copy Passthrough for Constant Crisp Quality"""
+        """Video Stream Passthrough with Frame Memory Copy"""
         img_bgr = frame.to_ndarray(format="bgr24")
 
+        # .copy() is vital here so C-buffer release doesn't invalidate array in Queue
         if not self.detected and not self.frame_queue.full():
             try:
-                self.frame_queue.put_nowait(img_bgr)
+                self.frame_queue.put_nowait(img_bgr.copy())
             except Exception:
                 pass
 
@@ -97,7 +99,6 @@ class LeakFreePerformanceTransformer:
 
 
 def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
-    # CSS to force sharp pixel rendering and prevent canvas downscaling
     st.markdown(
         """
         <style>
@@ -106,7 +107,6 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
             height: auto !important;
             max-height: 80vh !important;
             object-fit: contain !important;
-            image-rendering: crisp-edges !important;
             image-rendering: -webkit-optimize-contrast !important;
             border-radius: 10px;
         }
@@ -132,9 +132,6 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
         cam_photo = st.camera_input("Take Live Photo from Camera", key="native_camera_input")
 
         if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_snapshot_analyze"):
-            from models.detector import run_detection
-            from utils.helpers import generate_tracking_id
-
             img = Image.open(cam_photo)
             with st.spinner("Analyzing Camera Capture..."):
                 proc_img, counts = run_detection(img, FIXED_CONFIDENCE_THRESHOLD)
@@ -150,7 +147,7 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
         if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
             st.image(
                 st.session_state["processed_img"],
-                caption="Snapshot AI Analysis Result (Fixed Conf: 0.65)",
+                caption="Snapshot AI Analysis Result (Conf: 0.65)",
                 use_container_width=True,
             )
 
@@ -161,7 +158,7 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
 
     # ==================== MODE 2: LIVE VIDEO FEED ====================
     else:
-        st.markdown("#### ⚡ Ultra-HD Fixed Quality Live Stream")
+        st.markdown("#### ⚡ Ultra-HD Live Stream (Conf: 0.65)")
 
         if "captured_result" not in st.session_state:
             st.session_state["captured_result"] = None
@@ -185,7 +182,7 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="extreme-engine-conf-065",
+                key="extreme-engine-fixed-v2",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=LeakFreePerformanceTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
@@ -194,7 +191,6 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
                         "width": {"ideal": 1920, "max": 3840},
                         "height": {"ideal": 1080, "max": 2160},
                         "frameRate": {"ideal": 30, "max": 60},
-                        "degradationPreference": "maintain-resolution",
                     },
                     "audio": False,
                 },
