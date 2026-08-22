@@ -31,11 +31,10 @@ class AutoStopTransformer:
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img_bgr = frame.to_ndarray(format="bgr24")
 
-        # Agar defect pehle hi detect ho chuka ho
         if self.detected:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
-        # Frame Skipping (Har 2nd frame process hoga)
+        # High resolution par processing smooth rakhne ke liye alternate frames
         self.frame_counter += 1
         if self.frame_counter % 2 != 0:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
@@ -142,12 +141,16 @@ def render_live_camera_mode(conf_threshold):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="auto-stop-streamer-v2",
+                key="auto-stop-streamer-maxres",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=AutoStopTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
                 media_stream_constraints={
-                    "video": {"width": {"ideal": 640}, "height": {"ideal": 480}},
+                    "video": {
+                        "width": {"ideal": 1920, "max": 3840},
+                        "height": {"ideal": 1080, "max": 2160},
+                        "frameRate": {"ideal": 30},
+                    },
                     "audio": False,
                 },
                 async_processing=True,
@@ -156,12 +159,10 @@ def render_live_camera_mode(conf_threshold):
             if ctx.video_processor:
                 ctx.video_processor.conf_threshold = current_conf
 
-                # Continuous background polling jab tak detection na ho jaye
                 if ctx.video_processor.detected and ctx.video_processor.result_data:
                     st.session_state["captured_result"] = ctx.video_processor.result_data
                     st.rerun()
 
-            # Video active rehne par har 0.2s baad status check karega
             if ctx.state.playing:
                 time.sleep(0.2)
                 st.rerun()
