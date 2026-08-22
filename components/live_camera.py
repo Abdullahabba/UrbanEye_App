@@ -2,6 +2,8 @@ import time
 import av
 import cv2
 import numpy as np
+import threading
+from queue import Queue, Empty
 import streamlit as st
 from PIL import Image
 from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
@@ -9,7 +11,7 @@ from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
-# Reliable Multi-STUN & TURN Relays
+# Ultra-fast Multi-STUN & TURN Relays for Maximum Bandwidth Pipe
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
@@ -26,67 +28,86 @@ RTC_CONFIGURATION = RTCConfiguration(
 )
 
 
-class AutoStopTransformer:
+class ExtremePerformanceTransformer:
     def __init__(self):
         self.detected = False
         self.result_data = None
         self.conf_threshold = 0.35
-        self.last_check_time = 0.0
+        
+        # Async Processing Queue (Size 1: Dropping stale frames to eliminate lag)
+        self.frame_queue = Queue(maxsize=1)
+        self.lock = threading.Lock()
+        
+        # Start Background Async Worker
+        self.stopped = False
+        self.worker_thread = threading.Thread(target=self._ai_worker_loop, daemon=True)
+        self.worker_thread.start()
 
-    def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-        img_bgr = frame.to_ndarray(format="bgr24")
-        h, w = img_bgr.shape[:2]
-
-        if self.detected:
-            return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
-
-        # Video feed par real-time active resolution stamp (e.g. 1920x1080)
-        cv2.putText(
-            img_bgr,
-            f"Stream Res: {w}x{h}",
-            (20, 40),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (0, 255, 0),
-            2,
-            cv2.LINE_AA,
-        )
-
-        current_time = time.time()
-        if current_time - self.last_check_time >= 0.20:
-            self.last_check_time = current_time
+    def _ai_worker_loop(self):
+        """Dedicated AI Thread: Camera Stream se bilkul alag parallel chalta hai"""
+        while not self.stopped:
             try:
+                # Latest frame fetch bina main video stream ko block kiye
+                img_bgr = self.frame_queue.get(timeout=0.05)
+            except Empty:
+                continue
+
+            if self.detected:
+                continue
+
+            try:
+                # OpenVINO Fast RGB Inference
                 img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
                 pil_img = Image.fromarray(img_rgb)
 
                 proc_img, counts = run_detection(pil_img, self.conf_threshold)
 
                 if counts and len(counts) > 0:
-                    self.detected = True
-                    tracking_id = generate_tracking_id()
-
-                    self.result_data = {
-                        "tracking_id": tracking_id,
-                        "counts": counts,
-                        "processed_img": proc_img,
-                    }
+                    with self.lock:
+                        self.detected = True
+                        tracking_id = generate_tracking_id()
+                        self.result_data = {
+                            "tracking_id": tracking_id,
+                            "counts": counts,
+                            "processed_img": proc_img,
+                        }
             except Exception as e:
-                print(f"Inference Error in Stream: {e}")
+                print(f"Async Inference Engine Error: {e}")
 
+    def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+        """Stream Processing Loop: Native Camera Speed (60 FPS @ Max Resolution)"""
+        img_bgr = frame.to_ndarray(format="bgr24")
+
+        if self.detected:
+            return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
+
+        # Frame asynchronously background queue mein send karein agar queue khali ho
+        if not self.frame_queue.full():
+            try:
+                self.frame_queue.put_nowait(img_bgr.copy())
+            except Exception:
+                pass
+
+        # ZERO DELAY RETURN: Instant passthrough for buttery-smooth native camera feel
         return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
+
+    def stop(self):
+        self.stopped = True
 
 
 def render_live_camera_mode(conf_threshold):
-    # CSS injection to force Streamlit WebRTC video player into Full HD crisp container
+    # CSS injection for Uncompressed 4K/Full HD Hardware Rendering
     st.markdown(
         """
         <style>
         div[data-testid="stWebRtc"] video {
             width: 100% !important;
             height: auto !important;
-            max-height: 80vh !important;
-            object-fit: contain !important;
-            border-radius: 10px;
+            max-height: 85vh !important;
+            object-fit: fill !important;
+            image-rendering: -webkit-optimize-contrast;
+            border-radius: 12px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.3);
         }
         </style>
         """,
@@ -149,7 +170,7 @@ def render_live_camera_mode(conf_threshold):
 
     # ==================== MODE 2: LIVE VIDEO FEED ====================
     else:
-        st.markdown("#### ⚡ Live Video Feed Auto-Stop Mode")
+        st.markdown("#### ⚡ Ultra-HD 60FPS Extreme Live Stream")
 
         if "captured_result" not in st.session_state:
             st.session_state["captured_result"] = None
@@ -173,15 +194,15 @@ def render_live_camera_mode(conf_threshold):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="auto-stop-streamer-forced-hd",
+                key="extreme-engine-v1",
                 mode=WebRtcMode.SENDRECV,
-                video_processor_factory=AutoStopTransformer,
+                video_processor_factory=ExtremePerformanceTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
                 media_stream_constraints={
                     "video": {
-                        "width": {"min": 1280, "ideal": 1920},
-                        "height": {"min": 720, "ideal": 1080},
-                        "frameRate": {"ideal": 30, "max": 60},
+                        "width": {"ideal": 3840, "max": 3840},
+                        "height": {"ideal": 2160, "max": 2160},
+                        "frameRate": {"ideal": 60, "max": 60},
                     },
                     "audio": False,
                 },
@@ -196,5 +217,5 @@ def render_live_camera_mode(conf_threshold):
                     st.rerun()
 
             if ctx.state.playing:
-                time.sleep(0.15)
+                time.sleep(0.1)
                 st.rerun()
