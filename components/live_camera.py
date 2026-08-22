@@ -31,24 +31,21 @@ class AutoStopTransformer:
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img_bgr = frame.to_ndarray(format="bgr24")
 
-        # Agar hazard detect ho chuka hai toh execution stop kar dein
+        # Agar defect pehle hi detect ho chuka ho
         if self.detected:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
-        # Frame Skipping (Har 2nd frame process hoga) -> Heavy CPU load reduce karta hai
+        # Frame Skipping (Har 2nd frame process hoga)
         self.frame_counter += 1
         if self.frame_counter % 2 != 0:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
         try:
-            # OpenCV BGR -> PIL Image conversion
             img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(img_rgb)
 
-            # Fast OpenVINO detection call
             proc_img, counts = run_detection(pil_img, self.conf_threshold)
 
-            # Agar koi defect/hazard mila
             if counts and len(counts) > 0:
                 self.detected = True
                 tracking_id = generate_tracking_id()
@@ -67,7 +64,6 @@ class AutoStopTransformer:
 def render_live_camera_mode(conf_threshold):
     st.markdown("### 🎥 Municipal Hazard Detection Portal")
 
-    # Mode selection
     detection_mode = st.radio(
         "Select Detection Mode:",
         ["📸 Snapshot Capture (Error-Free)", "⚡ Live Video Feed (Real-Time Stream)"],
@@ -77,7 +73,6 @@ def render_live_camera_mode(conf_threshold):
 
     st.markdown("---")
 
-    # Global Confidence Threshold
     if "conf_threshold" not in st.session_state:
         st.session_state["conf_threshold"] = conf_threshold
 
@@ -128,7 +123,6 @@ def render_live_camera_mode(conf_threshold):
         if "captured_result" not in st.session_state:
             st.session_state["captured_result"] = None
 
-        # Reset button view agar hazard mil gaya ho
         if st.session_state["captured_result"] is not None:
             res = st.session_state["captured_result"]
             st.session_state["counts"] = res["counts"]
@@ -147,24 +141,27 @@ def render_live_camera_mode(conf_threshold):
                 st.session_state.pop("processed_img", None)
                 st.rerun()
         else:
-            # Clean WebRTC streamer setup without UI thread locking
             ctx = webrtc_streamer(
                 key="auto-stop-streamer-v2",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=AutoStopTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
                 media_stream_constraints={
-                    "video": {"width": {"ideal": 640}, "height": {"ideal": 480}, "frameRate": {"ideal": 30}},
+                    "video": {"width": {"ideal": 640}, "height": {"ideal": 480}},
                     "audio": False,
                 },
                 async_processing=True,
             )
 
-            # Pass current slider threshold directly to video processor thread
             if ctx.video_processor:
                 ctx.video_processor.conf_threshold = current_conf
 
-                # Continuous page rerun lagane ke bajaye sirf detect hone par Rerun karein
+                # Continuous background polling jab tak detection na ho jaye
                 if ctx.video_processor.detected and ctx.video_processor.result_data:
                     st.session_state["captured_result"] = ctx.video_processor.result_data
                     st.rerun()
+
+            # Video active rehne par har 0.2s baad status check karega
+            if ctx.state.playing:
+                time.sleep(0.2)
+                st.rerun()
