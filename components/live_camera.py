@@ -1,18 +1,15 @@
+import time
 import av
 import cv2
-import gc
 import numpy as np
-import threading
-from queue import Queue, Empty
 import streamlit as st
 from PIL import Image
 from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 
-# Direct Top-Level Imports (Loop ke andar import karne se Thread Lock ho jata tha)
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
-# Global Confidence Threshold
+# Fixed Global Confidence Threshold
 FIXED_CONFIDENCE_THRESHOLD = 0.65
 
 RTC_CONFIGURATION = RTCConfiguration(
@@ -31,71 +28,51 @@ RTC_CONFIGURATION = RTCConfiguration(
 )
 
 
-class LeakFreePerformanceTransformer:
+class FastDirectTransformer:
     def __init__(self):
         self.detected = False
         self.result_data = None
         self.conf_threshold = FIXED_CONFIDENCE_THRESHOLD
-        
-        # Maxsize 1 queue ensures always fresh frame processing
-        self.frame_queue = Queue(maxsize=1)
-        self.lock = threading.Lock()
-        
-        self.stopped = False
-        self.worker_thread = threading.Thread(target=self._ai_worker_loop, daemon=True)
-        self.worker_thread.start()
-
-    def _ai_worker_loop(self):
-        """Dedicated Inference Thread"""
-        while not self.stopped:
-            try:
-                img_bgr = self.frame_queue.get(timeout=0.1)
-            except Empty:
-                continue
-
-            if self.detected:
-                del img_bgr
-                continue
-
-            try:
-                # Valid frame verification
-                if img_bgr is not None and img_bgr.size > 0:
-                    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-                    pil_img = Image.fromarray(img_rgb)
-
-                    # Model Detection Call
-                    proc_img, counts = run_detection(pil_img, self.conf_threshold)
-
-                    if counts and len(counts) > 0:
-                        with self.lock:
-                            self.detected = True
-                            tracking_id = generate_tracking_id()
-                            self.result_data = {
-                                "tracking_id": tracking_id,
-                                "counts": counts,
-                                "processed_img": proc_img,
-                            }
-            except Exception as e:
-                print(f"❌ Worker Thread Inference Error: {e}")
-            finally:
-                del img_bgr
-                gc.collect()
+        self.last_check_time = 0.0
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-        """Video Stream Passthrough with Frame Memory Copy"""
         img_bgr = frame.to_ndarray(format="bgr24")
 
-        # .copy() is vital here so C-buffer release doesn't invalidate array in Queue
-        if not self.detected and not self.frame_queue.full():
+        # Agar detect ho chuka hai toh raw frame pass-through
+        if self.detected:
+            return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
+
+        current_time = time.time()
+
+        # Har 0.15 second baad fast OpenCV resize ke sath detection
+        if current_time - self.last_check_time >= 0.15:
+            self.last_check_time = current_time
             try:
-                self.frame_queue.put_nowait(img_bgr.copy())
-            except Exception:
-                pass
+                # Fast 640x640 downscale solely for YOLO model input (Takes 1-2ms)
+                small_bgr = cv2.resize(img_bgr, (640, 640), interpolation=cv2.INTER_NEAREST)
+                img_rgb = cv2.cvtColor(small_bgr, cv2.COLOR_BGR2RGB)
+                pil_img = Image.fromarray(img_rgb)
 
+                # Direct OpenVINO Detection Call
+                proc_small, counts = run_detection(pil_img, self.conf_threshold)
+
+                if counts and len(counts) > 0:
+                    # Hazard milne par Full HD original frame par detection run karke process save kar lein
+                    full_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                    full_pil = Image.fromarray(full_rgb)
+                    proc_full, full_counts = run_detection(full_pil, self.conf_threshold)
+
+                    self.detected = True
+                    self.result_data = {
+                        "tracking_id": generate_tracking_id(),
+                        "counts": full_counts,
+                        "processed_img": proc_full,
+                    }
+            except Exception as e:
+                print(f"❌ Detection Engine Error: {e}")
+
+        # Always return full native resolution HD frame to WebRTC player
         return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
-
-    def stop(self):
-        self.stopped = True
 
 
 def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
@@ -107,7 +84,6 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
             height: auto !important;
             max-height: 80vh !important;
             object-fit: contain !important;
-            image-rendering: -webkit-optimize-contrast !important;
             border-radius: 10px;
         }
         </style>
@@ -158,7 +134,7 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
 
     # ==================== MODE 2: LIVE VIDEO FEED ====================
     else:
-        st.markdown("#### ⚡ Ultra-HD Live Stream (Conf: 0.65)")
+        st.markdown("#### ⚡ Real-Time Live Detection Stream (Conf: 0.65)")
 
         if "captured_result" not in st.session_state:
             st.session_state["captured_result"] = None
@@ -182,9 +158,9 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="extreme-engine-fixed-v2",
+                key="direct-fast-engine-v1",
                 mode=WebRtcMode.SENDRECV,
-                video_processor_factory=LeakFreePerformanceTransformer,
+                video_processor_factory=FastDirectTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
                 media_stream_constraints={
                     "video": {
@@ -197,7 +173,13 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
                 async_processing=True,
             )
 
-            if ctx.video_processor and ctx.video_processor.detected:
-                if ctx.video_processor.result_data:
+            # Polling to trigger Streamlit rerun immediately upon detection
+            if ctx.video_processor:
+                if ctx.video_processor.detected and ctx.video_processor.result_data:
                     st.session_state["captured_result"] = ctx.video_processor.result_data
                     st.rerun()
+
+            # Active UI Polling Loop
+            if ctx.state.playing and st.session_state["captured_result"] is None:
+                time.sleep(0.1)
+                st.rerun()
