@@ -1,3 +1,4 @@
+import os
 import random
 import string
 import numpy as np
@@ -8,15 +9,33 @@ from database.supabase_client import supabase
 
 
 # -----------------------------------------------------------------------------
-# 1. MODEL LOADING (WITH CACHING FOR FAST PERFORMANCE)
+# 1. MODEL LOADING (WITH OPENVINO CPU ACCELERATION & FALLBACKS)
 # -----------------------------------------------------------------------------
 @st.cache_resource
-def load_yolo_model(model_path="models/best.pt"):
-    """YOLO model ko load karta hai (cached so it doesn't reload every time)."""
-    try:
-        return YOLO(model_path)
-    except Exception:
-        return YOLO("yolov8n.pt")
+def load_yolo_model():
+    """
+    OpenVINO IR model load karta hai CPU acceleration ke liye.
+    Agar OpenVINO folder na mile toh best.pt ya default yolov8n.pt par fallback karta hai.
+    """
+    openvino_path = os.path.join("models", "best_openvino_model")
+    pt_path = os.path.join("models", "best.pt")
+    
+    # 1. Pehle OpenVINO model try karein (Fastest on CPU)
+    if os.path.exists(openvino_path):
+        try:
+            return YOLO(openvino_path, task="detect")
+        except Exception as e:
+            st.warning(f"Failed to load OpenVINO model: {e}")
+
+    # 2. Agar OpenVINO na ho, toh standard PyTorch best.pt try karein
+    if os.path.exists(pt_path):
+        try:
+            return YOLO(pt_path)
+        except Exception as e:
+            st.warning(f"Failed to load best.pt model: {e}")
+
+    # 3. Last fallback to default YOLOv8n
+    return YOLO("yolov8n.pt")
 
 
 # -----------------------------------------------------------------------------
@@ -39,10 +58,11 @@ def run_detection(image: Image.Image, conf_threshold=0.50):
 
     # Object Counts calculate karna
     counts = {}
-    for box in res.boxes:
-        cls_id = int(box.cls[0])
-        class_name = model.names[cls_id]
-        counts[class_name] = counts.get(class_name, 0) + 1
+    if res.boxes is not None:
+        for box in res.boxes:
+            cls_id = int(box.cls[0])
+            class_name = model.names[cls_id]
+            counts[class_name] = counts.get(class_name, 0) + 1
 
     return processed_img, counts
 
@@ -76,7 +96,7 @@ def save_detection_report(user_id, counts, location, description="", latitude=No
         "location": location.strip() if location else "Location not specified",
         "description": description.strip(),
         "status": "Pending",
-        "latitude": latitude,  # Map view ke liye zaroori
+        "latitude": latitude,   # Map view ke liye zaroori
         "longitude": longitude, # Map view ke liye zaroori
     }
 
