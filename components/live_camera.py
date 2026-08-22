@@ -9,13 +9,21 @@ from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
-# Extended STUN servers for fail-proof WebRTC connections
+# Reliable Multi-STUN & Open TURN Relays for strict network/NAT connection
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
+            # Google Public STUN
             {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]},
             {"urls": ["stun:stun2.l.google.com:19302", "stun:stun3.l.google.com:19302"]},
-            {"urls": ["stun:stun.stunprotocol.org:3478"]},
+            # Twilio & Open Relay STUNs
+            {"urls": ["stun:global.stun.twilio.com:3478"]},
+            # Free Open TURN server fallback for firewall/mobile hotspot bypass
+            {
+                "urls": ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443"],
+                "username": "openrelay",
+                "credential": "openrelay",
+            },
         ]
     }
 )
@@ -34,7 +42,6 @@ class AutoStopTransformer:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
         try:
-            # Full FPS Processing (Zero Frame Skipping)
             img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(img_rgb)
 
@@ -136,15 +143,15 @@ def render_live_camera_mode(conf_threshold):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="auto-stop-streamer-max-fps-res",
+                key="auto-stop-streamer-stable",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=AutoStopTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
                 media_stream_constraints={
                     "video": {
-                        "width": {"min": 1280, "ideal": 3840, "max": 3840},
-                        "height": {"min": 720, "ideal": 2160, "max": 2160},
-                        "frameRate": {"ideal": 60, "max": 60},
+                        "width": {"ideal": 1280},
+                        "height": {"ideal": 720},
+                        "frameRate": {"ideal": 30},
                     },
                     "audio": False,
                 },
@@ -159,5 +166,5 @@ def render_live_camera_mode(conf_threshold):
                     st.rerun()
 
             if ctx.state.playing:
-                time.sleep(0.1)
+                time.sleep(0.15)
                 st.rerun()
