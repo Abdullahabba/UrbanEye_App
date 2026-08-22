@@ -35,15 +35,25 @@ class AutoStopTransformer:
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img_bgr = frame.to_ndarray(format="bgr24")
+        h, w = img_bgr.shape[:2]
 
         if self.detected:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
-        current_time = time.time()
+        # Video feed par real-time active resolution stamp (e.g. 1920x1080)
+        cv2.putText(
+            img_bgr,
+            f"Stream Res: {w}x{h}",
+            (20, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (0, 255, 0),
+            2,
+            cv2.LINE_AA,
+        )
 
-        # AI Detection har 0.25 seconds baad chalegi
-        # Baqi saare frames instantly return ho kar 60 FPS smooth stream denge
-        if current_time - self.last_check_time >= 0.25:
+        current_time = time.time()
+        if current_time - self.last_check_time >= 0.20:
             self.last_check_time = current_time
             try:
                 img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
@@ -63,11 +73,26 @@ class AutoStopTransformer:
             except Exception as e:
                 print(f"Inference Error in Stream: {e}")
 
-        # Instant frame return for smooth normal camera feel
         return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
 
 def render_live_camera_mode(conf_threshold):
+    # CSS injection to force Streamlit WebRTC video player into Full HD crisp container
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stWebRtc"] video {
+            width: 100% !important;
+            height: auto !important;
+            max-height: 80vh !important;
+            object-fit: contain !important;
+            border-radius: 10px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown("### 🎥 Municipal Hazard Detection Portal")
 
     detection_mode = st.radio(
@@ -148,14 +173,14 @@ def render_live_camera_mode(conf_threshold):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="auto-stop-streamer-smooth-fps",
+                key="auto-stop-streamer-forced-hd",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=AutoStopTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
                 media_stream_constraints={
                     "video": {
-                        "width": {"ideal": 1280},
-                        "height": {"ideal": 720},
+                        "width": {"min": 1280, "ideal": 1920},
+                        "height": {"min": 720, "ideal": 1080},
                         "frameRate": {"ideal": 30, "max": 60},
                     },
                     "audio": False,
@@ -171,5 +196,5 @@ def render_live_camera_mode(conf_threshold):
                     st.rerun()
 
             if ctx.state.playing:
-                time.sleep(0.2)
+                time.sleep(0.15)
                 st.rerun()
