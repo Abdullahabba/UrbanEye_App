@@ -11,6 +11,9 @@ from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
+# Fixed Global Confidence Threshold
+FIXED_CONF_THRESHOLD = 0.70
+
 # Ultra-fast Multi-STUN & TURN Relays for Maximum Bandwidth Pipe
 RTC_CONFIGURATION = RTCConfiguration(
     {
@@ -32,7 +35,7 @@ class ExtremePerformanceTransformer:
     def __init__(self):
         self.detected = False
         self.result_data = None
-        self.conf_threshold = 0.35
+        self.conf_threshold = FIXED_CONF_THRESHOLD
         
         # Async Processing Queue (Size 1: Dropping stale frames to eliminate lag)
         self.frame_queue = Queue(maxsize=1)
@@ -95,7 +98,7 @@ class ExtremePerformanceTransformer:
         self.stopped = True
 
 
-def render_live_camera_mode(conf_threshold):
+def render_live_camera_mode(conf_threshold=FIXED_CONF_THRESHOLD):
     # CSS injection for Uncompressed 4K/Full HD Hardware Rendering
     st.markdown(
         """
@@ -125,19 +128,6 @@ def render_live_camera_mode(conf_threshold):
 
     st.markdown("---")
 
-    if "conf_threshold" not in st.session_state:
-        st.session_state["conf_threshold"] = conf_threshold
-
-    current_conf = st.slider(
-        "Confidence Threshold",
-        0.05,
-        0.90,
-        st.session_state["conf_threshold"],
-        0.05,
-        key="global_conf_slider",
-    )
-    st.session_state["conf_threshold"] = current_conf
-
     # ==================== MODE 1: SNAPSHOT CAPTURE ====================
     if "Snapshot Capture" in detection_mode:
         st.markdown("#### 📸 Field Camera Snapshot Mode")
@@ -146,7 +136,7 @@ def render_live_camera_mode(conf_threshold):
         if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_snapshot_analyze"):
             img = Image.open(cam_photo)
             with st.spinner("Analyzing Camera Capture..."):
-                proc_img, counts = run_detection(img, current_conf)
+                proc_img, counts = run_detection(img, FIXED_CONF_THRESHOLD)
 
                 st.session_state.update(
                     {
@@ -210,7 +200,7 @@ def render_live_camera_mode(conf_threshold):
             )
 
             if ctx.video_processor:
-                ctx.video_processor.conf_threshold = current_conf
+                ctx.video_processor.conf_threshold = FIXED_CONF_THRESHOLD
 
                 if ctx.video_processor.detected and ctx.video_processor.result_data:
                     st.session_state["captured_result"] = ctx.video_processor.result_data
