@@ -2,7 +2,7 @@ import time
 import av
 import cv2
 import numpy as np
-import streamlit as st
+import Streamlit as st
 from PIL import Image
 from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 
@@ -12,17 +12,15 @@ from utils.helpers import generate_tracking_id
 # Fixed Global Confidence Threshold
 FIXED_CONFIDENCE_THRESHOLD = 0.65
 
+# Optimized & Fast Google STUN Relays
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
-            {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]},
-            {"urls": ["stun:stun2.l.google.com:19302", "stun:stun3.l.google.com:19302"]},
-            {"urls": ["stun:global.stun.twilio.com:3478"]},
-            {
-                "urls": ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443"],
-                "username": "openrelay",
-                "credential": "openrelay",
-            },
+            {"urls": ["stun:stun.l.google.com:19302"]},
+            {"urls": ["stun:stun1.l.google.com:19302"]},
+            {"urls": ["stun:stun2.l.google.com:19302"]},
+            {"urls": ["stun:stun3.l.google.com:19302"]},
+            {"urls": ["stun:stun4.l.google.com:19302"]},
         ]
     }
 )
@@ -38,26 +36,24 @@ class FastDirectTransformer:
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img_bgr = frame.to_ndarray(format="bgr24")
 
-        # Agar detect ho chuka hai toh raw frame pass-through
         if self.detected:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
         current_time = time.time()
 
-        # Har 0.15 second baad fast OpenCV resize ke sath detection
+        # Har 0.15s baad fast background AI check
         if current_time - self.last_check_time >= 0.15:
             self.last_check_time = current_time
             try:
-                # Fast 640x640 downscale solely for YOLO model input (Takes 1-2ms)
+                # Fast 640x640 resize for instant detection
                 small_bgr = cv2.resize(img_bgr, (640, 640), interpolation=cv2.INTER_NEAREST)
                 img_rgb = cv2.cvtColor(small_bgr, cv2.COLOR_BGR2RGB)
                 pil_img = Image.fromarray(img_rgb)
 
-                # Direct OpenVINO Detection Call
                 proc_small, counts = run_detection(pil_img, self.conf_threshold)
 
                 if counts and len(counts) > 0:
-                    # Hazard milne par Full HD original frame par detection run karke process save kar lein
+                    # Original HD Frame Capture
                     full_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
                     full_pil = Image.fromarray(full_rgb)
                     proc_full, full_counts = run_detection(full_pil, self.conf_threshold)
@@ -69,9 +65,9 @@ class FastDirectTransformer:
                         "processed_img": proc_full,
                     }
             except Exception as e:
-                print(f"❌ Detection Engine Error: {e}")
+                print(f"❌ Detection Error: {e}")
 
-        # Always return full native resolution HD frame to WebRTC player
+        # Native Camera Frame Return
         return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
 
@@ -134,7 +130,7 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
 
     # ==================== MODE 2: LIVE VIDEO FEED ====================
     else:
-        st.markdown("#### ⚡ Real-Time Live Detection Stream (Conf: 0.65)")
+        st.markdown("#### ⚡ Real-Time Live Stream (Conf: 0.65)")
 
         if "captured_result" not in st.session_state:
             st.session_state["captured_result"] = None
@@ -158,28 +154,23 @@ def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="direct-fast-engine-v1",
+                key="live-streamer-stable",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=FastDirectTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
                 media_stream_constraints={
                     "video": {
-                        "width": {"ideal": 1920, "max": 3840},
-                        "height": {"ideal": 1080, "max": 2160},
-                        "frameRate": {"ideal": 30, "max": 60},
+                        "width": {"ideal": 1920},
+                        "height": {"ideal": 1080},
+                        "frameRate": {"ideal": 30},
                     },
                     "audio": False,
                 },
                 async_processing=True,
             )
 
-            # Polling to trigger Streamlit rerun immediately upon detection
+            # SIRF tab rerun ho jab actual hazard detect ho jaye
             if ctx.video_processor:
                 if ctx.video_processor.detected and ctx.video_processor.result_data:
                     st.session_state["captured_result"] = ctx.video_processor.result_data
                     st.rerun()
-
-            # Active UI Polling Loop
-            if ctx.state.playing and st.session_state["captured_result"] is None:
-                time.sleep(0.1)
-                st.rerun()
