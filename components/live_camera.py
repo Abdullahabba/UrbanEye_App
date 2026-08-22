@@ -26,7 +26,6 @@ class AutoStopTransformer:
         self.detected = False
         self.result_data = None
         self.conf_threshold = 0.35
-        self.frame_counter = 0
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img_bgr = frame.to_ndarray(format="bgr24")
@@ -34,12 +33,8 @@ class AutoStopTransformer:
         if self.detected:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
-        # High resolution par processing smooth rakhne ke liye alternate frames
-        self.frame_counter += 1
-        if self.frame_counter % 2 != 0:
-            return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
-
         try:
+            # Full FPS Processing (Zero Frame Skipping)
             img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(img_rgb)
 
@@ -141,15 +136,15 @@ def render_live_camera_mode(conf_threshold):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="auto-stop-streamer-maxres",
+                key="auto-stop-streamer-max-fps-res",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=AutoStopTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
                 media_stream_constraints={
                     "video": {
-                        "width": {"ideal": 1920, "max": 3840},
-                        "height": {"ideal": 1080, "max": 2160},
-                        "frameRate": {"ideal": 30},
+                        "width": {"min": 1280, "ideal": 3840, "max": 3840},
+                        "height": {"min": 720, "ideal": 2160, "max": 2160},
+                        "frameRate": {"ideal": 60, "max": 60},
                     },
                     "audio": False,
                 },
@@ -164,5 +159,5 @@ def render_live_camera_mode(conf_threshold):
                     st.rerun()
 
             if ctx.state.playing:
-                time.sleep(0.2)
+                time.sleep(0.1)
                 st.rerun()
