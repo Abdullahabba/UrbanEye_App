@@ -11,7 +11,10 @@ from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
-# Ultra-fast Multi-STUN & TURN Relays for Maximum Bandwidth Pipe
+# Fixed Global Confidence Threshold
+FIXED_CONFIDENCE_THRESHOLD = 0.70
+
+# Multi-STUN & TURN Relays for Maximum Bandwidth Pipe
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
@@ -32,22 +35,21 @@ class ExtremePerformanceTransformer:
     def __init__(self):
         self.detected = False
         self.result_data = None
-        self.conf_threshold = 0.35
+        self.conf_threshold = FIXED_CONFIDENCE_THRESHOLD
         
-        # Async Processing Queue (Size 1: Dropping stale frames to eliminate lag)
+        # Async Processing Queue
         self.frame_queue = Queue(maxsize=1)
         self.lock = threading.Lock()
         
-        # Start Background Async Worker
+        # Start Background Async Worker Thread
         self.stopped = False
         self.worker_thread = threading.Thread(target=self._ai_worker_loop, daemon=True)
         self.worker_thread.start()
 
     def _ai_worker_loop(self):
-        """Dedicated AI Thread: Camera Stream se bilkul alag parallel chalta hai"""
+        """Dedicated AI Thread: Camera Stream se parallel chalta hai"""
         while not self.stopped:
             try:
-                # Latest frame fetch bina main video stream ko block kiye
                 img_bgr = self.frame_queue.get(timeout=0.05)
             except Empty:
                 continue
@@ -56,10 +58,10 @@ class ExtremePerformanceTransformer:
                 continue
 
             try:
-                # OpenVINO Fast RGB Inference
                 img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
                 pil_img = Image.fromarray(img_rgb)
 
+                # Fixed 0.70 confidence threshold applied here
                 proc_img, counts = run_detection(pil_img, self.conf_threshold)
 
                 if counts and len(counts) > 0:
@@ -75,28 +77,26 @@ class ExtremePerformanceTransformer:
                 print(f"Async Inference Engine Error: {e}")
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-        """Stream Processing Loop: Native Camera Speed (60 FPS @ Max Resolution)"""
+        """Stream Processing Loop: Maximum Speed (60 FPS @ Native Max Resolution)"""
         img_bgr = frame.to_ndarray(format="bgr24")
 
         if self.detected:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
-        # Frame asynchronously background queue mein send karein agar queue khali ho
         if not self.frame_queue.full():
             try:
                 self.frame_queue.put_nowait(img_bgr.copy())
             except Exception:
                 pass
 
-        # ZERO DELAY RETURN: Instant passthrough for buttery-smooth native camera feel
         return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
     def stop(self):
         self.stopped = True
 
 
-def render_live_camera_mode(conf_threshold):
-    # CSS injection for Uncompressed 4K/Full HD Hardware Rendering
+def render_live_camera_mode(conf_threshold=FIXED_CONFIDENCE_THRESHOLD):
+    # CSS injection for Uncompressed Hardware Rendering
     st.markdown(
         """
         <style>
@@ -125,19 +125,6 @@ def render_live_camera_mode(conf_threshold):
 
     st.markdown("---")
 
-    if "conf_threshold" not in st.session_state:
-        st.session_state["conf_threshold"] = conf_threshold
-
-    current_conf = st.slider(
-        "Confidence Threshold",
-        0.05,
-        0.90,
-        st.session_state["conf_threshold"],
-        0.05,
-        key="global_conf_slider",
-    )
-    st.session_state["conf_threshold"] = current_conf
-
     # ==================== MODE 1: SNAPSHOT CAPTURE ====================
     if "Snapshot Capture" in detection_mode:
         st.markdown("#### 📸 Field Camera Snapshot Mode")
@@ -146,7 +133,8 @@ def render_live_camera_mode(conf_threshold):
         if cam_photo and st.button("🔍 Analyze Field Snapshot", key="btn_snapshot_analyze"):
             img = Image.open(cam_photo)
             with st.spinner("Analyzing Camera Capture..."):
-                proc_img, counts = run_detection(img, current_conf)
+                # Fixed 0.70 Confidence Threshold
+                proc_img, counts = run_detection(img, FIXED_CONFIDENCE_THRESHOLD)
 
                 st.session_state.update(
                     {
@@ -159,7 +147,7 @@ def render_live_camera_mode(conf_threshold):
         if "processed_img" in st.session_state and st.session_state["processed_img"] is not None:
             st.image(
                 st.session_state["processed_img"],
-                caption="Snapshot AI Analysis Result",
+                caption="Snapshot AI Analysis Result (Fixed Conf: 0.70)",
                 use_container_width=True,
             )
 
@@ -183,7 +171,7 @@ def render_live_camera_mode(conf_threshold):
 
             st.image(
                 res["processed_img"],
-                caption=f"✅ Hazard Detected ({res['tracking_id']})",
+                caption=f"✅ Hazard Detected ({res['tracking_id']}) - Conf: 0.70",
                 use_container_width=True,
             )
 
@@ -194,7 +182,7 @@ def render_live_camera_mode(conf_threshold):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="extreme-engine-v1",
+                key="extreme-engine-fixed-conf",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=ExtremePerformanceTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
@@ -210,7 +198,7 @@ def render_live_camera_mode(conf_threshold):
             )
 
             if ctx.video_processor:
-                ctx.video_processor.conf_threshold = current_conf
+                ctx.video_processor.conf_threshold = FIXED_CONFIDENCE_THRESHOLD
 
                 if ctx.video_processor.detected and ctx.video_processor.result_data:
                     st.session_state["captured_result"] = ctx.video_processor.result_data
