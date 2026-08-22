@@ -9,16 +9,13 @@ from streamlit_webrtc import RTCConfiguration, WebRtcMode, webrtc_streamer
 from models.detector import run_detection
 from utils.helpers import generate_tracking_id
 
-# Reliable Multi-STUN & Open TURN Relays for strict network/NAT connection
+# Reliable Multi-STUN & TURN Relays
 RTC_CONFIGURATION = RTCConfiguration(
     {
         "iceServers": [
-            # Google Public STUN
             {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]},
             {"urls": ["stun:stun2.l.google.com:19302", "stun:stun3.l.google.com:19302"]},
-            # Twilio & Open Relay STUNs
             {"urls": ["stun:global.stun.twilio.com:3478"]},
-            # Free Open TURN server fallback for firewall/mobile hotspot bypass
             {
                 "urls": ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443"],
                 "username": "openrelay",
@@ -34,6 +31,7 @@ class AutoStopTransformer:
         self.detected = False
         self.result_data = None
         self.conf_threshold = 0.35
+        self.last_check_time = 0.0
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img_bgr = frame.to_ndarray(format="bgr24")
@@ -41,24 +39,31 @@ class AutoStopTransformer:
         if self.detected:
             return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
-        try:
-            img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-            pil_img = Image.fromarray(img_rgb)
+        current_time = time.time()
 
-            proc_img, counts = run_detection(pil_img, self.conf_threshold)
+        # AI Detection har 0.25 seconds baad chalegi
+        # Baqi saare frames instantly return ho kar 60 FPS smooth stream denge
+        if current_time - self.last_check_time >= 0.25:
+            self.last_check_time = current_time
+            try:
+                img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                pil_img = Image.fromarray(img_rgb)
 
-            if counts and len(counts) > 0:
-                self.detected = True
-                tracking_id = generate_tracking_id()
+                proc_img, counts = run_detection(pil_img, self.conf_threshold)
 
-                self.result_data = {
-                    "tracking_id": tracking_id,
-                    "counts": counts,
-                    "processed_img": proc_img,
-                }
-        except Exception as e:
-            print(f"Inference Error in Stream: {e}")
+                if counts and len(counts) > 0:
+                    self.detected = True
+                    tracking_id = generate_tracking_id()
 
+                    self.result_data = {
+                        "tracking_id": tracking_id,
+                        "counts": counts,
+                        "processed_img": proc_img,
+                    }
+            except Exception as e:
+                print(f"Inference Error in Stream: {e}")
+
+        # Instant frame return for smooth normal camera feel
         return av.VideoFrame.from_ndarray(img_bgr, format="bgr24")
 
 
@@ -143,7 +148,7 @@ def render_live_camera_mode(conf_threshold):
                 st.rerun()
         else:
             ctx = webrtc_streamer(
-                key="auto-stop-streamer-stable",
+                key="auto-stop-streamer-smooth-fps",
                 mode=WebRtcMode.SENDRECV,
                 video_processor_factory=AutoStopTransformer,
                 rtc_configuration=RTC_CONFIGURATION,
@@ -151,7 +156,7 @@ def render_live_camera_mode(conf_threshold):
                     "video": {
                         "width": {"ideal": 1280},
                         "height": {"ideal": 720},
-                        "frameRate": {"ideal": 30},
+                        "frameRate": {"ideal": 30, "max": 60},
                     },
                     "audio": False,
                 },
@@ -166,5 +171,5 @@ def render_live_camera_mode(conf_threshold):
                     st.rerun()
 
             if ctx.state.playing:
-                time.sleep(0.15)
+                time.sleep(0.2)
                 st.rerun()
